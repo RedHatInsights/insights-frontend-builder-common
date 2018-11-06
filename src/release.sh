@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -e
+set -x
 
 git clone ${REPO}.git -b $1
 cd dist

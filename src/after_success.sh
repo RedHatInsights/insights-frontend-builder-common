@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+set -e
+
+# Dont set -x here ... keys would be echo'ed to the logs
 
 # Check if it is a pull request
 # If it is not a pull request, generate the deploy key
