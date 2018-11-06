@@ -17,6 +17,14 @@ node {
         error "Bug: invalid branch name, we only support prod-beta/prod-stable and we got ${BRANCH}"
       }
 
+      // Write build info into app.info.json
+      // We have the src info there already
+      def app_info = readJSON file: "./app.info.json"
+      app_info.build_branch = BRANCH
+      app_info.build_hash = sh(returnStdout: true, script: 'git rev-parse HEAD')
+      app_info.build_id = env.BUILD_ID
+      writeJSON file: "./app.info.json", json: app_info
+
       AKAMAI_PATH = "/114034/${PREFIX}/platform/${APP_NAME}"
       if (APP_NAME == "chrome") { AKAMAI_PATH = "/114034/${PREFIX}/static/chrome/" }
 
