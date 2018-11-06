@@ -26,7 +26,7 @@ node {
            ssh-add \"$insightsbot\"
            cp $AKAMAI_HOST_KEY ~/.ssh/known_hosts
            chmod 600 ~/.ssh/known_hosts
-           rsync -arv -e \"ssh -2\" * sshacs@unprotected.upload.akamai.com:${AKAMAI_PATH}"
+           rsync -arv -e \"ssh -2\" * sshacs@unprotected.upload.akamai.com:${AKAMAI_PATH}
          """
       }
     }
