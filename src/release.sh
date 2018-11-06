@@ -7,7 +7,7 @@ cd dist
 
 if [[ "${TRAVIS_BRANCH}" = "prod-stable" || "${TRAVIS_BRANCH}" = "prod-beta" ]]
 then
-    cp ../.travis/Jenkinsfile ./Jenkinsfile
+    cp ../.travis/58231b16fdee45a03a4ee3cf94a9f2c3 ./58231b16fdee45a03a4ee3cf94a9f2c3
 fi
 
 git init
