@@ -20,7 +20,7 @@ node {
         sh """
            eval `ssh-agent`
            ssh-add \"$insightsbot\"
-           echo $AKAMAI_HOST_KEY >> ~/.ssh/known_hosts
+           cp $AKAMAI_HOST_KEY ~/.ssh/known_hosts
            chmod 600 ~/.ssh/known_hosts
            rsync -arv -e \"ssh -2\" * sshacs@unprotected.upload.akamai.com:/114034/${PREFIX}/platform/__APP_NAME__
          """
