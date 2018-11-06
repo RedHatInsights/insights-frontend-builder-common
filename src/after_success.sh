@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 set -e
-
-# Dont set -x here ... keys would be echo'ed to the logs
+set -x
 
 # Check if it is a pull request
 # If it is not a pull request, generate the deploy key
@@ -9,12 +8,14 @@ if [ "${TRAVIS_PULL_REQUEST}" != "false" ]; then
     echo -e "Pull Request, not pushing a build"
     exit 0;
 else
+    set +x # Dont set -x here ... keys would be echo'ed to the logs
     openssl aes-256-cbc \
             -K `env | grep 'encrypted_.*_key' | cut -f2 -d '='` \
             -iv `env | grep 'encrypted_.*_iv' | cut -f2 -d '='` \
             -in .travis/deploy_key.enc -out .travis/deploy_key -d
+    set -x
 
-    chmod 600 starter
+    chmod 600 .travis/deploy_key
     eval `ssh-agent -s`
     ssh-add .travis/deploy_key
 fi
