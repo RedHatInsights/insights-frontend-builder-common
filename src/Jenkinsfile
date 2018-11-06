@@ -6,7 +6,8 @@ node {
                       passphraseVariable: '',
                       usernameVariable: '')]) {
 
-      String BRANCH = GIT_BRANCH.replaceAll('origin/', '')
+      String BRANCH = env.BRANCH_NAME.replaceAll('origin/', '')
+
       if (BRANCH == 'prod-stable') {
         PREFIX = 'insights'
       } else if (BRANCH == 'prod-beta') {
