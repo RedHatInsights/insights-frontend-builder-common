@@ -7,10 +7,9 @@ node {
                       usernameVariable: '')]) {
 
       sh """
-         eval `ssh-agent`
-         ssh-add \"$insightsbot\"
-         echo rsync -arv -e \"ssh -2\" * sshacs@unprotected.upload.akamai.com:/114034/$endpoint
-         # rsync -arv -e \"ssh -2\" * sshacs@unprotected.upload.akamai.com:/114034/$endpoint
+           eval `ssh-agent`
+           ssh-add \"$insightsbot\"
+           rsync -arv -e \"ssh -2\" * sshacs@unprotected.upload.akamai.com:/114034/__APP_NAME__
          """
 
     }
