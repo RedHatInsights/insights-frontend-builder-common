@@ -5,22 +5,24 @@ set -x
 SRC_HASH=`git rev-parse --verify HEAD`
 APP_NAME=`node -e 'console.log(require("./package.json").insights.appname)'`
 
-echo "{
-  \"app_name\": \"$APP_NAME\",
-  \"src_hash\": \"$SRC_HASH\",
-  \"travis\": {
-    \"event_type\": \"TRAVIS_EVENT_TYPE\",
-    \"build_number\": \"$TRAVIS_BUILD_NUMBER\",
-    \"build_web_url\": \"$TRAVIS_BUILD_WEB_URL\"
-  }
-}" ./dist/app.info.json
-
 git clone ${REPO}.git -b $1
 # TODO why this? ^
 # We already init and push below
 # @jkinlaw I think this is dead code, right?
 
 cd dist
+
+echo "{
+  \"app_name\": \"$APP_NAME\",
+  \"src_hash\": \"$SRC_HASH\",
+  \"src_tag\": \"$TRAVIS_TAG\",
+  \"src_branch\": \"$TRAVIS_BRANCH\",
+  \"travis\": {
+    \"event_type\": \"TRAVIS_EVENT_TYPE\",
+    \"build_number\": \"$TRAVIS_BUILD_NUMBER\",
+    \"build_web_url\": \"$TRAVIS_BUILD_WEB_URL\"
+  }
+}" > ./app.info.json
 
 if [[ "${TRAVIS_BRANCH}" = "prod-stable" || "${TRAVIS_BRANCH}" = "prod-beta" ]]
 then
