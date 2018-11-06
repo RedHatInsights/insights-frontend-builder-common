@@ -6,12 +6,20 @@ node {
                       passphraseVariable: '',
                       usernameVariable: '')]) {
 
+      String BRANCH = GIT_BRANCH.replaceAll('origin/', '')
+      if (BRANCH == 'prod-stable') {
+        PREFIX = 'insights'
+      } else if (BRANCH == 'prod-beta') {
+        PREFIX = 'insightsbeta'
+      } else {
+        error "Bug: invalid branch name, we only support prod-beta/prod-stable and we got ${BRANCH}"
+      }
+
       sh """
            eval `ssh-agent`
            ssh-add \"$insightsbot\"
-           rsync -arv -e \"ssh -2\" * sshacs@unprotected.upload.akamai.com:/114034/__APP_NAME__
+           rsync -arv -e \"ssh -2\" * sshacs@unprotected.upload.akamai.com:/114034/${PREFIX}/platform/__APP_NAME__
          """
-
     }
   }
 }
