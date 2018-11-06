@@ -1,0 +1,17 @@
+node {
+  stage ('deploy') {
+    checkout scm
+    withCredentials(bindings: [sshUserPrivateKey(credentialsId: 'insightsbot',
+                      keyFileVariable: 'insightsbot',
+                      passphraseVariable: '',
+                      usernameVariable: '')]) {
+
+      sh """
+         eval `ssh-agent`
+         ssh-add \"$insightsbot\"
+         echo rsync -arv -e \"ssh -2\" * sshacs@unprotected.upload.akamai.com:/114034/$endpoint
+         # rsync -arv -e \"ssh -2\" * sshacs@unprotected.upload.akamai.com:/114034/$endpoint
+         """
+
+    }
+  }
