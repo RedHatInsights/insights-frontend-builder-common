@@ -1,28 +1,32 @@
 node {
-  stage ('deploy') {
+  stage ("deploy") {
     checkout scm
-    withCredentials(bindings: [sshUserPrivateKey(credentialsId: 'insightsbot',
-                      keyFileVariable: 'insightsbot',
-                      passphraseVariable: '',
-                      usernameVariable: '')]) {
+    withCredentials(bindings: [sshUserPrivateKey(credentialsId: "insightsbot",
+                      keyFileVariable: "insightsbot",
+                      passphraseVariable: "",
+                      usernameVariable: "")]) {
 
-      String BRANCH = env.BRANCH_NAME.replaceAll('origin/', '')
+      String APP_NAME = "__APP_NAME__"
+      String BRANCH = env.BRANCH_NAME.replaceAll("origin/", "")
 
-      if (BRANCH == 'prod-stable') {
-        PREFIX = 'insights'
-      } else if (BRANCH == 'prod-beta') {
-        PREFIX = 'insightsbeta'
+      if (BRANCH == "prod-stable") {
+        PREFIX = "insights"
+      } else if (BRANCH == "prod-beta") {
+        PREFIX = "insightsbeta"
       } else {
         error "Bug: invalid branch name, we only support prod-beta/prod-stable and we got ${BRANCH}"
       }
 
-      configFileProvider([configFile(fileId: 'a3e36eb0-9a5e-448f-b472-dc178d8fa133', variable: 'AKAMAI_HOST_KEY')]) {
+      AKAMAI_PATH = "/114034/${PREFIX}/platform/${APP_NAME}"
+      if (APP_NAME == "chrome") { AKAMAI_PATH = "/114034/${PREFIX}/static/chrome/" }
+
+      configFileProvider([configFile(fileId: "a3e36eb0-9a5e-448f-b472-dc178d8fa133", variable: "AKAMAI_HOST_KEY")]) {
         sh """
            eval `ssh-agent`
            ssh-add \"$insightsbot\"
            cp $AKAMAI_HOST_KEY ~/.ssh/known_hosts
            chmod 600 ~/.ssh/known_hosts
-           rsync -arv -e \"ssh -2\" * sshacs@unprotected.upload.akamai.com:/114034/${PREFIX}/platform/__APP_NAME__
+           rsync -arv -e \"ssh -2\" * sshacs@unprotected.upload.akamai.com:${AKAMAI_PATH}"
          """
       }
     }
