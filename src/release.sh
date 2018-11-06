@@ -18,7 +18,7 @@ echo "{
   \"src_tag\": \"$TRAVIS_TAG\",
   \"src_branch\": \"$TRAVIS_BRANCH\",
   \"travis\": {
-    \"event_type\": \"TRAVIS_EVENT_TYPE\",
+    \"event_type\": \"$TRAVIS_EVENT_TYPE\",
     \"build_number\": \"$TRAVIS_BUILD_NUMBER\",
     \"build_web_url\": \"$TRAVIS_BUILD_WEB_URL\"
   }
