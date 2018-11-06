@@ -9,10 +9,10 @@ if [ "${TRAVIS_PULL_REQUEST}" != "false" ]; then
     echo -e "Pull Request, not pushing a build"
     exit 0;
 else
-    openssl aes-256-cbc -K $encrypted_ca9080c40340_key -iv $encrypted_ca9080c40340_iv -in .travis/secrets.enc -out .travis/secrets -d
+    openssl aes-256-cbc -K $encrypted_ca9080c40340_key -iv $encrypted_ca9080c40340_iv -in .travis/deploy_key.enc -out .travis/deploy_key -d
     chmod 600 starter
     eval `ssh-agent -s`
-    ssh-add .travis/secrets
+    ssh-add .travis/deploy_key
 fi
 
 # If current dev branch is master, push to build repo ci-beta
