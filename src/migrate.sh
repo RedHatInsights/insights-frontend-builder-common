@@ -4,7 +4,10 @@ APP_NAME=$1
 
 if [[ ! -n "$APP_NAME" ]]
 then
-    echo "Error include the app name as a parameter (ex: migrate.sh advisor)";
+    echo "Error:   include the app name as a parameter";
+    echo "Note:    we need *just* the app name used in the public URL here"
+    echo "Example: given \"/insights/platform/advisor\" we need \"advisor\""
+    echo "p.s. dont goof this please"
     exit 1
 fi
 
