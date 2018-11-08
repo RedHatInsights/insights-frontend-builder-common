@@ -5,11 +5,6 @@ set -x
 SRC_HASH=`git rev-parse --verify HEAD`
 APP_NAME=`node -e 'console.log(require("./package.json").insights.appname)'`
 
-git clone ${REPO}.git -b $1
-# TODO why this? ^
-# We already init and push below
-# @jkinlaw I think this is dead code, right?
-
 cd dist || cd build
 
 echo "{
