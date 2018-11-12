@@ -5,7 +5,7 @@ set -x
 SRC_HASH=`git rev-parse --verify HEAD`
 APP_NAME=`node -e 'console.log(require("./package.json").insights.appname)'`
 
-cd dist || cd build
+cd dist || cd build || cd public
 
 echo "{
   \"app_name\": \"$APP_NAME\",
