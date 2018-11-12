@@ -15,7 +15,7 @@ rm -rf .travis/*sh
 
 git mv ./deploy_key.enc .travis/
 
-sed -s 's|- .travis/after_success.sh|- curl -sSL https://raw.githubusercontent.com/RedHatInsights/insights-frontend-builder-common/master/src/bootstrap.sh \| bash -s|' -i .travis.yml
+sed 's|- .travis/after_success.sh|- curl -sSL https://raw.githubusercontent.com/RedHatInsights/insights-frontend-builder-common/master/src/bootstrap.sh \| bash -s|' -i .travis.yml
 
 node -e "const pkg = require(\"./package.json\")
 pkg.insights = { appname: \"$APP_NAME\" }
