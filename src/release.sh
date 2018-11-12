@@ -5,7 +5,15 @@ set -x
 SRC_HASH=`git rev-parse --verify HEAD`
 APP_NAME=`node -e 'console.log(require("./package.json").insights.appname)'`
 
-cd dist || cd build
+
+# instead of using -v use -n to check for an empty strings
+# -v is not working well on bash 3.2 on osx
+if [[ -n "$APP_BUILD_DIR" &&  -d $APP_BUILD_DIR ]]
+then
+    cd $APP_BUILD_DIR
+else
+    cd dist || cd build
+fi
 
 echo "{
   \"app_name\": \"$APP_NAME\",
