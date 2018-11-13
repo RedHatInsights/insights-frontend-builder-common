@@ -20,12 +20,18 @@ else
     ssh-add .travis/deploy_key
 fi
 
-# If current dev branch is master, push to build repo ci-beta
-if [ "${TRAVIS_BRANCH}" = "master" ]; then
-    .travis/release.sh "ci-beta"
+if [ -x .travis/custom_release.sh ]
+then
+    ./travis/custom_release.sh
+else
+    # If current dev branch is master, push to build repo ci-beta
+    if [ "${TRAVIS_BRANCH}" = "master" ]; then
+        .travis/release.sh "ci-beta"
+    fi
+
+    # If current dev branch is deployment branch, push to build repo
+    if [[ "${TRAVIS_BRANCH}" = "ci-stable"  || "${TRAVIS_BRANCH}" = "qa-beta" || "${TRAVIS_BRANCH}" = "qa-stable" || "${TRAVIS_BRANCH}" = "prod-beta" || "${TRAVIS_BRANCH}" = "prod-stable" ]]; then
+        .travis/release.sh "${TRAVIS_BRANCH}"
+    fi
 fi
 
-# If current dev branch is deployment branch, push to build repo
-if [[ "${TRAVIS_BRANCH}" = "ci-stable"  || "${TRAVIS_BRANCH}" = "qa-beta" || "${TRAVIS_BRANCH}" = "qa-stable" || "${TRAVIS_BRANCH}" = "prod-beta" || "${TRAVIS_BRANCH}" = "prod-stable" ]]; then
-    .travis/release.sh "${TRAVIS_BRANCH}"
-fi
