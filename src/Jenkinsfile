@@ -24,6 +24,12 @@ node {
       app_info.build_hash = sh(returnStdout: true, script: 'git rev-parse HEAD').trim()
       app_info.build_id = env.BUILD_ID
       writeJSON file: "./app.info.json", json: app_info
+      
+      // Send Slack Notification
+      sh """
+         curl -d "{\"text\": \"${APP_NAME}/${BRANCH} (STATUS) - Deploy build ${app_info.build_id} started for GIT COMMIT ${app_info.build_hash}.\"}" -H "Content-Type: application/json" -X POST ${env.SLACK_INSIGHTS_BOTS}
+       """
+      
 
       AKAMAI_PATH = "/114034/${PREFIX}/platform/${APP_NAME}"
       if (APP_NAME == "chrome") { AKAMAI_PATH = "/114034/${PREFIX}/static/chrome/" }
