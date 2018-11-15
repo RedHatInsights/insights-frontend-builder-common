@@ -29,8 +29,7 @@ node {
       
       // Send Slack Notification
       String SLACK_TEXT = "${APP_NAME}/${BRANCH} [STATUS] - Deploy build ${app_info.build_id} started for GIT COMMIT ${app_info.build_hash}."
-      def SLACK_JSON = JsonOutput.toJson([text: SLACK_TEXT])
-      sh "curl -X POST --data-urlencode \'payload=${SLACK_JSON}\' ${env.SLACK_INSIGHTS_BOTS}"
+      slackSend message: SLACK_TEXT, color: 'black', channel: '#insights-bots'
 
       AKAMAI_PATH = "/114034/${PREFIX}/platform/${APP_NAME}"
       if (APP_NAME == "chrome") { AKAMAI_PATH = "/114034/${PREFIX}/static/chrome/" }
