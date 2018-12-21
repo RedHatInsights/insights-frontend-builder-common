@@ -5,7 +5,6 @@ set -x
 SRC_HASH=`git rev-parse --verify HEAD`
 APP_NAME=`node -e 'console.log(require("./package.json").insights.appname)'`
 
-
 # instead of using -v use -n to check for an empty strings
 # -v is not working well on bash 3.2 on osx
 if [[ -n "$APP_BUILD_DIR" &&  -d $APP_BUILD_DIR ]]
@@ -30,10 +29,11 @@ echo "{
 cp ../.travis/58231b16fdee45a03a4ee3cf94a9f2c3 ./58231b16fdee45a03a4ee3cf94a9f2c3
 sed -s "s/__APP_NAME__/$APP_NAME/" -i ./58231b16fdee45a03a4ee3cf94a9f2c3
 
-git init
 git config --global user.name $COMMIT_AUTHOR_USERNAME
 git config --global user.email $COMMIT_AUTHOR_EMAIL
-git remote add travis-build ${DEPLOY_REPO:-$REPO}.git
-git add .
+
+git clone --bare --branch $1 --depth 1 ${DEPLOY_REPO:-$REPO} .git
+git config core.bare false
+git add -A
 git commit -m "${TRAVIS_COMMIT_MESSAGE}"
-git push --force --set-upstream travis-build HEAD:$1
+git push origin $1
