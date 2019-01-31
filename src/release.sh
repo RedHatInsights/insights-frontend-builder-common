@@ -5,6 +5,12 @@ set -x
 SRC_HASH=`git rev-parse --verify HEAD`
 APP_NAME=`node -e 'console.log(require("./package.json").insights.appname)'`
 
+NPM_INFO="undefined"
+if [ -f package.json ]
+then
+    NPM_INFO=`npm ls --depth=0 --json`
+fi
+
 # instead of using -v use -n to check for an empty strings
 # -v is not working well on bash 3.2 on osx
 if [[ -n "$APP_BUILD_DIR" &&  -d $APP_BUILD_DIR ]]
@@ -19,6 +25,7 @@ echo "{
   \"src_hash\": \"$SRC_HASH\",
   \"src_tag\": \"$TRAVIS_TAG\",
   \"src_branch\": \"$TRAVIS_BRANCH\",
+  \"npm_info\": $NPM_INFO,
   \"travis\": {
     \"event_type\": \"$TRAVIS_EVENT_TYPE\",
     \"build_number\": \"$TRAVIS_BUILD_NUMBER\",

@@ -24,7 +24,7 @@ node {
       app_info.build_hash = sh(returnStdout: true, script: 'git rev-parse HEAD').trim()
       app_info.build_id = env.BUILD_ID
       writeJSON file: "./app.info.json", json: app_info
-      
+
       // Send Slack Notification
       String SLACK_TEXT = "${APP_NAME}/${BRANCH} [STATUS] - Deploy build ${app_info.build_id} started for GIT COMMIT ${app_info.build_hash}."
       slackSend message: SLACK_TEXT, color: 'black', channel: '#insights-bots'
