@@ -1,8 +1,8 @@
 node {
   stage ("deploy") {
     checkout scm
-    withCredentials(bindings: [sshUserPrivateKey(credentialsId: "insightsbot",
-                      keyFileVariable: "insightsbot",
+    withCredentials(bindings: [sshUserPrivateKey(credentialsId: "cloud-netstorage",
+                      keyFileVariable: "cloud_netstorage",
                       passphraseVariable: "",
                       usernameVariable: "")]) {
 
@@ -34,7 +34,7 @@ node {
       configFileProvider([configFile(fileId: "a3e36eb0-9a5e-448f-b472-dc178d8fa133", variable: "AKAMAI_HOST_KEY")]) {
         sh """
            eval `ssh-agent`
-           ssh-add \"$insightsbot\"
+           ssh-add \"$cloud_netstorage\"
            cp $AKAMAI_HOST_KEY ~/.ssh/known_hosts
            chmod 600 ~/.ssh/known_hosts
            rsync -arv -e \"ssh -2\" * sshacs@cloud-unprotected.upload.akamai.com:${AKAMAI_PATH}
