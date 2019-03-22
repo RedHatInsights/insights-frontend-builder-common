@@ -10,9 +10,9 @@ node {
       String BRANCH = env.BRANCH_NAME.replaceAll("origin/", "")
 
       if (BRANCH == "prod-stable") {
-        PREFIX = "insights"
+        PREFIX = "apps"
       } else if (BRANCH == "prod-beta") {
-        PREFIX = "insightsbeta"
+        PREFIX = "beta/apps"
       } else {
         error "Bug: invalid branch name, we only support prod-beta/prod-stable and we got ${BRANCH}"
       }
@@ -29,7 +29,7 @@ node {
       String SLACK_TEXT = "${APP_NAME}/${BRANCH} [STATUS] - Deploy build ${app_info.build_id} started for GIT COMMIT ${app_info.build_hash}."
       slackSend message: SLACK_TEXT, color: 'black', channel: '#insights-bots'
 
-      AKAMAI_PATH = "/822386/apps/${APP_NAME}"
+      AKAMAI_PATH = "/822386/${PREFIX}/${APP_NAME}"
 
       configFileProvider([configFile(fileId: "9f0c91bc-4feb-4076-9f3e-13da94ff3cef", variable: "AKAMAI_HOST_KEY")]) {
         sh """
