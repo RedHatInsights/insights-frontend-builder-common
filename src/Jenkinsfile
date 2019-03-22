@@ -1,8 +1,8 @@
 node {
   stage ("deploy") {
     checkout scm
-    withCredentials(bindings: [sshUserPrivateKey(credentialsId: "insightsbot",
-                      keyFileVariable: "insightsbot",
+    withCredentials(bindings: [sshUserPrivateKey(credentialsId: "cloud-netstorage",
+                      keyFileVariable: "privateKeyFile",
                       passphraseVariable: "",
                       usernameVariable: "")]) {
 
@@ -29,16 +29,15 @@ node {
       String SLACK_TEXT = "${APP_NAME}/${BRANCH} [STATUS] - Deploy build ${app_info.build_id} started for GIT COMMIT ${app_info.build_hash}."
       slackSend message: SLACK_TEXT, color: 'black', channel: '#insights-bots'
 
-      AKAMAI_PATH = "/114034/${PREFIX}/platform/${APP_NAME}"
-      if (APP_NAME == "chrome") { AKAMAI_PATH = "/114034/${PREFIX}/static/chrome/" }
+      AKAMAI_PATH = "/822386/apps/${APP_NAME}"
 
       configFileProvider([configFile(fileId: "a3e36eb0-9a5e-448f-b472-dc178d8fa133", variable: "AKAMAI_HOST_KEY")]) {
         sh """
            eval `ssh-agent`
-           ssh-add \"$insightsbot\"
+           ssh-add \"$privateKeyFile\"
            cp $AKAMAI_HOST_KEY ~/.ssh/known_hosts
            chmod 600 ~/.ssh/known_hosts
-           rsync -arv -e \"ssh -2\" * sshacs@unprotected.upload.akamai.com:${AKAMAI_PATH}
+           rsync -arv -e \"ssh -2\" * sshacs@cloud-unprotected.upload.akamai.com:${AKAMAI_PATH}
          """
       }
     }
