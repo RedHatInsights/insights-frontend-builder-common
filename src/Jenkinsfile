@@ -31,7 +31,7 @@ node {
 
       AKAMAI_PATH = "/822386/apps/${APP_NAME}"
 
-      configFileProvider([configFile(fileId: "a3e36eb0-9a5e-448f-b472-dc178d8fa133", variable: "AKAMAI_HOST_KEY")]) {
+      configFileProvider([configFile(fileId: "9f0c91bc-4feb-4076-9f3e-13da94ff3cef", variable: "AKAMAI_HOST_KEY")]) {
         sh """
            eval `ssh-agent`
            ssh-add \"$privateKeyFile\"
