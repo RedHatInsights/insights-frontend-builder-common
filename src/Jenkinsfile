@@ -33,6 +33,7 @@ node {
 
       configFileProvider([configFile(fileId: "9f0c91bc-4feb-4076-9f3e-13da94ff3cef", variable: "AKAMAI_HOST_KEY")]) {
         sh """
+           mkdir -p ${AKAMAI_PATH}
            eval `ssh-agent`
            ssh-add \"$privateKeyFile\"
            cp $AKAMAI_HOST_KEY ~/.ssh/known_hosts
