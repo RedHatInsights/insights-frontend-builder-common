@@ -32,7 +32,7 @@ node {
       def index_map = readJSON file: "./index_map.json"
       def index_path_list = []
       for(def entry : index_map) {
-          if(row.real_path == currentApp) {
+          if(entry.real_path == currentApp) {
               index_path_list.add(entry.req_path)
           }
       }
