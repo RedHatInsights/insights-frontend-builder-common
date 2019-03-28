@@ -41,7 +41,7 @@ node {
       String SLACK_TEXT = "${APP_NAME}/${BRANCH} [STATUS] - Deploy build ${app_info.build_id} started for GIT COMMIT ${app_info.build_hash}."
       slackSend message: SLACK_TEXT, color: 'black', channel: '#insights-bots'
 
-      AKAMAI_BASE_PATH = "/822386"
+      AKAMAI_BASE_PATH = "822386"
       AKAMAI_APP_PATH = "${AKAMAI_BASE_PATH}/${PREFIX}/${APP_NAME}"
 
       configFileProvider([configFile(fileId: "9f0c91bc-4feb-4076-9f3e-13da94ff3cef", variable: "AKAMAI_HOST_KEY")]) {
