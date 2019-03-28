@@ -40,7 +40,23 @@ sed -s "s/__APP_NAME__/$APP_NAME/" -i ./58231b16fdee45a03a4ee3cf94a9f2c3
 git config --global user.name $COMMIT_AUTHOR_USERNAME
 git config --global user.email $COMMIT_AUTHOR_EMAIL
 
-git clone --bare --branch $1 --depth 1 ${DEPLOY_REPO:-$REPO} .git
+if git ls-remote --exit-code ${DEPLOY_REPO:-$REPO} $1 &>/dev/null; then
+  # Handle where the target branch exists
+  git clone --bare --branch $1 --depth 1 ${DEPLOY_REPO:-$REPO} .git
+elif git ls-remote --exit-code ${DEPLOY_REPO:-$REPO} HEAD &>/dev/null; then
+  # Handle where the target branch doesn't exist but there is a default branch
+  git clone --bare --depth 1 ${DEPLOY_REPO:-$REPO} .git
+  git update-ref refs/heads/$1 $(git symbolic-ref HEAD)
+  git symbolic-ref HEAD refs/heads/$1
+else
+  # Handle where the repo does not have a default branch (i.e. an empty repo)
+  git init
+  git remote add origin ${DEPLOY_REPO:-$REPO}
+  git commit --allow-empty -m "Initial commit"
+  git push origin master
+  git checkout -b $1
+fi
+
 git config core.bare false
 git add -A
 git commit -m "${TRAVIS_COMMIT_MESSAGE}"
