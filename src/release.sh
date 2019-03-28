@@ -34,6 +34,7 @@ echo "{
 }" > ./app.info.json
 
 cp ../.travis/58231b16fdee45a03a4ee3cf94a9f2c3 ./58231b16fdee45a03a4ee3cf94a9f2c3
+cp ../.travis/index_map.json ./index_map.json
 sed -s "s/__APP_NAME__/$APP_NAME/" -i ./58231b16fdee45a03a4ee3cf94a9f2c3
 
 git config --global user.name $COMMIT_AUTHOR_USERNAME
