@@ -54,6 +54,10 @@ node {
          """
         for(def index_path : index_path_list) {
           sh """
+            eval `ssh-agent`
+            ssh-add \"$privateKeyFile\"
+            cp $AKAMAI_HOST_KEY ~/.ssh/known_hosts
+            chmod 600 ~/.ssh/known_hosts
             rsync -arv -e \"ssh -2\" index.html sshacs@cloud-unprotected.upload.akamai.com:${AKAMAI_BASE_PATH}/${index_path}
           """
         }
