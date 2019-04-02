@@ -60,7 +60,7 @@ node {
             chmod 600 ~/.ssh/known_hosts
             mkdir -p ${AKAMAI_BASE_PATH}/${index_path}
             cp index.html ${AKAMAI_BASE_PATH}/${index_path}/index.html
-            rsync -arv -e \"ssh -2\" ${AKAMAI_BASE_PATH} sshacs@cloud-unprotected.upload.akamai.com:/${AKAMAI_BASE_PATH}
+            rsync -arv -e \"ssh -2\" ${AKAMAI_BASE_PATH} sshacs@cloud-unprotected.upload.akamai.com
           """
         }
       }
