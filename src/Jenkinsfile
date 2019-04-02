@@ -42,26 +42,27 @@ node {
       slackSend message: SLACK_TEXT, color: 'black', channel: '#insights-bots'
 
       AKAMAI_BASE_PATH = "822386"
-      AKAMAI_APP_PATH = "${AKAMAI_BASE_PATH}/${PREFIX}/${APP_NAME}"
+      AKAMAI_APP_PATH = "/${AKAMAI_BASE_PATH}/${PREFIX}/${APP_NAME}"
 
       configFileProvider([configFile(fileId: "9f0c91bc-4feb-4076-9f3e-13da94ff3cef", variable: "AKAMAI_HOST_KEY")]) {
-        sh """
-           mkdir -p ${AKAMAI_APP_PATH}
-           mv !(${AKAMAI_BASE_PATH}) ${AKAMAI_APP_PATH}
-         """
-        for(def index_path : index_path_list) {
-          sh """
-            mkdir -p ${AKAMAI_BASE_PATH}/${index_path}
-            cp index.html ${AKAMAI_BASE_PATH}/${index_path}/index.html
-          """
-        }
         sh """
            eval `ssh-agent`
            ssh-add \"$privateKeyFile\"
            cp $AKAMAI_HOST_KEY ~/.ssh/known_hosts
            chmod 600 ~/.ssh/known_hosts
-           rsync -arv -e \"ssh -2\" * sshacs@cloud-unprotected.upload.akamai.com:/${AKAMAI_BASE_PATH}
+           rsync -arv -e \"ssh -2\" * sshacs@cloud-unprotected.upload.akamai.com:${AKAMAI_APP_PATH}
          """
+        for(def index_path : index_path_list) {
+          sh """
+            eval `ssh-agent`
+            ssh-add \"$privateKeyFile\"
+            cp $AKAMAI_HOST_KEY ~/.ssh/known_hosts
+            chmod 600 ~/.ssh/known_hosts
+            mkdir -p ${AKAMAI_BASE_PATH}/${index_path}
+            cp index.html ${AKAMAI_BASE_PATH}/${index_path}/index.html
+            rsync -arv -e \"ssh -2\" ${AKAMAI_BASE_PATH}/* sshacs@cloud-unprotected.upload.akamai.com:/${AKAMAI_BASE_PATH}
+          """
+        }
       }
     }
   }
