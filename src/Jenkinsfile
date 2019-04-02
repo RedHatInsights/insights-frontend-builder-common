@@ -13,9 +13,9 @@ node {
       String BRANCH = env.BRANCH_NAME.replaceAll("origin/", "")
 
       if (BRANCH == "prod-stable") {
-        PREFIX = "apps"
+        PREFIX = ""
       } else if (BRANCH == "prod-beta") {
-        PREFIX = "beta/apps"
+        PREFIX = "beta/"
       } else {
         error "Bug: invalid branch name, we only support prod-beta/prod-stable and we got ${BRANCH}"
       }
@@ -42,7 +42,7 @@ node {
       slackSend message: SLACK_TEXT, color: 'black', channel: '#insights-bots'
 
       AKAMAI_BASE_PATH = "822386"
-      AKAMAI_APP_PATH = "/${AKAMAI_BASE_PATH}/${PREFIX}/${APP_NAME}"
+      AKAMAI_APP_PATH = "/${AKAMAI_BASE_PATH}/${PREFIX}apps/${APP_NAME}"
 
       configFileProvider([configFile(fileId: "9f0c91bc-4feb-4076-9f3e-13da94ff3cef", variable: "AKAMAI_HOST_KEY")]) {
         sh """
@@ -58,8 +58,8 @@ node {
             ssh-add \"$privateKeyFile\"
             cp $AKAMAI_HOST_KEY ~/.ssh/known_hosts
             chmod 600 ~/.ssh/known_hosts
-            mkdir -p ${AKAMAI_BASE_PATH}/${index_path}
-            cp index.html ${AKAMAI_BASE_PATH}/${index_path}/index.html
+            mkdir -p ${AKAMAI_BASE_PATH}/${PREFIX}${index_path}
+            cp index.html ${AKAMAI_BASE_PATH}/${PREFIX}${index_path}/index.html
             rsync -arv -e \"ssh -2\" ${AKAMAI_BASE_PATH}/* sshacs@cloud-unprotected.upload.akamai.com:/${AKAMAI_BASE_PATH}
           """
         }
