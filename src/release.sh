@@ -20,12 +20,13 @@ else
     cd dist || cd build
 fi
 
+echo $NPM_INFO > ./app.info.deps.json
+
 echo "{
   \"app_name\": \"$APP_NAME\",
   \"src_hash\": \"$SRC_HASH\",
   \"src_tag\": \"$TRAVIS_TAG\",
   \"src_branch\": \"$TRAVIS_BRANCH\",
-  \"npm_info\": $NPM_INFO,
   \"travis\": {
     \"event_type\": \"$TRAVIS_EVENT_TYPE\",
     \"build_number\": \"$TRAVIS_BUILD_NUMBER\",
