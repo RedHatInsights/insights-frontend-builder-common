@@ -2,7 +2,7 @@ import groovy.json.JsonSlurper
 
 node {
   stage ("deploy") {
-    
+
     checkout scm
     withCredentials(bindings: [sshUserPrivateKey(credentialsId: "cloud-netstorage",
                       keyFileVariable: "privateKeyFile",
@@ -28,15 +28,6 @@ node {
       app_info.build_id = env.BUILD_ID
       writeJSON file: "./app.info.json", json: app_info
 
-      // Get the index paths using index_map.json
-      def index_map = readJSON file: "./index_map.json"
-      def index_path_list = []
-      for(def entry : index_map) {
-          if(entry.real_path == app_info.app_name) {
-              index_path_list.add(entry.req_path)
-          }
-      }
-
       // Send Slack Notification
       String SLACK_TEXT = "${APP_NAME}/${BRANCH} [STATUS] - Deploy build ${app_info.build_id} started for GIT COMMIT ${app_info.build_hash}."
       slackSend message: SLACK_TEXT, color: 'black', channel: '#insights-bots'
@@ -52,16 +43,6 @@ node {
            chmod 600 ~/.ssh/known_hosts
            rsync -arv -e \"ssh -2\" * sshacs@cloud-unprotected.upload.akamai.com:${AKAMAI_APP_PATH}
          """
-        for(def index_path : index_path_list) {
-          sh """
-            eval `ssh-agent`
-            ssh-add \"$privateKeyFile\"
-            cp $AKAMAI_HOST_KEY ~/.ssh/known_hosts
-            chmod 600 ~/.ssh/known_hosts
-            mkdir -p ${AKAMAI_BASE_PATH}/${PREFIX}${index_path}
-            cp index.html ${AKAMAI_BASE_PATH}/${PREFIX}${index_path}/index.html
-            rsync -arv -e \"ssh -2\" ${AKAMAI_BASE_PATH}/* sshacs@cloud-unprotected.upload.akamai.com:/${AKAMAI_BASE_PATH}
-          """
         }
       }
     }
