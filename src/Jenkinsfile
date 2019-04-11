@@ -43,7 +43,6 @@ node {
            chmod 600 ~/.ssh/known_hosts
            rsync -arv -e \"ssh -2\" * sshacs@cloud-unprotected.upload.akamai.com:${AKAMAI_APP_PATH}
          """
-        }
       }
     }
   }
