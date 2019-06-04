@@ -34,3 +34,9 @@ else
         .travis/release.sh "${TRAVIS_BRANCH}"
     fi
 fi
+
+# Ignore custom release so we can build repo nightly
+if [ "${TRAVIS_BRANCH}" = "nightly" ]; then
+    .travis/nightly.sh
+    .travis/release.sh "nightly"
+fi
