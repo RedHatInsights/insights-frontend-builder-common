@@ -5,16 +5,7 @@ set -x
 # show remotes
 git remote -v
 
-git fetch origin
-git branch -a
-
-git fetch origin/master
-git branch -a
-
-git pull origin
-git branch -a
-
-git pull origin/master
+git pull origin master
 
 # show branches
 git branch -a
