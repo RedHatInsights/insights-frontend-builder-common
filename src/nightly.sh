@@ -6,9 +6,6 @@ set -x
 git config remote.origin.fetch '+refs/heads/*:refs/remotes/origin/*'
 git remote update
 
-# see branches
-git branch -a
-
 # Rest branch to master so cron job takes care of all the work
 git reset --hard remotes/origin/master
 
