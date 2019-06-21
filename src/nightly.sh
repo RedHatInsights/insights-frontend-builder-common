@@ -3,6 +3,7 @@ set -e
 set -x
 
 # Update the remote, travis only pulls one branch
+git config remote.origin.fetch '+refs/heads/*:refs/remotes/origin/*'
 git remote update
 
 # see branches
