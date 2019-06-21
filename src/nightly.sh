@@ -3,7 +3,7 @@ set -e
 set -x
 
 # Rest branch to master so cron job takes care of all the work
-git reset --hard master
+git reset --hard origin/master
 
 # install packages
 npm install @patternfly/patternfly@latest
