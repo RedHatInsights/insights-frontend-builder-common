@@ -11,7 +11,7 @@ git pull origin master
 git branch -a
 
 # Rest branch to master so cron job takes care of all the work
-git reset --hard origin/master
+git reset --hard master
 
 # install packages
 npm install @patternfly/patternfly@latest
