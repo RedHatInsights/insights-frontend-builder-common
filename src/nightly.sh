@@ -5,13 +5,14 @@ set -x
 # show remotes
 git remote -v
 
-git pull origin master
+# Update the remote
+git remote update
 
 # show branches
 git branch -a
 
 # Rest branch to master so cron job takes care of all the work
-git reset --hard master
+git reset --hard origin/master
 
 # install packages
 npm install @patternfly/patternfly@latest
