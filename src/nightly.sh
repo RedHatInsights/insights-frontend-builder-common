@@ -2,17 +2,14 @@
 set -e
 set -x
 
-# show remotes
-git remote -v
-
-# Update the remote
+# Update the remote, travis only pulls one branch
 git remote update
 
-# show branches
+# see branches
 git branch -a
 
 # Rest branch to master so cron job takes care of all the work
-git reset --hard origin/master
+git reset --hard remotes/origin/master
 
 # install packages
 npm install @patternfly/patternfly@latest
