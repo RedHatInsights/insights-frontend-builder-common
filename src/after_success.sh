@@ -38,5 +38,5 @@ fi
 # Ignore custom release so we can build repo nightly
 if [ "${TRAVIS_BRANCH}" = "nightly" ]; then
     .travis/nightly.sh
-    .travis/release.sh "nightly"
+    .travis/release.sh "nightly-stable"
 fi
