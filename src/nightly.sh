@@ -28,4 +28,4 @@ npm run lint
 npm run test
 
 # build it
-NODE_ENV=production webpack --config config/prod.webpack.config.js
+npm run nightly
