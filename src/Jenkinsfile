@@ -44,6 +44,16 @@ node {
            rsync -arv -e \"ssh -2\" * sshacs@cloud-unprotected.upload.akamai.com:${AKAMAI_APP_PATH}
          """
       }
+
+      //run on a node with python on it
+      openShift.withNode(image: "docker-registry.default.svc:5000/jenkins/jenkins-slave-base-centos7-python36:latest") {
+        //install python dependencies
+        sh "python -m pip install -r requirements.txt"
+        //Bust the current cache
+        sh """
+          python3 akamai_cache_buster/BustCache.py ~/.edgerc ${APP_NAME}
+          """
+      }
     }
   }
 }
