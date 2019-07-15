@@ -10,18 +10,12 @@ git remote update
 git reset --hard remotes/origin/master
 
 # install packages
+npm install
 npm install @patternfly/patternfly@latest
 npm install @patternfly/react-core@prerelease
 npm install @patternfly/react-tokens@prerelease
 npm install @patternfly/react-icons@latest
 npm install @patternfly/react-charts@prerelease
-
-# Echo version numbers for deugging
-echo "using @patternfly/patternfly version " npm show @patternfly/patternfly version
-echo "using @patternfly/react-core version " npm show @patternfly/react-core version
-echo "using @patternfly/react-tokens version " npm show @patternfly/react-tokens version
-echo "using @patternfly/react-icons " npm show @patternfly/react-icons version
-echo "using @patternfly/react-charts " npm show @patternfly/react-charts version
 
 # Lint + Test
 npm run lint
@@ -29,3 +23,6 @@ npm run test
 
 # build it
 npm run nightly
+
+# show the packages
+npm ls @patternfly/patternfly @patternfly/react-core @patternfly/react-tokens @patternfly/react-icons @patternfly/react-charts --depth=0 --json >> dist/patternfly-deps.json || build/patternfly-deps.json
