@@ -54,7 +54,9 @@ node {
           sh "ls"
           sh "curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py"
           sh "python get-pip.py --user"
-          sh "python -m pip install -r akamai_cache_buster/requirements.txt"
+          sh "wget https://raw.githubusercontent.com/RedHatInsights/insights-frontend-builder-common/master/src/akamai_cache_buster/bustCache.py"
+          sh "wget https://raw.githubusercontent.com/RedHatInsights/insights-frontend-builder-common/master/src/akamai_cache_buster/requirements.txt"
+          sh "python -m pip install -r requirements.txt"
           //Bust the current cache
           sh """
             python3 akamai_cache_buster/BustCache.py ~/.edgerc ${APP_NAME}
