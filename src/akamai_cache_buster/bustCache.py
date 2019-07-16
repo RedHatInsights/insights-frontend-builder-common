@@ -69,6 +69,7 @@ def main():
         "objects" : urls
     }
 
+    print(base_url + "/ccu/v3/invalidate/url/staging")
     print(akamaiPost("/ccu/v3/invalidate/url/staging", body))
 
 if __name__ == "__main__":
