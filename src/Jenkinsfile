@@ -58,7 +58,7 @@ node {
           withCredentials([file(credentialsId: "rhcs-akamai-edgerc", variable: 'EDGERC')]) {
             //path to .edgerc file is now set to $EDGERC"
             //Bust the current cache
-            sh "python3 BustCache.py $EDGERC ${APP_NAME}"
+            sh "python3 bustCache.py $EDGERC ${APP_NAME}"
           }
         }
       }
