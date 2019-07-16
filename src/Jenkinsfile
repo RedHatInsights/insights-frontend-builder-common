@@ -55,10 +55,11 @@ node {
           sh "wget https://raw.githubusercontent.com/RedHatInsights/insights-frontend-builder-common/master/src/akamai_cache_buster/bustCache.py"
           sh "wget https://raw.githubusercontent.com/RedHatInsights/insights-frontend-builder-common/master/src/akamai_cache_buster/requirements.txt"
           sh "python3 -m pip install --user -r requirements.txt"
-          //Bust the current cache
-          sh """
-            python3 akamai_cache_buster/BustCache.py ~/.edgerc ${APP_NAME}
-            """
+          withCredentials([file(credentialsId: "rhcs-akamai-edgerc", variable: 'EDGERC')]) {
+            //path to .edgerc file is now set to $EDGERC"
+            //Bust the current cache
+            sh "python3 BustCache.py $EDGERC ${APP_NAME}"
+          }
         }
       }
     }
