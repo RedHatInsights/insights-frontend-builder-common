@@ -55,6 +55,7 @@ node {
           sh "wget https://raw.githubusercontent.com/RedHatInsights/insights-frontend-builder-common/master/src/akamai_cache_buster/bustCache.py"
           sh "wget https://raw.githubusercontent.com/RedHatInsights/insights-frontend-builder-common/master/src/akamai_cache_buster/requirements.txt"
           sh "python3 -m pip install --user -r requirements.txt"
+          sh "export PATH=$PATH:/home/jenkins/.local/bin"
           withCredentials([file(credentialsId: "rhcs-akamai-edgerc", variable: 'EDGERC')]) {
             //path to .edgerc file is now set to $EDGERC"
             //Bust the current cache

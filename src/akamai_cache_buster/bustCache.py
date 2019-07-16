@@ -60,7 +60,7 @@ def main():
 
     urls = []
     for paths in getYMLFromUrl("https://raw.githubusercontent.com/RedHatInsights/cloud-services-config/master/main.yml").get(appName).get("frontend").get("paths"):
-        urls.append("https://cloud.redhat.com/apps" + paths)
+        urls.append("https://cloud.redhat.com" + paths)
     
     for url in urls:
         print(url)
