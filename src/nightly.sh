@@ -25,4 +25,10 @@ npm run test
 npm run nightly
 
 # show the packages
-npm ls @patternfly/patternfly @patternfly/react-core @patternfly/react-tokens @patternfly/react-icons @patternfly/react-charts --depth=0 --json >> dist/patternfly-deps.json || build/patternfly-deps.json
+if [ -d "dist" ]; then
+    npm ls @patternfly/patternfly @patternfly/react-core @patternfly/react-tokens @patternfly/react-icons @patternfly/react-charts --depth=0 --json >> dist/patternfly-deps.json
+fi
+
+if [ -d "build" ]; then
+    npm ls @patternfly/patternfly @patternfly/react-core @patternfly/react-tokens @patternfly/react-icons @patternfly/react-charts --depth=0 --json >> build/patternfly-deps.json
+fi
