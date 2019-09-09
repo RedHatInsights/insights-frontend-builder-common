@@ -56,10 +56,10 @@ def main():
     #connect to akamai and validate
     initEdgeGridAuth()
 
-    print(getYMLFromUrl("https://raw.githubusercontent.com/RedHatInsights/cloud-services-config/master/main.yml").get(appName).get("frontend").get("paths"))
+    print(getYMLFromUrl("https://cloud.redhat.com/config/main.yml").get(appName).get("frontend").get("paths"))
 
     urls = []
-    for paths in getYMLFromUrl("https://raw.githubusercontent.com/RedHatInsights/cloud-services-config/master/main.yml").get(appName).get("frontend").get("paths"):
+    for paths in getYMLFromUrl("https://cloud.redhat.com/config/main.yml").get(appName).get("frontend").get("paths"):
         urls.append("https://cloud.redhat.com" + paths)
     
     for url in urls:
