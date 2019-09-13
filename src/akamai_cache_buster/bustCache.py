@@ -55,22 +55,64 @@ def main():
     
     #connect to akamai and validate
     initEdgeGridAuth()
+        
 
-    print(getYMLFromUrl("https://cloud.redhat.com/config/main.yml").get(appName).get("frontend").get("paths"))
+    paths = getYMLFromUrl("https://cloud.redhat.com/config/main.yml").get(appName).get("frontend").get("paths")
+    for path in paths:
+        print(path.split('/'))
+    #print(paths)
 
-    urls = []
-    for paths in getYMLFromUrl("https://cloud.redhat.com/config/main.yml").get(appName).get("frontend").get("paths"):
-        urls.append("https://cloud.redhat.com" + paths)
+    #  old way
+    # urls = []
+    # for paths in getYMLFromUrl("https://cloud.redhat.com/config/main.yml").get(appName).get("frontend").get("paths"):
+    #     urls.append("https://cloud.redhat.com" + paths)
+    #     for subApps in getYMLFromUrl("https://cloud.redhat.com/config/main.yml").get(appName).get("frontend").get("sub_apps"):
+    #         urls.append("https://cloud.redhat.com" + paths + "/" + subApps.get("id"))
     
-    for url in urls:
-        print(url)
+    # for url in urls:
+    #     print(url)
 
-    body = {
-        "objects" : urls
-    }
+    # body = {
+    #     "objects" : urls
+    # }
 
-    print(base_url + "/ccu/v3/invalidate/url/staging")
-    print(akamaiPost("/ccu/v3/invalidate/url/staging", body))
+    #generate metadata xml
+   
+    #create a request for each path
+    for path in paths:
+
+        #create the basic metadata message
+        metadata = '<?xml version=\"1.0\"?>\n'
+        metadata += '<!-- Submitted by bustCache.py script automatically -->'
+        metadata += '<eccu>\n'
+
+        #generate the path XML
+        splitPath = path.split('/')
+        for i in range(1, len(splitPath)):
+            metadata += '   ' * i + ('<match:recursive-dirs value=\"%s\">\n'%(splitPath[i]))
+        metadata += '   ' * len(splitPath) + '<revalidate>now</revalidate>\n'
+        for i in range(1, len(splitPath)):
+            metadata += '   ' * (len(splitPath) - i) + '</match:recursive-dirs>\n'
+        metadata += '</eccu>'
+
+        print(metadata + '\n')
+
+        body = {
+            "propertyName": "cloud.redhat.com",
+            "propertyNameExactMatch": 'true',
+            "propertyType": "HOST_HEADER",
+            "metadata": metadata,
+            "notes": "purging cache for new deployment",
+            "requestName": "Invalidate cache for some frontend",
+            "statusUpdateEmails": [
+                "rfelton@redhat.com"
+            ]
+        }
+
+        print(body)
+        print(base_url + "/eccu/v1/requests")
+        #print(akamaiPost("/ccu/v3/invalidate/url/staging", body))
+        #print(akamaiPost("/eccu-api/v1/requests", body))
 
 if __name__ == "__main__":
     main()
