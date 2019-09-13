@@ -92,10 +92,7 @@ def main():
             ]
         }
 
-        print(body)
-        print(base_url + "/eccu/v1/requests")
-        #print(akamaiPost("/ccu/v3/invalidate/url/staging", body))
-        #print(akamaiPost("/eccu-api/v1/requests", body))
+        print(akamaiPost("/eccu-api/v1/requests", body))
 
 if __name__ == "__main__":
     main()
