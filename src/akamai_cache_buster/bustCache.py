@@ -60,23 +60,6 @@ def main():
     paths = getYMLFromUrl("https://cloud.redhat.com/config/main.yml").get(appName).get("frontend").get("paths")
     for path in paths:
         print(path.split('/'))
-    #print(paths)
-
-    #  old way
-    # urls = []
-    # for paths in getYMLFromUrl("https://cloud.redhat.com/config/main.yml").get(appName).get("frontend").get("paths"):
-    #     urls.append("https://cloud.redhat.com" + paths)
-    #     for subApps in getYMLFromUrl("https://cloud.redhat.com/config/main.yml").get(appName).get("frontend").get("sub_apps"):
-    #         urls.append("https://cloud.redhat.com" + paths + "/" + subApps.get("id"))
-    
-    # for url in urls:
-    #     print(url)
-
-    # body = {
-    #     "objects" : urls
-    # }
-
-    #generate metadata xml
    
     #create a request for each path
     for path in paths:
