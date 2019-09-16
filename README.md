@@ -7,7 +7,7 @@ The repo responsible for building all of the frontends on cloud.redhat.com.
 
 This script is run automatically from Jenkins each time a frontend is deployed
 to `Prod`. It clears out all of the old cached versions of the application to make
-sure users are served up-to-date content
+sure users are served up-to-date content.
 
 ### To Run
 
