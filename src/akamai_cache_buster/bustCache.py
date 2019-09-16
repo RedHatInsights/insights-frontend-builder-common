@@ -45,54 +45,50 @@ def getHostFromConfig(path="~/.edgerc"):
 # Get the base url using the provided config
 base_url = "https://" + getHostFromConfig()
 
+def createMetadata(path):
+    #create the basic metadata message
+    metadata = '<?xml version=\"1.0\"?>\n<!-- Submitted by bustCache.py script automatically -->\n<eccu>\n'
+
+    #generate the path XML
+    splitPath = path.split('/')
+    metadataClosingTags = ''
+    pathLength = len(splitPath)
+    #create opening and closing tags
+    for i in range(1, pathLength):
+        metadata += '   ' * i + f'<match:recursive-dirs value=\"{splitPath[i]}\">\n'
+        metadataClosingTags += '   ' * (pathLength - i) + '</match:recursive-dirs>\n'
+    metadata += '   ' * pathLength + '<revalidate>now</revalidate>\n'
+    metadata += metadataClosingTags
+    metadata += '</eccu>'
+
+    return metadata
+
+def createRequest(path):
+    body = {
+        "propertyName": "cloud.redhat.com",
+        "propertyNameExactMatch": 'true',
+        "propertyType": "HOST_HEADER",
+        "metadata": createMetadata(path),
+        "notes": "purging cache for new deployment",
+        "requestName": "Invalidate cache for some frontend",
+        "statusUpdateEmails": [
+            "rfelton@redhat.com"
+        ]
+    }
+
+    return body
 
 #main
 def main():
     appName = sys.argv[2]
-
-    #sys.argv[2] should be name of app to bust
-    print(appName)
     
     #connect to akamai and validate
     initEdgeGridAuth()
-        
 
+    #create a request for each path
     paths = getYMLFromUrl("https://cloud.redhat.com/config/main.yml").get(appName).get("frontend").get("paths")
     for path in paths:
-        print(path.split('/'))
-   
-    #create a request for each path
-    for path in paths:
-
-        #create the basic metadata message
-        metadata = '<?xml version=\"1.0\"?>\n'
-        metadata += '<!-- Submitted by bustCache.py script automatically -->'
-        metadata += '<eccu>\n'
-
-        #generate the path XML
-        splitPath = path.split('/')
-        for i in range(1, len(splitPath)):
-            metadata += '   ' * i + ('<match:recursive-dirs value=\"%s\">\n'%(splitPath[i]))
-        metadata += '   ' * len(splitPath) + '<revalidate>now</revalidate>\n'
-        for i in range(1, len(splitPath)):
-            metadata += '   ' * (len(splitPath) - i) + '</match:recursive-dirs>\n'
-        metadata += '</eccu>'
-
-        print(metadata + '\n')
-
-        body = {
-            "propertyName": "cloud.redhat.com",
-            "propertyNameExactMatch": 'true',
-            "propertyType": "HOST_HEADER",
-            "metadata": metadata,
-            "notes": "purging cache for new deployment",
-            "requestName": "Invalidate cache for some frontend",
-            "statusUpdateEmails": [
-                "rfelton@redhat.com"
-            ]
-        }
-
-        print(akamaiPost("/eccu-api/v1/requests", body))
+        akamaiPost("/eccu-api/v1/requests", createRequest(path))
 
 if __name__ == "__main__":
     main()
