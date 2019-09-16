@@ -63,14 +63,14 @@ def createMetadata(path):
 
     return metadata
 
-def createRequest(path):
+def createRequest(path, appName):
     body = {
         "propertyName": "cloud.redhat.com",
         "propertyNameExactMatch": 'true',
         "propertyType": "HOST_HEADER",
         "metadata": createMetadata(path),
         "notes": "purging cache for new deployment",
-        "requestName": "Invalidate cache for some frontend",
+        "requestName": f"Invalidate cache for {appName}",
         "statusUpdateEmails": [
             "rfelton@redhat.com"
         ]
@@ -88,7 +88,7 @@ def main():
     #create a request for each path
     paths = getYMLFromUrl("https://cloud.redhat.com/config/main.yml").get(appName).get("frontend").get("paths")
     for path in paths:
-        akamaiPost("/eccu-api/v1/requests", createRequest(path))
+        akamaiPost("/eccu-api/v1/requests", createRequest(path, appName))
 
 if __name__ == "__main__":
     main()
