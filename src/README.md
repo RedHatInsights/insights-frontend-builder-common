@@ -1,7 +1,7 @@
 
 # Frontend Builder Common
 
-The repo responsible for building almost all of the frontends on cloud.redhat.com
+The repo responsible for building all of the frontends on cloud.redhat.com
 
 ## Akamai Cache Buster
 
@@ -12,7 +12,7 @@ sure users are served up to date content
 ### To Run
 
 ```bash
-python bustCache.py /path/to/our/.edgerc NameOfApp
+python bustCache.py /path/to/your/.edgerc nameOfApp
 ```
 
 ### Some Notes and Requirements
