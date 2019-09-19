@@ -45,30 +45,39 @@ def getHostFromConfig(path="~/.edgerc"):
 # Get the base url using the provided config
 base_url = "https://" + getHostFromConfig()
 
-def createMetadata(path):
-    #create the basic metadata message
+#uses the paths for the app and the environments it's released on to generate
+#the XML used in the API request
+def createMetadata(paths, releases):
+    #Add the begining XML
     metadata = '<?xml version=\"1.0\"?>\n<!-- Submitted by bustCache.py script automatically -->\n<eccu>\n'
 
-    #generate the path XML
-    splitPath = path.split('/')
-    metadataClosingTags = ''
-    pathLength = len(splitPath)
-    #create opening and closing tags
-    for i in range(1, pathLength):
-        metadata += '   ' * i + f'<match:recursive-dirs value=\"{splitPath[i]}\">\n'
-        metadataClosingTags += '   ' * (pathLength - i) + '</match:recursive-dirs>\n'
-    metadata += '   ' * pathLength + '<revalidate>now</revalidate>\n'
-    metadata += metadataClosingTags
+    #generate the paths XML
+    for key in releases:
+        prefix = releases[key].get("prefix")
+        if (prefix == None):
+            prefix = ''
+        for path in paths:
+            path = prefix + path
+            splitPath = path.split('/')
+            metadataClosingTags = ''
+            pathLength = len(splitPath)
+            #create opening and closing tags
+            for i in range(1, pathLength):
+                metadata += '   ' * i + f'<match:recursive-dirs value=\"{splitPath[i]}\">\n'
+                metadataClosingTags += '   ' * (pathLength - i) + '</match:recursive-dirs>\n'
+            metadata += '   ' * pathLength + '<revalidate>now</revalidate>\n'
+            metadata += metadataClosingTags
+
     metadata += '</eccu>'
 
     return metadata
 
-def createRequest(path, appName):
+def createRequest(paths, releases, appName):
     body = {
         "propertyName": "cloud.redhat.com",
         "propertyNameExactMatch": 'true',
         "propertyType": "HOST_HEADER",
-        "metadata": createMetadata(path),
+        "metadata": createMetadata(paths, releases),
         "notes": "purging cache for new deployment",
         "requestName": f"Invalidate cache for {appName}",
         "statusUpdateEmails": [
@@ -85,10 +94,11 @@ def main():
     #connect to akamai and validate
     initEdgeGridAuth()
 
-    #create a request for each path
+    #get the data to use for cache busting
     paths = getYMLFromUrl("https://cloud.redhat.com/config/main.yml").get(appName).get("frontend").get("paths")
-    for path in paths:
-        akamaiPost("/eccu-api/v1/requests", createRequest(path, appName))
+    releases = getYMLFromUrl("https://cloud.redhat.com/config/releases.yml")
+
+    akamaiPost("/eccu-api/v1/requests", createRequest(paths, releases, appName))
 
 if __name__ == "__main__":
     main()
