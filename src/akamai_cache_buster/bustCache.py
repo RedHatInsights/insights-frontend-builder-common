@@ -45,32 +45,60 @@ def getHostFromConfig(path="~/.edgerc"):
 # Get the base url using the provided config
 base_url = "https://" + getHostFromConfig()
 
+#uses the paths for the app and the environments it's released on to generate
+#the XML used in the API request
+def createMetadata(paths, releases):
+    #Add the begining XML
+    metadata = '<?xml version=\"1.0\"?>\n<!-- Submitted by bustCache.py script automatically -->\n<eccu>\n'
+
+    #generate the paths XML
+    for key in releases:
+        prefix = releases[key].get("prefix")
+        if (prefix == None):
+            prefix = ''
+        for path in paths:
+            path = prefix + path
+            splitPath = path.split('/')
+            metadataClosingTags = ''
+            pathLength = len(splitPath)
+            #create opening and closing tags
+            for i in range(1, pathLength):
+                metadata += '   ' * i + f'<match:recursive-dirs value=\"{splitPath[i]}\">\n'
+                metadataClosingTags += '   ' * (pathLength - i) + '</match:recursive-dirs>\n'
+            metadata += '   ' * pathLength + '<revalidate>now</revalidate>\n'
+            metadata += metadataClosingTags
+
+    metadata += '</eccu>'
+
+    return metadata
+
+def createRequest(paths, releases, appName):
+    body = {
+        "propertyName": "cloud.redhat.com",
+        "propertyNameExactMatch": 'true',
+        "propertyType": "HOST_HEADER",
+        "metadata": createMetadata(paths, releases),
+        "notes": "purging cache for new deployment",
+        "requestName": f"Invalidate cache for {appName}",
+        "statusUpdateEmails": [
+            "rfelton@redhat.com"
+        ]
+    }
+
+    return body
 
 #main
 def main():
     appName = sys.argv[2]
-
-    #sys.argv[2] should be name of app to bust
-    print(appName)
     
     #connect to akamai and validate
     initEdgeGridAuth()
 
-    print(getYMLFromUrl("https://cloud.redhat.com/config/main.yml").get(appName).get("frontend").get("paths"))
+    #get the data to use for cache busting
+    paths = getYMLFromUrl("https://cloud.redhat.com/config/main.yml").get(appName).get("frontend").get("paths")
+    releases = getYMLFromUrl("https://cloud.redhat.com/config/releases.yml")
 
-    urls = []
-    for paths in getYMLFromUrl("https://cloud.redhat.com/config/main.yml").get(appName).get("frontend").get("paths"):
-        urls.append("https://cloud.redhat.com" + paths)
-    
-    for url in urls:
-        print(url)
-
-    body = {
-        "objects" : urls
-    }
-
-    print(base_url + "/ccu/v3/invalidate/url/staging")
-    print(akamaiPost("/ccu/v3/invalidate/url/staging", body))
+    akamaiPost("/eccu-api/v1/requests", createRequest(paths, releases, appName))
 
 if __name__ == "__main__":
     main()
