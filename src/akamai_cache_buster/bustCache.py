@@ -95,7 +95,12 @@ def main():
     initEdgeGridAuth()
 
     #get the data to use for cache busting
-    paths = getYMLFromUrl("https://cloud.redhat.com/config/main.yml").get(appName).get("frontend").get("paths")
+    try:
+        paths = getYMLFromUrl("https://cloud.redhat.com/config/main.yml").get(appName).get("frontend").get("paths")
+    except:
+        print("WARNING: this app has no path, if that's okay ignore this :)")
+        return
+
     releases = getYMLFromUrl("https://cloud.redhat.com/config/releases.yml")
 
     akamaiPost("/eccu-api/v1/requests", createRequest(paths, releases, appName))
