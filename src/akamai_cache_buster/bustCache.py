@@ -81,7 +81,8 @@ def createRequest(paths, releases, appName):
         "notes": "purging cache for new deployment",
         "requestName": f"Invalidate cache for {appName}",
         "statusUpdateEmails": [
-            "rfelton@redhat.com"
+            "rfelton@redhat.com",
+            "fms-alerts@redhat.com"
         ]
     }
 
