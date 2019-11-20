@@ -43,10 +43,10 @@ node {
            cp $AKAMAI_HOST_KEY ~/.ssh/known_hosts
            chmod 600 ~/.ssh/known_hosts
            n=0
-           until [ $n -ge 10 ]
+           until [ \$n -ge 10 ]
            do
               rsync -arv -e \"ssh -2\" * sshacs@cloud-unprotected.upload.akamai.com:${AKAMAI_APP_PATH} && break
-              n=$[$n+1]
+              n=\$[\$n+1]
               sleep 10
            done
          """
