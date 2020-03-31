@@ -2,8 +2,8 @@
 set -e
 set -x
 
-COMMON_URL="https://raw.githubusercontent.com/RedHatInsights/insights-frontend-builder-common/master/"
-CHROME_URL="https://raw.githubusercontent.com/RedHatInsights/insights-chrome/master/"
+COMMON_URL="https://raw.githubusercontent.com/RedHatInsights/insights-frontend-builder-common/master"
+CHROME_URL="https://raw.githubusercontent.com/RedHatInsights/insights-chrome/master"
 curl $COMMON_URL/src/nightly.sh > .travis/nightly.sh
 curl $COMMON_URL/src/after_success.sh > .travis/after_success.sh
 curl $COMMON_URL/src/release.sh > .travis/release.sh
