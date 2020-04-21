@@ -39,6 +39,7 @@ node {
 
       AKAMAI_BASE_PATH = "822386"
       AKAMAI_APP_PATH = "/${AKAMAI_BASE_PATH}/${PREFIX}apps/${APP_NAME}"
+      AKAMAI_STAGE_APP_PATH = "/${AKAMAI_BASE_PATH}/stage/${PREFIX}apps/${APP_NAME}"
 
       configFileProvider([configFile(fileId: "9f0c91bc-4feb-4076-9f3e-13da94ff3cef", variable: "AKAMAI_HOST_KEY")]) {
         sh """
@@ -50,6 +51,13 @@ node {
            until [ \$n -ge 10 ]
            do
               rsync -arv -e \"ssh -2\" * sshacs@cloud-unprotected.upload.akamai.com:${AKAMAI_APP_PATH} && break
+              n=\$[\$n+1]
+              sleep 10
+           done
+           n=0
+           until [ \$n -ge 10 ]
+           do
+              rsync -arv -e \"ssh -2\" * sshacs@cloud-unprotected.upload.akamai.com:${AKAMAI_STAGE_APP_PATH} && break
               n=\$[\$n+1]
               sleep 10
            done
