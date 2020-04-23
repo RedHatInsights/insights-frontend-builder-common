@@ -6,10 +6,10 @@ SRC_HASH=`git rev-parse --verify HEAD`
 APP_NAME=`node -e 'console.log(require("./package.json").insights.appname)'`
 
 NPM_INFO="undefined"
-# if [ -f package.json ]
-# then
-#     NPM_INFO=`npm ls --depth=0 --json || true`
-# fi
+if [ -f package.json ]
+then
+    NPM_INFO=`npm ls --depth=0 --json || true`
+fi
 
 # instead of using -v use -n to check for an empty strings
 # -v is not working well on bash 3.2 on osx
