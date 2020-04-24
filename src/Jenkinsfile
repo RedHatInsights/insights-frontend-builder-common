@@ -18,9 +18,9 @@ node {
       } else if (BRANCH == "prod-beta") {
         PREFIX = "beta/"
       } else if (BRANCH == "qa-stable") {
-        PREFIX = "pentest/"
+        PREFIX = "stage/"
       } else if (BRANCH == "qa-beta") {
-        PREFIX = "pentest/beta/"
+        PREFIX = "stage/beta/"
       } else {
         error "Bug: invalid branch name, we only support (prod/qa)-(beta/stable) and we got ${BRANCH}"
       }
@@ -39,7 +39,6 @@ node {
 
       AKAMAI_BASE_PATH = "822386"
       AKAMAI_APP_PATH = "/${AKAMAI_BASE_PATH}/${PREFIX}apps/${APP_NAME}"
-      AKAMAI_STAGE_APP_PATH = "/${AKAMAI_BASE_PATH}/stage/${PREFIX}apps/${APP_NAME}"
 
       configFileProvider([configFile(fileId: "9f0c91bc-4feb-4076-9f3e-13da94ff3cef", variable: "AKAMAI_HOST_KEY")]) {
         sh """
@@ -51,13 +50,6 @@ node {
            until [ \$n -ge 10 ]
            do
               rsync -arv -e \"ssh -2\" * sshacs@cloud-unprotected.upload.akamai.com:${AKAMAI_APP_PATH} && break
-              n=\$[\$n+1]
-              sleep 10
-           done
-           n=0
-           until [ \$n -ge 10 ]
-           do
-              rsync -arv -e \"ssh -2\" * sshacs@cloud-unprotected.upload.akamai.com:${AKAMAI_STAGE_APP_PATH} && break
               n=\$[\$n+1]
               sleep 10
            done
