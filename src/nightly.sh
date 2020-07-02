@@ -17,10 +17,6 @@ npm install @patternfly/react-tokens@prerelease
 npm install @patternfly/react-icons@latest
 npm install @patternfly/react-charts@prerelease
 
-# Lint + Test
-npm run lint
-npm run test
-
 # build it
 npm run nightly
 
