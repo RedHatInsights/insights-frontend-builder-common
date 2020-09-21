@@ -34,7 +34,7 @@ echo "{
   \"src_hash\": \"$SRC_HASH\",
   \"src_tag\": \"$TRAVIS_TAG\",
   \"src_branch\": \"$TRAVIS_BRANCH\",
-  \"patternfly_dependencies\": \"$PATTERNFLY_DEPS\",
+  \"patternfly_dependencies\": $PATTERNFLY_DEPS,
   \"travis\": {
     \"event_type\": \"$TRAVIS_EVENT_TYPE\",
     \"build_number\": \"$TRAVIS_BUILD_NUMBER\",
