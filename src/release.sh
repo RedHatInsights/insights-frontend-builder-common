@@ -19,7 +19,7 @@ then
   LINES=`npm list --silent --depth=0 --production | grep @patternfly -i | sed -E "s/^(.{0})(.{4})/\1/" | tr "\n" "," | sed -E "s/,/\",\"/g"` 
   PATTERNFLY_DEPS="[\"${LINES%???}\"]"
 else
-  PATTERNFLY_DEPS=[]
+  PATTERNFLY_DEPS="[]"
 fi
 
 if [[ -n "$APP_BUILD_DIR" &&  -d $APP_BUILD_DIR ]]
