@@ -14,10 +14,12 @@ NPM_INFO="undefined"
 # instead of using -v use -n to check for an empty strings
 # -v is not working well on bash 3.2 on osx
 PATTERNFLY_DEPS="undefined"
-if [[ -f package-lock.json ]];
+if [[ -f package-lock.json ]] || [[ -f yarn.lock ]];
 then
   LINES=`npm list --silent --depth=0 --production | grep @patternfly -i | sed -E "s/^(.{0})(.{4})/\1/" | tr "\n" "," | sed -E "s/,/\",\"/g"` 
   PATTERNFLY_DEPS="[\"${LINES%???}\"]"
+else
+  PATTERNFLY_DEPS="[]"
 fi
 
 if [[ -n "$APP_BUILD_DIR" &&  -d $APP_BUILD_DIR ]]
