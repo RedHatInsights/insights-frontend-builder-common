@@ -25,7 +25,7 @@ then
     .travis/custom_release.sh
 else
     # If current dev branch is master, push to build repo ci-beta
-    if [ "${TRAVIS_BRANCH}" = "master" ]; then
+    if [[ "${TRAVIS_BRANCH}" = "master" ||  "${TRAVIS_BRANCH}" = "main" ]]; then
         .travis/release.sh "ci-beta"
     fi
 
