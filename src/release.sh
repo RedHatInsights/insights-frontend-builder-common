@@ -4,6 +4,7 @@ set -x
 
 SRC_HASH=`git rev-parse --verify HEAD`
 APP_NAME=`node -e 'console.log(require("./package.json").insights.appname)'`
+BUILD_HASH=`sh(returnStdout: true, script: 'git rev-parse HEAD').trim()`
 
 NPM_INFO="undefined"
 # if [ -f package.json ]
@@ -34,6 +35,7 @@ echo $NPM_INFO > ./app.info.deps.json
 echo "{
   \"app_name\": \"$APP_NAME\",
   \"src_hash\": \"$SRC_HASH\",
+  \"build_hash\": \"$BUILD_HASH\"
   \"src_tag\": \"$TRAVIS_TAG\",
   \"src_branch\": \"$TRAVIS_BRANCH\",
   \"patternfly_dependencies\": $PATTERNFLY_DEPS,
