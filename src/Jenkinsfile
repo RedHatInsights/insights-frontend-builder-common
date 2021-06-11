@@ -29,7 +29,6 @@ node {
       // We have the src info there already
       def app_info = readJSON file: "./app.info.json"
       app_info.build_branch = BRANCH
-      app_info.build_hash = sh(returnStdout: true, script: 'git rev-parse HEAD').trim()
       app_info.build_id = env.BUILD_ID
       writeJSON file: "./app.info.json", json: app_info
 
