@@ -21,8 +21,12 @@ node {
         PREFIX = "stage/"
       } else if (BRANCH == "qa-beta") {
         PREFIX = "stage/beta/"
-      } else {
-        error "Bug: invalid branch name, we only support (prod/qa)-(beta/stable) and we got ${BRANCH}"
+      } else if (BRANCH == "stage-stable") {
+        PREFIX = "stage/"
+      } else if (BRANCH == "stage-beta") {
+        PREFIX = "stage/beta/"
+      }else {
+        error "Bug: invalid branch name, we only support (prod/qa/stage)-(beta/stable) and we got ${BRANCH}"
       }
 
       // Write build info into app.info.json
