@@ -25,7 +25,7 @@ node {
         PREFIX = "stage/"
       } else if (BRANCH == "stage-beta") {
         PREFIX = "stage/beta/"
-      }else {
+      } else {
         error "Bug: invalid branch name, we only support (prod/qa/stage)-(beta/stable) and we got ${BRANCH}"
       }
 
