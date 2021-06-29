@@ -17,13 +17,9 @@ node {
         PREFIX = ""
       } else if (BRANCH == "prod-beta") {
         PREFIX = "beta/"
-      } else if (BRANCH == "qa-stable") {
+      } else if (BRANCH == "qa-stable" || BRANCH == "stage-stable") {
         PREFIX = "stage/"
-      } else if (BRANCH == "qa-beta") {
-        PREFIX = "stage/beta/"
-      } else if (BRANCH == "stage-stable") {
-        PREFIX = "stage/"
-      } else if (BRANCH == "stage-beta") {
+      } else if (BRANCH == "qa-beta" || BRANCH == "stage-beta") {
         PREFIX = "stage/beta/"
       } else {
         error "Bug: invalid branch name, we only support (prod/qa/stage)-(beta/stable) and we got ${BRANCH}"
