@@ -30,7 +30,7 @@ else
     fi
 
     # If current dev branch is deployment branch, push to build repo
-    if [[ "${TRAVIS_BRANCH}" = "ci-stable"  || "${TRAVIS_BRANCH}" = "qa-beta" || "${TRAVIS_BRANCH}" = "qa-stable" || "${TRAVIS_BRANCH}" = "prod-beta" || "${TRAVIS_BRANCH}" = "prod-stable" || "${TRAVIS_BRANCH}" = "qaprodauth-stable" || "${TRAVIS_BRANCH}" = "qaprodauth-beta" || "${TRAVIS_BRANCH}" = "stage-beta" || "${TRAVIS_BRANCH}" = "stage-stable"]]; then
+    if [[ "${TRAVIS_BRANCH}" = "ci-stable" || "${TRAVIS_BRANCH}" = "qa-beta" || "${TRAVIS_BRANCH}" = "qa-stable" || "${TRAVIS_BRANCH}" = "prod-beta" || "${TRAVIS_BRANCH}" = "prod-stable" || "${TRAVIS_BRANCH}" = "qaprodauth-stable" || "${TRAVIS_BRANCH}" = "qaprodauth-beta" || "${TRAVIS_BRANCH}" = "stage-beta" || "${TRAVIS_BRANCH}" = "stage-stable" ]]; then
         .travis/release.sh "${TRAVIS_BRANCH}"
     fi
 fi
