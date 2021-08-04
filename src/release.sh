@@ -44,6 +44,36 @@ echo "{
   }
 }" > ./app.info.json
 
+# Generate Docker
+echo "FROM nginx
+
+COPY ./nginx.conf /etc/nginx/conf.d/default.conf
+COPY . /usr/share/nginx/html
+" > ./Dockerfile
+
+# Generate nginx config
+
+PREFIX=""
+if [[ "${TRAVIS_BRANCH}" = "master" ||  "${TRAVIS_BRANCH}" = "main" || "${TRAVIS_BRANCH}" =~ "beta" ]]; then
+  PREFIX="/beta"
+fi
+
+echo "server { 
+ listen 80;
+ server_name $APP_NAME;
+
+ location / {
+  try_files \$uri \$uri/ $PREFIX/apps/chrome/index.html;
+ }
+
+ location $PREFIX/apps/$APP_NAME {
+   alias /usr/share/nginx/html;
+ }
+}
+" > ./nginx.conf
+
+# Jenkins config
+
 cp ../.travis/58231b16fdee45a03a4ee3cf94a9f2c3 ./58231b16fdee45a03a4ee3cf94a9f2c3
 sed -s "s/__APP_NAME__/$APP_NAME/" -i ./58231b16fdee45a03a4ee3cf94a9f2c3
 
