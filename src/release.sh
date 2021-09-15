@@ -44,33 +44,47 @@ echo "{
   }
 }" > ./app.info.json
 
-# Generate Docker
-echo "FROM nginx
+if [ ! -f ./Dockerfile ]; then
+    # Generate Docker
+    echo "FROM nginx
 
 COPY ./nginx.conf /etc/nginx/conf.d/default.conf
 COPY . /usr/share/nginx/html
-" > ./Dockerfile
-
-# Generate nginx config
-
-PREFIX=""
-if [[ "${TRAVIS_BRANCH}" = "master" ||  "${TRAVIS_BRANCH}" = "main" || "${TRAVIS_BRANCH}" =~ "beta" ]]; then
-  PREFIX="/beta"
+    " > ./Dockerfile
 fi
 
-echo "server { 
- listen 80;
- server_name $APP_NAME;
+if [ ! -f ./dockerignore ]; then
+    # Generate .dockerignore
+    echo ".git
+.travis
+" > ./dockerignore
+fi
 
- location / {
-  try_files \$uri \$uri/ $PREFIX/apps/chrome/index.html;
- }
+if [ ! -f ./nginx.conf ]; then
+    # Generate nginx config
 
- location $PREFIX/apps/$APP_NAME {
-   alias /usr/share/nginx/html;
- }
+    PREFIX=""
+    if [[ "${TRAVIS_BRANCH}" = "master" ||  "${TRAVIS_BRANCH}" = "main" || "${TRAVIS_BRANCH}" =~ "beta" ]]; then
+    PREFIX="/beta"
+    fi
+
+    echo "server { 
+    listen 8000;
+    server_name $APP_NAME;
+
+    location / {
+        try_files \$uri \$uri/ $PREFIX/apps/chrome/index.html;
+    }
+
+    location $PREFIX/apps/$APP_NAME {
+        alias /usr/share/nginx/html;
+    }
 }
 " > ./nginx.conf
+fi
+
+# Deploy the images to quay if QUAY_TOKEN defined
+.travis/quay_push.sh
 
 # Jenkins config
 
