@@ -26,22 +26,43 @@ echo "{
   \"patternfly_dependencies\": $PATTERNFLY_DEPS,
 }" > $APP_ROOT/app.info.json
 
-
-PREFIX=""
-if [[ "${TRAVIS_BRANCH}" = "master" ||  "${TRAVIS_BRANCH}" = "main" || "${TRAVIS_BRANCH}" =~ "beta" ]]; then
-  PREFIX="/beta"
+if [[ -f $APP_ROOT/nginx.conf ]]; then
+  echo "nginx config already exists, skipping generation"
+else
+  generate_nginx_conf
 fi
 
-echo "server {
- listen 80;
- server_name $APP_NAME;
+if [[ -f $APP_ROOT/Dockerfile ]]; then
+  echo "Dockerfile already exists, skipping generation"
+else
+  generate_dockerfile
+fi
 
- location / {
-  try_files \$uri \$uri/ $PREFIX/apps/chrome/index.html;
- }
+function generate_nginx_conf() {
+  PREFIX=""
+  if [[ "${TRAVIS_BRANCH}" = "master" ||  "${TRAVIS_BRANCH}" = "main" || "${TRAVIS_BRANCH}" =~ "beta" ]]; then
+    PREFIX="/beta"
+  fi
 
- location $PREFIX/apps/$APP_NAME {
-   alias /usr/share/nginx/html;
- }
+  echo "server {
+   listen 80;
+   server_name $APP_NAME;
+
+   location / {
+    try_files \$uri \$uri/ $PREFIX/apps/chrome/index.html;
+   }
+
+   location $PREFIX/apps/$APP_NAME {
+     alias /usr/share/nginx/html;
+   }
+  }
+  " > $APP_ROOT/nginx.conf
 }
-" > $APP_ROOT/nginx.conf
+
+function generate_dockerfile() {
+  cat << EOF > $APP_ROOT/Dockerfile
+FROM registry.access.redhat.com/ubi8/nginx-118
+COPY ./nginx.conf /etc/nginx/conf.d/default.conf
+COPY . /usr/share/nginx/html
+EOF
+}
