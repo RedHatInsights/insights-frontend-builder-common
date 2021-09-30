@@ -99,11 +99,12 @@ def main():
     initEdgeGridAuth()
 
     #get the data to use for cache busting
+    paths
     try:
         paths = getYMLFromUrl("https://console.redhat.com/config/main.yml").get(appName).get("frontend").get("paths")
     except:
         print("WARNING: this app has no path, if that's okay ignore this :)")
-        return
+        paths = []
 
     releases = getYMLFromUrl("https://console.redhat.com/config/releases.yml")
 
