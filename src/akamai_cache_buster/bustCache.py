@@ -56,6 +56,11 @@ def createMetadata(paths, releases, appName):
         prefix = releases[key].get("content_path_prefix")
         if (prefix == None):
             prefix = ''
+        
+        splitPrefix f"apps"
+        metadata += f'<match:recursive-dirs value=\"apps/{prefix + '/'}{appName}\">\n'
+        metadata += '<revalidate>now</revalidate>'
+        metadata += '</match:recursive-dirs>'
         for path in paths:
             path = prefix + path
             splitPath = path.split('/')
@@ -67,10 +72,6 @@ def createMetadata(paths, releases, appName):
                 metadataClosingTags += '   ' * (pathLength - i) + '</match:recursive-dirs>\n'
             metadata += '   ' * pathLength + '<revalidate>now</revalidate>\n'
             metadata += metadataClosingTags
-
-    metadata += f'<match:recursive-dirs value=\"apps/{appName}\">\n'
-    metadata += '<revalidate>now</revalidate>'
-    metadata += '</match:recursive-dirs>'
     metadata += '</eccu>'
 
     return metadata
