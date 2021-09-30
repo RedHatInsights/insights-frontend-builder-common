@@ -97,12 +97,12 @@ def main():
 
     #get the data to use for cache busting
     try:
-        paths = getYMLFromUrl("https://cloud.redhat.com/config/main.yml").get(appName).get("frontend").get("paths")
+        paths = getYMLFromUrl("https://console.redhat.com/config/main.yml").get(appName).get("frontend").get("paths")
     except:
         print("WARNING: this app has no path, if that's okay ignore this :)")
         return
 
-    releases = getYMLFromUrl("https://cloud.redhat.com/config/releases.yml")
+    releases = getYMLFromUrl("https://console.redhat.com/config/releases.yml")
 
     akamaiPost("/eccu-api/v1/requests", createRequest(paths, releases, appName))
 
