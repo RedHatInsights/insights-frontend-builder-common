@@ -53,7 +53,7 @@ def createMetadata(paths, releases, appName):
 
     #generate the paths XML
     for key in releases:
-        prefix = releases[key].get("prefix")
+        prefix = releases[key].get("content_path_prefix")
         if (prefix == None):
             prefix = ''
         for path in paths:
