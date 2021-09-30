@@ -47,7 +47,7 @@ base_url = "https://" + getHostFromConfig()
 
 #uses the paths for the app and the environments it's released on to generate
 #the XML used in the API request
-def createMetadata(paths, releases):
+def createMetadata(paths, releases, appName):
     #Add the begining XML
     metadata = '<?xml version=\"1.0\"?>\n<!-- Submitted by bustCache.py script automatically -->\n<eccu>\n'
 
@@ -68,6 +68,9 @@ def createMetadata(paths, releases):
             metadata += '   ' * pathLength + '<revalidate>now</revalidate>\n'
             metadata += metadataClosingTags
 
+    metadata += f'<match:recursive-dirs value=\"apps/{appName}\">\n'
+    metadata += '<revalidate>now</revalidate>'
+    metadata += '</match:recursive-dirs>'
     metadata += '</eccu>'
 
     return metadata
@@ -77,7 +80,7 @@ def createRequest(paths, releases, appName):
         "propertyName": "cloud.redhat.com",
         "propertyNameExactMatch": 'true',
         "propertyType": "HOST_HEADER",
-        "metadata": createMetadata(paths, releases),
+        "metadata": createMetadata(paths, releases, appName),
         "notes": "purging cache for new deployment",
         "requestName": f"Invalidate cache for {appName}",
         "statusUpdateEmails": [
