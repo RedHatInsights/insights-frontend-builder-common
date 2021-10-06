@@ -1,5 +1,10 @@
 #!/bin/bash
 
+export LC_ALL=en_US.utf-8
+export LANG=en_US.utf-8
+export IMAGE_TAG=$(git rev-parse --short=7 HEAD)
+export GIT_COMMIT=$(git rev-parse HEAD)
+
 APP_NAME=`node -e 'console.log(require("./package.json").insights.appname)'`
 NPM_INFO="undefined"
 PATTERNFLY_DEPS="undefined"
