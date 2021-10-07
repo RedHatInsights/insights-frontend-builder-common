@@ -47,15 +47,20 @@ base_url = "https://" + getHostFromConfig()
 
 #uses the paths for the app and the environments it's released on to generate
 #the XML used in the API request
-def createMetadata(paths, releases):
+def createMetadata(paths, releases, appName):
     #Add the begining XML
     metadata = '<?xml version=\"1.0\"?>\n<!-- Submitted by bustCache.py script automatically -->\n<eccu>\n'
 
     #generate the paths XML
     for key in releases:
-        prefix = releases[key].get("prefix")
+        prefix = releases[key].get("content_path_prefix")
         if (prefix == None):
             prefix = ''
+        
+        splitPrefix f"apps"
+        metadata += f'<match:recursive-dirs value=\"apps/{prefix + '/'}{appName}\">\n'
+        metadata += '<revalidate>now</revalidate>'
+        metadata += '</match:recursive-dirs>'
         for path in paths:
             path = prefix + path
             splitPath = path.split('/')
@@ -67,7 +72,6 @@ def createMetadata(paths, releases):
                 metadataClosingTags += '   ' * (pathLength - i) + '</match:recursive-dirs>\n'
             metadata += '   ' * pathLength + '<revalidate>now</revalidate>\n'
             metadata += metadataClosingTags
-
     metadata += '</eccu>'
 
     return metadata
@@ -77,7 +81,7 @@ def createRequest(paths, releases, appName):
         "propertyName": "cloud.redhat.com",
         "propertyNameExactMatch": 'true',
         "propertyType": "HOST_HEADER",
-        "metadata": createMetadata(paths, releases),
+        "metadata": createMetadata(paths, releases, appName),
         "notes": "purging cache for new deployment",
         "requestName": f"Invalidate cache for {appName}",
         "statusUpdateEmails": [
@@ -96,13 +100,14 @@ def main():
     initEdgeGridAuth()
 
     #get the data to use for cache busting
+    paths
     try:
-        paths = getYMLFromUrl("https://cloud.redhat.com/config/main.yml").get(appName).get("frontend").get("paths")
+        paths = getYMLFromUrl("https://console.redhat.com/config/main.yml").get(appName).get("frontend").get("paths")
     except:
         print("WARNING: this app has no path, if that's okay ignore this :)")
-        return
+        paths = []
 
-    releases = getYMLFromUrl("https://cloud.redhat.com/config/releases.yml")
+    releases = getYMLFromUrl("https://console.redhat.com/config/releases.yml")
 
     akamaiPost("/eccu-api/v1/requests", createRequest(paths, releases, appName))
 
