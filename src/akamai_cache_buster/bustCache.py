@@ -57,8 +57,9 @@ def createMetadata(paths, releases, appName):
         if (prefix == None):
             prefix = ''
         
-        splitPrefix f"apps"
-        metadata += f'<match:recursive-dirs value=\"apps/{prefix + '/'}{appName}\">\n'
+        splitPrefix = f"apps"
+        prefix += "/"
+        metadata += f'<match:recursive-dirs value=\"apps/{prefix}{appName}\">\n'
         metadata += '<revalidate>now</revalidate>'
         metadata += '</match:recursive-dirs>'
         for path in paths:
@@ -100,7 +101,7 @@ def main():
     initEdgeGridAuth()
 
     #get the data to use for cache busting
-    paths
+    paths = []
     try:
         paths = getYMLFromUrl("https://console.redhat.com/config/main.yml").get(appName).get("frontend").get("paths")
     except:
