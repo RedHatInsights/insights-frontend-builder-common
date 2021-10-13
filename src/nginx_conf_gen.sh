@@ -16,7 +16,7 @@ function generate_nginx_conf() {
   fi
 
   echo "server {
-   listen 80;
+   listen 8000;
    server_name $APP_NAME;
 
    location / {
@@ -24,7 +24,7 @@ function generate_nginx_conf() {
    }
 
    location $PREFIX/apps/$APP_NAME {
-     alias /usr/share/nginx/html;
+     alias /opt/app-root/src;
    }
   }
   " > $APP_ROOT/nginx.conf
@@ -33,8 +33,12 @@ function generate_nginx_conf() {
 function generate_dockerfile() {
   cat << EOF > $APP_ROOT/Dockerfile
 FROM registry.access.redhat.com/ubi8/nginx-118
-COPY ./nginx.conf /etc/nginx/conf.d/default.conf
-COPY . /usr/share/nginx/html
+
+COPY ./nginx.conf /opt/app-root/etc/nginx/conf.d/default.conf
+COPY . /opt/app-root/src
+ADD ./nginx.conf "${NGINX_CONFIGURATION_PATH}"
+
+CMD ["nginx", "-g", "daemon off;"]
 EOF
 }
 
