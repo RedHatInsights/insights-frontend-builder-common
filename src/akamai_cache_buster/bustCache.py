@@ -53,19 +53,20 @@ def createMetadata(paths, releases, appName):
 
     #generate the paths XML
     for key in releases:
+        # generate JS/CSS assets paths
         prefix = releases[key].get("content_path_prefix")
         if (prefix == None):
             prefix = '/'
         splitPrefix = f"apps{prefix}/{appName}".split('/')
         splitPrefix = list(filter(len, splitPrefix))
         splitPrefixLength = len(splitPrefix)
-        print(splitPrefix)
         closingTag = ''
         for i in range(0, splitPrefixLength):
-          metadata += '    ' * i + f'<match:recursive-dirs value=\"{splitPrefix[i]}\">\n'
-          closingTag += '    ' * (splitPrefixLength - i - 1) +'</match:recursive-dirs>\n'
+            metadata += '    ' * i + f'<match:recursive-dirs value=\"{splitPrefix[i]}\">\n'
+            closingTag += '    ' * (splitPrefixLength - i - 1) +'</match:recursive-dirs>\n'
         metadata += '    ' * (i + 1) + '<revalidate>now</revalidate>\n'
         metadata += closingTag
+        # generate HTML paths
         for path in paths:
             path = prefix + path
             splitPath = path.split('/')
@@ -79,8 +80,20 @@ def createMetadata(paths, releases, appName):
                 metadataClosingTags += '   ' * (pathLength - i - 1) + '</match:recursive-dirs>\n'
             metadata += '   ' * pathLength + '<revalidate>now</revalidate>\n'
             metadata += metadataClosingTags
+      # generate chrome JSON config paths
+        prefix = releases[key].get("content_path_prefix")
+        if (prefix == None):
+            prefix = ''
+        chromeConfigPath = f'{prefix}/config/chrome'.split('/')
+        chromeSplitPath = list(filter(len, chromeConfigPath))
+        chromeSplitPathLen = len(chromeSplitPath)
+        metadataClosingTags = ''
+        for i in range(0, chromeSplitPathLen):
+            metadata += '    ' * i + f'<match:recursive-dirs value=\"{chromeSplitPath[i]}\">\n'
+            metadataClosingTags += '    ' * (chromeSplitPathLen - i - 1) +'</match:recursive-dirs>\n'
+        metadata += '    ' * (i + 1) + '<revalidate>now</revalidate>\n'
+        metadata += metadataClosingTags
     metadata += '</eccu>'
-
     
     return metadata
 
