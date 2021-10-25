@@ -55,26 +55,33 @@ def createMetadata(paths, releases, appName):
     for key in releases:
         prefix = releases[key].get("content_path_prefix")
         if (prefix == None):
-            prefix = ''
-        
-        splitPrefix = f"apps"
-        prefix += "/"
-        metadata += f'<match:recursive-dirs value=\"apps/{prefix}{appName}\">\n'
-        metadata += '<revalidate>now</revalidate>'
-        metadata += '</match:recursive-dirs>'
+            prefix = '/'
+        splitPrefix = f"apps{prefix}/{appName}".split('/')
+        splitPrefix = list(filter(len, splitPrefix))
+        splitPrefixLength = len(splitPrefix)
+        print(splitPrefix)
+        closingTag = ''
+        for i in range(0, splitPrefixLength):
+          metadata += '    ' * i + f'<match:recursive-dirs value=\"{splitPrefix[i]}\">\n'
+          closingTag += '    ' * (splitPrefixLength - i - 1) +'</match:recursive-dirs>\n'
+        metadata += '    ' * (i + 1) + '<revalidate>now</revalidate>\n'
+        metadata += closingTag
         for path in paths:
             path = prefix + path
             splitPath = path.split('/')
+            splitPath = list(filter(len, splitPath))
             metadataClosingTags = ''
             pathLength = len(splitPath)
             #create opening and closing tags
-            for i in range(1, pathLength):
+
+            for i in range(0, pathLength):
                 metadata += '   ' * i + f'<match:recursive-dirs value=\"{splitPath[i]}\">\n'
-                metadataClosingTags += '   ' * (pathLength - i) + '</match:recursive-dirs>\n'
+                metadataClosingTags += '   ' * (pathLength - i - 1) + '</match:recursive-dirs>\n'
             metadata += '   ' * pathLength + '<revalidate>now</revalidate>\n'
             metadata += metadataClosingTags
     metadata += '</eccu>'
 
+    
     return metadata
 
 def createRequest(paths, releases, appName):
