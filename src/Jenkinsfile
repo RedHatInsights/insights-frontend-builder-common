@@ -57,14 +57,11 @@ node {
       }
       
       //Clear the cache for the app being deployed
-      openShiftUtils.withNode(image: "docker-registry.default.svc:5000/jenkins/jenkins-slave-base-centos7-python36:latest") {
+      openShiftUtils.withNode(image: "quay.io/redhatqe/jenkins-slave-python36-akamai:v3.11") {
         //install python dependencies
-        sh "curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py"
-        sh "python3 get-pip.py --user"
         sh "wget https://raw.githubusercontent.com/RedHatInsights/insights-frontend-builder-common/master/src/akamai_cache_buster/bustCache.py"
         sh "wget https://raw.githubusercontent.com/RedHatInsights/insights-frontend-builder-common/master/src/akamai_cache_buster/requirements.txt"
-        sh "python3 -m pip install --user -r requirements.txt"
-        sh "export PATH=$PATH:/home/jenkins/.local/bin"
+        sh "pip install -r requirements.txt"
         withCredentials([file(credentialsId: "jenkins-eccu-cache-purge", variable: 'EDGERC')]) {
           //path to .edgerc file is now set to $EDGERC"
           //Bust the current cache
