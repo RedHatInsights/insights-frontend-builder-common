@@ -13,6 +13,8 @@ def getYMLFromUrl(url):
 
 #main
 def main():
+    # disable the purge until the docker image is fixed
+    return
     print(f'Cache purge started with: {sys.argv}')
     edgeRcPath = sys.argv[1]
     appName = sys.argv[2]
