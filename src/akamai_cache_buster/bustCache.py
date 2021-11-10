@@ -13,7 +13,6 @@ def getYMLFromUrl(url):
 
 #main
 def main():
-    print(f'Cache purge started with: {sys.argv}')
     edgeRcPath = sys.argv[1]
     appName = sys.argv[2]
     branch = sys.argv[3]
