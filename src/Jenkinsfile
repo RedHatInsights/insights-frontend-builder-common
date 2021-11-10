@@ -57,7 +57,7 @@ node {
       }
       
       //Clear the cache for the app being deployed
-      openShiftUtils.withNode(image: "quay.io/redhatqe/jenkins-slave-python36-akamai:v3.11") {
+      openShiftUtils.withJnlpNode(image: "quay.io/redhatqe/jenkins-slave-python36-akamai:v3.11") {
         //install python dependencies
         sh "wget https://raw.githubusercontent.com/RedHatInsights/insights-frontend-builder-common/master/src/akamai_cache_buster/bustCache.py"
         sh "wget https://raw.githubusercontent.com/RedHatInsights/insights-frontend-builder-common/master/src/akamai_cache_buster/requirements.txt"
