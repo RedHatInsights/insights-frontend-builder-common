@@ -92,5 +92,5 @@ fi
 if [[ -f ./app.info.json ]]; then
   echo "app.info.json already exists, skipping generation"
 else
-  generate_app_info()
+  generate_app_info
 fi
