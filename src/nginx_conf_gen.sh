@@ -47,13 +47,18 @@ function generate_app_info() {
   then
     LINES=`npm list --silent --depth=0 --production | grep @patternfly -i | sed -E "s/^(.{0})(.{4})/\1/" | tr "\n" "," | sed -E "s/,/\",\"/g"`
     PATTERNFLY_DEPS="[\"${LINES%???}\"]"
-  else PATTERNFLY_DEPS="[]"
+    LINES=`npm list --silent --depth=0 --production | grep @redhat-cloud-services -i | sed -E "s/^(.{0})(.{4})/\1/" | tr "\n" "," | sed -E "s/,/\",\"/g"`
+    RH_CLOUD_SERVICES_DEPS="[\"${LINES%???}\"]"
+  else
+    PATTERNFLY_DEPS="[]"
+    RH_CLOUD_SERVICES_DEPS="[]"
   fi
 
   echo "{
     \"app_name\": \"$APP_NAME\",
     \"src_hash\": \"$GIT_COMMIT\",
     \"patternfly_dependencies\": $PATTERNFLY_DEPS,
+    \"rh_cloud_services_dependencies\": $RH_CLOUD_SERVICES_DEPS
   }" > ./app.info.json
 }
 
