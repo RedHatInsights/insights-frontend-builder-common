@@ -16,16 +16,16 @@ function generate_nginx_conf() {
   fi
 
   echo "server {
-   listen 8000;
-   server_name $APP_NAME;
+    listen 8000;
+    server_name $APP_NAME;
 
-   location / {
-    try_files \$uri \$uri/ $PREFIX/apps/chrome/index.html;
-   }
+    location / {
+      try_files \$uri \$uri/ $PREFIX/apps/chrome/index.html;
+    }
 
-   location $PREFIX/apps/$APP_NAME {
-     alias /opt/app-root/src;
-   }
+    location $PREFIX/apps/$APP_NAME {
+      alias /opt/app-root/src;
+    }
   }
   " > $APP_ROOT/nginx.conf
 }
@@ -75,7 +75,6 @@ else
 fi
 
 # Generate app info and app info deps
-
 if [[ -n "$APP_BUILD_DIR" &&  -d $APP_BUILD_DIR ]]
 then
     cd $APP_BUILD_DIR
