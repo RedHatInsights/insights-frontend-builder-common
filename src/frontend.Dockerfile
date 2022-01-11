@@ -1,9 +1,9 @@
 FROM registry.access.redhat.com/ubi8/ubi:8.5-214
 USER 0
-RUN dnf install -y openssh-clients git docker jq curl tar 
-RUN useradd -ms /bin/bash builder
-RUN mkdir -p /container_workspace
-RUN chown -R builder:builder /container_workspace
+RUN dnf install -y openssh-clients git curl tar
+RUN useradd -ms /bin/bash builder && \
+    mkdir -p /container_workspace && \
+    chown -R builder:builder /container_workspace
 USER builder
 RUN touch ~/.bash_profile && chmod +x ~/.bash_profile && mkdir -p /home/builder/.nvm
 
@@ -16,11 +16,8 @@ RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.1/install.sh | b
     && nvm install 12 \ 
     && nvm use 12
 
-# Setup cache dir for jest
-# ENV TMPDIR='/home/builder'
 COPY --chown=builder:builder ./nginx_conf_gen.sh /container_workspace
 COPY --chown=builder:builder ./quay_push.sh /container_workspace
 COPY --chown=builder:builder ./universal_build.sh /container_workspace
-# RUN chmod 775 /container_workspace/universal_build.sh
 WORKDIR /container_workspace
 ENTRYPOINT ["/container_workspace/universal_build.sh"]
