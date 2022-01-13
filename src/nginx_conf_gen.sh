@@ -18,14 +18,17 @@ function generate_nginx_conf() {
     listen 8000;
     server_name $APP_NAME;
     error_log stderr;
+    access_log /dev/stdout;
 
     location / {
       try_files \$uri \$uri/ $PREFIX/apps/chrome/index.html;
     }
 
-    location $PREFIX/apps/$APP_NAME {
-      alias /opt/app-root/src/dist;
+    location ~* ^$PREFIX/apps/$APP_NAME(.*) {
+      alias /opt/app-root/src;
+      try_files \$1 \$1/ /dist/\$1 /dist/\$1/;
     }
+
   }
   " > $APP_ROOT/nginx.conf
 }
