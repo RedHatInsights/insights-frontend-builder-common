@@ -3,7 +3,10 @@
 # --------------------------------------------
 # Export vars for helper scripts to use
 # --------------------------------------------
+export APP_NAME=$(node -e 'console.log(require("./package.json").insights.appname)')
 export CONTAINER_NAME="$APP_NAME-pr-check-$ghprbPullId"
+export IMAGE="quay.io/cloudservices/$COMPONENT-frontend"
+export IMAGE_TAG=$(git rev-parse --short=7 HEAD)
 COMMON_BUILDER=https://raw.githubusercontent.com/RedHatInsights/insights-frontend-builder-common/master
 
 function teardown_docker() {
@@ -20,7 +23,8 @@ docker run -i --name $CONTAINER_NAME \
   -v $PWD:/workspace:ro,Z \
   -e QUAY_USER=$QUAY_USER \
   -e QUAY_TOKEN=$QUAY_TOKEN \
-  quay.io/bholifie/frontend-builder:v0.0.16
+  -e NODE_BUILD_VERSION=$NODE_BUILD_VERSION \ 
+  quay.io/bholifie/frontend-builder:v0.0.18
 TEST_RESULT=$?
 
 if [ $TEST_RESULT -ne 0 ]; then

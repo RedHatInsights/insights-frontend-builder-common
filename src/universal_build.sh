@@ -1,6 +1,6 @@
 #!/bin/bash
 
-NODE_DEFAULT_VERSION=12
+NODE_DEFAULT_VERSION=16
 # Grab the Jenkins workspace
 # /workspace is mounted by the container
 # /container_workspace is created by the Dockerfile
@@ -10,7 +10,7 @@ cd /container_workspace
 # nvm is not a binary, but an alias that needs to be sourced.
 source ~/.bash_profile
 if [[ -z $NODE_BUILD_VERSION ]]; then
-    echo "Using Node 12 by default; use NODE_BUILD_VERSION to override."
+    echo "Using Node ${NODE_DEFAULT_VERSION} by default; use NODE_BUILD_VERSION to override."
     nvm install $NODE_DEFAULT_VERSION && nvm use $NODE_DEFAULT_VERSION
 else 
     nvm install $NODE_BUILD_VERSION && nvm use $NODE_BUILD_VERSION

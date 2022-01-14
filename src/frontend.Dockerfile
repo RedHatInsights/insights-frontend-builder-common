@@ -13,8 +13,8 @@ RUN touch ~/.bash_profile && chmod +x ~/.bash_profile && mkdir -p /home/builder/
 ENV NVM_DIR="/home/builder/.nvm"
 RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.1/install.sh | bash \
     && . $NVM_DIR/nvm.sh \
-    && nvm install 12 \ 
-    && nvm use 12
+    && nvm install 16 \ 
+    && nvm use 16
 
 COPY --chown=builder:builder ./nginx_conf_gen.sh /container_workspace
 COPY --chown=builder:builder ./quay_push.sh /container_workspace
