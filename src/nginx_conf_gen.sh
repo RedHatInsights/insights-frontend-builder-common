@@ -45,6 +45,13 @@ function generate_dockerfile() {
 EOF
 }
 
+function generate_docker_ignore() {
+  cat << EOF > $APP_ROOT/.dockerignore
+  node_modules
+  .git
+EOF
+}
+
 function generate_app_info() {
   if [[ -f package-lock.json ]] || [[ -f yarn.lock ]];
   then
@@ -75,6 +82,12 @@ if [[ -f $APP_ROOT/Dockerfile ]]; then
   echo "Dockerfile already exists, skipping generation"
 else
   generate_dockerfile
+fi
+
+if [[ -f $APP_ROOT/.dockerignore ]]; then
+  echo "Docker ignore already exists, skipping generation"
+else
+  generate_docker_ignore
 fi
 
 # Generate app info and app info deps
