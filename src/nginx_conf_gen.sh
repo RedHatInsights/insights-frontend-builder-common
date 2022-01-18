@@ -2,7 +2,6 @@
 
 export LC_ALL=en_US.utf-8
 export LANG=en_US.utf-8
-export IMAGE_TAG=$(git rev-parse --short=7 HEAD)
 export GIT_COMMIT=$(git rev-parse HEAD)
 
 APP_NAME=`node -e 'console.log(require("./package.json").insights.appname)'`
@@ -14,31 +13,42 @@ function generate_nginx_conf() {
   if [[ "${TRAVIS_BRANCH}" = "master" ||  "${TRAVIS_BRANCH}" = "main" || "${TRAVIS_BRANCH}" =~ "beta" ]]; then
     PREFIX="/beta"
   fi
-
+  
   echo "server {
-   listen 8000;
-   server_name $APP_NAME;
+    listen 8000;
+    server_name $APP_NAME;
+    error_log stderr;
+    access_log /dev/stdout;
 
-   location / {
-    try_files \$uri \$uri/ $PREFIX/apps/chrome/index.html;
-   }
+    location / {
+      try_files \$uri \$uri/ $PREFIX/apps/chrome/index.html;
+    }
 
-   location $PREFIX/apps/$APP_NAME {
-     alias /opt/app-root/src;
-   }
+    location ~* ^$PREFIX/apps/$APP_NAME(.*) {
+      alias /opt/app-root/src;
+      try_files \$1 \$1/ /dist/\$1 /dist/\$1/;
+    }
+
   }
   " > $APP_ROOT/nginx.conf
 }
 
 function generate_dockerfile() {
   cat << EOF > $APP_ROOT/Dockerfile
-FROM registry.access.redhat.com/ubi8/nginx-118
+  FROM registry.access.redhat.com/ubi8/nginx-118
 
-COPY ./nginx.conf /opt/app-root/etc/nginx/conf.d/default.conf
-COPY . /opt/app-root/src
-ADD ./nginx.conf "\${NGINX_CONFIGURATION_PATH}"
+  COPY ./nginx.conf /opt/app-root/etc/nginx/conf.d/default.conf
+  COPY . /opt/app-root/src
+  ADD ./nginx.conf "\${NGINX_CONFIGURATION_PATH}"
 
-CMD ["nginx", "-g", "daemon off;"]
+  CMD ["nginx", "-g", "daemon off;"]
+EOF
+}
+
+function generate_docker_ignore() {
+  cat << EOF > $APP_ROOT/.dockerignore
+  node_modules
+  .git
 EOF
 }
 
@@ -53,19 +63,19 @@ function generate_app_info() {
     PATTERNFLY_DEPS="[]"
     RH_CLOUD_SERVICES_DEPS="[]"
   fi
-
+  
   echo "{
-    \"app_name\": \"$APP_NAME\",
-    \"src_hash\": \"$GIT_COMMIT\",
-    \"patternfly_dependencies\": $PATTERNFLY_DEPS,
-    \"rh_cloud_services_dependencies\": $RH_CLOUD_SERVICES_DEPS
+  \"app_name\": \"$APP_NAME\",
+  \"src_hash\": \"$GIT_COMMIT\",
+  \"patternfly_dependencies\": $PATTERNFLY_DEPS,
+  \"rh_cloud_services_dependencies\": $RH_CLOUD_SERVICES_DEPS
   }" > ./app.info.json
 }
 
 if [[ -f $APP_ROOT/nginx.conf ]]; then
-  echo "nginx config already exists, skipping generation"
+    echo "nginx config already exists, skipping generation"
 else
-  generate_nginx_conf
+    generate_nginx_conf
 fi
 
 if [[ -f $APP_ROOT/Dockerfile ]]; then
@@ -74,13 +84,18 @@ else
   generate_dockerfile
 fi
 
-# Generate app info and app info deps
+if [[ -f $APP_ROOT/.dockerignore ]]; then
+  echo "Docker ignore already exists, skipping generation"
+else
+  generate_docker_ignore
+fi
 
+# Generate app info and app info deps
 if [[ -n "$APP_BUILD_DIR" &&  -d $APP_BUILD_DIR ]]
 then
-    cd $APP_BUILD_DIR
+  cd $APP_BUILD_DIR
 else
-    cd dist || cd build
+  cd dist || cd build
 fi
 
 if [[ -f ./app.info.deps.json ]]; then
