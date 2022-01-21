@@ -15,7 +15,7 @@ function teardown_docker() {
 
 trap "teardown_docker" EXIT SIGINT SIGTERM
 
-set -ex
+set -exv
 # NOTE: Make sure this volume is mounted 'ro', otherwise Jenkins cannot clean up the
 # workspace due to file permission errors; the Z is used for SELinux workarounds
 # -e NODE_BUILD_VERSION can be used to specify a version other than 12
@@ -36,6 +36,7 @@ if [ $TEST_RESULT -ne 0 ]; then
 fi
 
 # Extract files needed to build contianer
+echo $WORKSPACE
 mkdir -p $WORKSPACE/build
 docker cp $CONTAINER_NAME:/container_workspace/ $WORKSPACE/build
 cd $WORKSPACE/build/container_workspace/ && export APP_ROOT="$WORKSPACE/build/container_workspace/"
