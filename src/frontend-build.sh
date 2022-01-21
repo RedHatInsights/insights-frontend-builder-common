@@ -27,6 +27,8 @@ docker run -i --name $CONTAINER_NAME \
   quay.io/bholifie/frontend-builder:v0.0.19
 TEST_RESULT=$?
 
+echo $TEST_RESULT
+
 if [ $TEST_RESULT -ne 0 ]; then
   echo "Test failure observed; aborting"
   teardown_docker
