@@ -41,7 +41,12 @@ cd $WORKSPACE/build/container_workspace/ && export APP_ROOT="$WORKSPACE/build/co
 # ---------------------------
 # Build and Publish to Quay
 # ---------------------------
-echo "LABEL quay.expires-after=3d" >> $APP_ROOT/Dockerfile # tag expires in 3 days
+
+# Set expiry for PR images
+if [[ $ghprbPullId -ne "master" ]] || [[ $ghprbPullId -ne "main" ]]; then
+  echo "LABEL quay.expires-after=3d" >> $APP_ROOT/Dockerfile # tag expires in 3 days
+fi
+
 curl -sSL $COMMON_BUILDER/src/quay_push.sh | bash -s
 
 teardown_docker
