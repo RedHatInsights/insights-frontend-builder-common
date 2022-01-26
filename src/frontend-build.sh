@@ -8,6 +8,7 @@ export CONTAINER_NAME="$APP_NAME-pr-check-$ghprbPullId"
 export IMAGE="quay.io/cloudservices/$COMPONENT-frontend"
 export IMAGE_TAG=$(git rev-parse --short=7 HEAD)
 COMMON_BUILDER=https://raw.githubusercontent.com/RedHatInsights/insights-frontend-builder-common/master
+export MAIN_BRANCHES="main master devel"
 
 function teardown_docker() {
   docker rm -f $CONTAINER_NAME || true
@@ -41,7 +42,14 @@ cd $WORKSPACE/build/container_workspace/ && export APP_ROOT="$WORKSPACE/build/co
 # ---------------------------
 # Build and Publish to Quay
 # ---------------------------
-echo "LABEL quay.expires-after=3d" >> $APP_ROOT/Dockerfile # tag expires in 3 days
+
+# Set expiry for PR images
+if echo $MAIN_BRANCHES | grep -w $GIT_BRANCH > /dev/null; then
+  echo "Publishing to Quay without expiration"
+else
+  echo "LABEL quay.expires-after=3d" >> $APP_ROOT/Dockerfile # tag expires in 3 days
+fi
+
 curl -sSL $COMMON_BUILDER/src/quay_push.sh | bash -s
 
 teardown_docker
