@@ -9,7 +9,6 @@ export IMAGE="quay.io/cloudservices/$COMPONENT-frontend"
 export IMAGE_TAG=$(git rev-parse --short=7 HEAD)
 export IS_PR=true
 COMMON_BUILDER=https://raw.githubusercontent.com/RedHatInsights/insights-frontend-builder-common/master
-export MAIN_BRANCHES="main master devel"
 
 function teardown_docker() {
   docker rm -f $CONTAINER_NAME || true
@@ -17,7 +16,9 @@ function teardown_docker() {
 
 trap "teardown_docker" EXIT SIGINT SIGTERM
 
-if echo $MAIN_BRANCHES | grep -w $GIT_BRANCH > /dev/null; then
+# Job name will container pr-check or build-master. $GIT_BRANCH is not populated on a
+# manually triggered build
+if echo $JOB_NAME | grep -w "build-master" > /dev/null; then
   CONTAINER_NAME="$APP_NAME-build-main"
   IS_PR=false
 fi
