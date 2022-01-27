@@ -9,6 +9,7 @@ export IMAGE="quay.io/cloudservices/$COMPONENT-frontend"
 export IMAGE_TAG=$(git rev-parse --short=7 HEAD)
 export IS_PR=true
 COMMON_BUILDER=https://raw.githubusercontent.com/RedHatInsights/insights-frontend-builder-common/master
+export MAIN_BRANCHES="main master devel"
 
 function teardown_docker() {
   docker rm -f $CONTAINER_NAME || true

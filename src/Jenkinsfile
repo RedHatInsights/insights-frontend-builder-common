@@ -45,7 +45,7 @@ node {
            eval `ssh-agent`
            ssh-add \"$privateKeyFile\"
            cp $AKAMAI_HOST_KEY ~/.ssh/known_hosts
-           chmod 600 ~/.ssh/known_hosts
+           chmod 600 ~/.ssh/known_hosts ~/.ssh/config
            n=0
            until [ \$n -ge 10 ]
            do
