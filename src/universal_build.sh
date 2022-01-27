@@ -19,6 +19,12 @@ export APP_NAME=`node -e 'console.log(require("./package.json").insights.appname
 export APP_ROOT=/container_workspace
 
 set -exv
+
 npm ci
-npm run verify
+echo $IS_PR
+if [ $IS_PR ]; then
+    npm run verify
+else
+    npm run build
+fi
 source /container_workspace/nginx_conf_gen.sh
