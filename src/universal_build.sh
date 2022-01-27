@@ -21,7 +21,7 @@ export APP_ROOT=/container_workspace
 set -exv
 
 npm ci
-echo $IS_PR
+
 if [ $IS_PR ]; then
     npm run verify
 else
