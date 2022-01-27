@@ -24,7 +24,7 @@ docker run -i --name $CONTAINER_NAME \
   -e QUAY_USER=$QUAY_USER \
   -e QUAY_TOKEN=$QUAY_TOKEN \
   -e NODE_BUILD_VERSION=$NODE_BUILD_VERSION \
-  quay.io/bholifie/frontend-builder:v0.0.19
+  quay.io/bholifie/frontend-builder:v0.0.20
 TEST_RESULT=$?
 
 if [ $TEST_RESULT -ne 0 ]; then
