@@ -7,6 +7,7 @@ export APP_NAME=$(node -e 'console.log(require("./package.json").insights.appnam
 export CONTAINER_NAME="$APP_NAME-pr-check-$ghprbPullId"
 export IMAGE="quay.io/cloudservices/$COMPONENT-frontend"
 export IMAGE_TAG=$(git rev-parse --short=7 HEAD)
+export IS_PR=true
 COMMON_BUILDER=https://raw.githubusercontent.com/RedHatInsights/insights-frontend-builder-common/master
 export MAIN_BRANCHES="main master devel"
 
@@ -16,6 +17,11 @@ function teardown_docker() {
 
 trap "teardown_docker" EXIT SIGINT SIGTERM
 
+if echo $MAIN_BRANCHES | grep -w $GIT_BRANCH > /dev/null; then
+  CONTAINER_NAME="$APP_NAME-build-main"
+  IS_PR=false
+fi
+
 set -ex
 # NOTE: Make sure this volume is mounted 'ro', otherwise Jenkins cannot clean up the
 # workspace due to file permission errors; the Z is used for SELinux workarounds
@@ -24,6 +30,7 @@ docker run -i --name $CONTAINER_NAME \
   -v $PWD:/workspace:ro,Z \
   -e QUAY_USER=$QUAY_USER \
   -e QUAY_TOKEN=$QUAY_TOKEN \
+  -e IS_PR=$IS_PR \
   -e NODE_BUILD_VERSION=$NODE_BUILD_VERSION \
   quay.io/bholifie/frontend-builder:v0.0.19
 TEST_RESULT=$?
@@ -43,11 +50,10 @@ cd $WORKSPACE/build/container_workspace/ && export APP_ROOT="$WORKSPACE/build/co
 # Build and Publish to Quay
 # ---------------------------
 
-# Set expiry for PR images
-if echo $MAIN_BRANCHES | grep -w $GIT_BRANCH > /dev/null; then
-  echo "Publishing to Quay without expiration"
-else
+if [ $IS_PR = true ]; then
   echo "LABEL quay.expires-after=3d" >> $APP_ROOT/Dockerfile # tag expires in 3 days
+else
+  echo "Publishing to Quay without expiration"
 fi
 
 curl -sSL $COMMON_BUILDER/src/quay_push.sh | bash -s
