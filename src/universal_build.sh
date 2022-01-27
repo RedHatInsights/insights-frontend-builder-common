@@ -22,7 +22,7 @@ set -exv
 
 npm ci
 
-if [ $IS_PR ]; then
+if [ $IS_PR = true ]; then
     npm run verify
 else
     npm run build

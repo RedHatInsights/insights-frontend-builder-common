@@ -50,7 +50,7 @@ cd $WORKSPACE/build/container_workspace/ && export APP_ROOT="$WORKSPACE/build/co
 # Build and Publish to Quay
 # ---------------------------
 
-if [ $IS_PR ]; then
+if [ $IS_PR = true ]; then
   echo "LABEL quay.expires-after=3d" >> $APP_ROOT/Dockerfile # tag expires in 3 days
 else
   echo "Publishing to Quay without expiration"
