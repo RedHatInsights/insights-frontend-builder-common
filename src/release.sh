@@ -4,6 +4,7 @@ set -x
 
 SRC_HASH=`git rev-parse --verify HEAD`
 APP_NAME=`node -e 'console.log(require("./package.json").insights.appname)'`
+NODE_VERSION=`node -e 'console.log(require("./package.json")?.engines?.node || "unknown")'`
 
 NPM_INFO="undefined"
 # if [ -f package.json ]
@@ -37,6 +38,7 @@ echo $NPM_INFO > ./app.info.deps.json
 
 echo "{
   \"app_name\": \"$APP_NAME\",
+  \"node_version\": \"$NODE_VERSION\",
   \"src_hash\": \"$SRC_HASH\",
   \"src_tag\": \"$TRAVIS_TAG\",
   \"src_branch\": \"$TRAVIS_BRANCH\",
