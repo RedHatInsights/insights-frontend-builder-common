@@ -3,8 +3,8 @@ set -e
 set -x
 
 SRC_HASH=`git rev-parse --verify HEAD`
-APP_NAME=`node -e 'console.log(require("./package.json").insights.appname)'`
-NODE_VERSION=`node -e 'console.log(require("./package.json")?.engines?.node || "unknown")'`
+APP_NAME=$(node -e "console.log(require(\"${WORKSPACE:-.}/package.json\").insights.appname)")
+NODE_VERSION=$(node -e "console.log(require(\"${WORKSPACE:-.}/package.json\")?.engines?.node || \"unknown\")")
 
 NPM_INFO="undefined"
 # if [ -f package.json ]

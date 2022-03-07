@@ -31,6 +31,7 @@ docker run -i --name $CONTAINER_NAME \
   -v $PWD:/workspace:ro,Z \
   -e QUAY_USER=$QUAY_USER \
   -e QUAY_TOKEN=$QUAY_TOKEN \
+  -e WORKSPACE=$WORKSPACE \
   -e IS_PR=$IS_PR \
   -e NODE_BUILD_VERSION=$NODE_BUILD_VERSION \
   quay.io/cloudservices/frontend-build-container:35301fc
