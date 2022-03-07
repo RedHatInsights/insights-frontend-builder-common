@@ -4,7 +4,7 @@ export LC_ALL=en_US.utf-8
 export LANG=en_US.utf-8
 export GIT_COMMIT=$(git rev-parse HEAD)
 
-APP_NAME=`node -e 'console.log(require("./package.json").insights.appname)'`
+APP_NAME=$(node -e "console.log(require(\"${WORKSPACE:-.}/package.json\").insights.appname)")
 NPM_INFO="undefined"
 PATTERNFLY_DEPS="undefined"
 
