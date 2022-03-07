@@ -33,7 +33,7 @@ docker run -i --name $CONTAINER_NAME \
   -e QUAY_TOKEN=$QUAY_TOKEN \
   -e IS_PR=$IS_PR \
   -e NODE_BUILD_VERSION=$NODE_BUILD_VERSION \
-  quay.io/cloudservices/frontend-build-container:8ab923a
+  quay.io/cloudservices/frontend-build-container:35301fc
 TEST_RESULT=$?
 
 if [ $TEST_RESULT -ne 0 ]; then
