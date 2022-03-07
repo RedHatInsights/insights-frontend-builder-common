@@ -3,7 +3,7 @@
 # --------------------------------------------
 # Export vars for helper scripts to use
 # --------------------------------------------
-export APP_NAME=$(node -e 'console.log(require("./package.json").insights.appname)')
+export APP_NAME=$(node -e "console.log(require(\"${WORKSPACE:-.}/package.json\").insights.appname)")
 export CONTAINER_NAME="$APP_NAME-pr-check-$ghprbPullId"
 export IMAGE="quay.io/cloudservices/$COMPONENT-frontend"
 export IMAGE_TAG=$(git rev-parse --short=7 HEAD)
