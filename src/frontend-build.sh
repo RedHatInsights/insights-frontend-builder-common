@@ -18,7 +18,7 @@ trap "teardown_docker" EXIT SIGINT SIGTERM
 
 # Job name will container pr-check or build-master. $GIT_BRANCH is not populated on a
 # manually triggered build
-if echo $JOB_NAME | grep -w "build-master" > /dev/null; then
+if echo $JOB_NAME | grep -w "build-master" > /dev/null || echo $JOB_NAME | grep -w "build-main" > /dev/null; then
   CONTAINER_NAME="$APP_NAME-build-main"
   IS_PR=false
 fi
