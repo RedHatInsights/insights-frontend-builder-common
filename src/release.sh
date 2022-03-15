@@ -8,6 +8,7 @@ NODE_VERSION=$(node -e "console.log(require(\"${WORKSPACE:-.}/package.json\")?.e
 
 major_version=0
 # Get the major version of node
+OLDIFS=$IFS
 IFS='.'
 read -a versionarr <<< "$NODE_VERSION"
 major_version=${versionarr[0]/>=/}
@@ -19,7 +20,7 @@ else
         echo "You are using outdated version of node! Please update to LTS. Current version: $NODE_VERSION"
     fi
 fi
-
+IFS=$OLDIFS
 
 
 NPM_INFO="undefined"
