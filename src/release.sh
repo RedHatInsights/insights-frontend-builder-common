@@ -6,6 +6,22 @@ SRC_HASH=`git rev-parse --verify HEAD`
 APP_NAME=$(node -e "console.log(require(\"${WORKSPACE:-.}/package.json\").insights.appname)")
 NODE_VERSION=$(node -e "console.log(require(\"${WORKSPACE:-.}/package.json\")?.engines?.node || \"unknown\")")
 
+major_version=0
+# Get the major version of node
+IFS='.'
+read -a versionarr <<< "$NODE_VERSION"
+major_version=${versionarr[0]/>=/}
+
+if [[ $major_version == unknown ]]; then
+    echo "No node version specified in package.json -> engines!"
+else
+    if [ $major_version -lt 16 ]; then
+        echo "You are using outdated version of node! Please update to LTS. Current version: $NODE_VERSION"
+    fi
+fi
+
+
+
 NPM_INFO="undefined"
 # if [ -f package.json ]
 # then
