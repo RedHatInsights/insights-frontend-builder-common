@@ -21,6 +21,7 @@ def main():
         domain = 'https://console.redhat.com'
     entryBase = f'/apps/{appName}'
     fedModsBase = f'{entryBase}/fed-mods.json'
+    templateBase = f'{entryBase}/index.html'
     #get the data to use for cache busting
     paths = []
     try:
@@ -39,6 +40,7 @@ def main():
         if (prefix == None):
             prefix = ''
         purgeSuffixes.append(f'{prefix}{fedModsBase}')
+        purgeSuffixes.append(f'{prefix}{templateBase}')
         for path in paths:
             purgeSuffixes.append(f'{prefix}{path}')
     
