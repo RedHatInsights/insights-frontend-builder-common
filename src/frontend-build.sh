@@ -5,7 +5,7 @@
 # --------------------------------------------
 export APP_NAME=$(node -e "console.log(require(\"${WORKSPACE:-.}${APP_DIR:-}/package.json\").insights.appname)")
 export CONTAINER_NAME="$APP_NAME-pr-check-$ghprbPullId"
-export IMAGE="quay.io/cloudservices/$COMPONENT-frontend"
+# main IMAGE var is exported from the pr_check.sh parent file
 export IMAGE_TAG=$(git rev-parse --short=7 HEAD)
 export IS_PR=true
 COMMON_BUILDER=https://raw.githubusercontent.com/RedHatInsights/insights-frontend-builder-common/master
@@ -16,7 +16,7 @@ function teardown_docker() {
 
 trap "teardown_docker" EXIT SIGINT SIGTERM
 
-# Job name will container pr-check or build-master. $GIT_BRANCH is not populated on a
+# Job name will contain pr-check or build-master. $GIT_BRANCH is not populated on a
 # manually triggered build
 if echo $JOB_NAME | grep -w "build-master" > /dev/null || echo $JOB_NAME | grep -w "build-main" > /dev/null; then
   CONTAINER_NAME="$APP_NAME-build-main"
