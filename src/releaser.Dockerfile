@@ -10,6 +10,9 @@ RUN dnf update -y && \
 RUN mkdir -p /root/.ssh && \
         chmod 0777 -R /root/.ssh && \
         chmod 0777 -R /etc/ssh/ssh_config && \
+        mkdir /.npm && \
+        chmod 0777 -R /.npm && \
+        git config --global --add safe.directory '*' && \
         ssh-keyscan github.com >> /etc/ssh/ssh_known_hosts && \
         echo $'Host github.com\n\
   HostName github.com\n\
