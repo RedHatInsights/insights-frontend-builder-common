@@ -35,6 +35,7 @@ docker run -i --name $CONTAINER_NAME \
   -e IS_PR=$IS_PR \
   -e CI_ROOT=$CI_ROOT \
   -e NODE_BUILD_VERSION=$NODE_BUILD_VERSION \
+  -e SERVER_NAME=$SERVER_NAME \
   quay.io/cloudservices/frontend-build-container:d60de0c
 TEST_RESULT=$?
 
