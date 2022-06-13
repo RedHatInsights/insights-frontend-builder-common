@@ -33,10 +33,6 @@ node {
       app_info.build_id = env.BUILD_ID
       writeJSON file: "./app.info.json", json: app_info
 
-      // Send Slack Notification
-      String SLACK_TEXT = "${APP_NAME}/${BRANCH} [STATUS] - Deploy build ${app_info.build_id} started for GIT COMMIT ${app_info.build_hash}."
-      slackSend message: SLACK_TEXT, color: 'black', channel: '#insights-bots'
-
       AKAMAI_BASE_PATH = "822386"
       AKAMAI_APP_PATH = "/${AKAMAI_BASE_PATH}/${PREFIX}apps/${APP_NAME}"
 
@@ -71,6 +67,10 @@ node {
           sh "python3 bustCache.py $EDGERC ${APP_NAME} ${BRANCH}"
         }
       }
+
+      // Send Slack Notification
+      String SLACK_TEXT = "${APP_NAME}/${BRANCH} [STATUS] - Deploy build ${app_info.build_id} finished for GIT COMMIT ${app_info.build_hash}."
+      slackSend message: SLACK_TEXT, color: 'black', channel: '#insights-bots'
     }
   }
 }
