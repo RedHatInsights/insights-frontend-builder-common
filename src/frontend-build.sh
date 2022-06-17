@@ -67,8 +67,6 @@ else
   echo "Publishing to Quay without expiration"
 fi
 
-cat $APP_ROOT/Dockerfile
-
 curl -sSL $COMMON_BUILDER/src/quay_push.sh | bash -s
 
 teardown_docker
