@@ -55,7 +55,7 @@ cd $WORKSPACE/build/container_workspace/ && export APP_ROOT="$WORKSPACE/build/co
 # ---------------------------
 
 if [ $IS_PR = true ]; then
-  echo "\n" >> $APP_ROOT/Dockerfile
+  echo $'\n'>> $APP_ROOT/Dockerfile
   # downstream developers may remove newline at end of dockerfile
   # this will result in something like
   #   CMD npm run start:containerLABEL quay.expires-after=3d
