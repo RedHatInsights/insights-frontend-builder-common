@@ -19,7 +19,16 @@ trap "teardown_docker" EXIT SIGINT SIGTERM
 # Job name will contain pr-check or build-master. $GIT_BRANCH is not populated on a
 # manually triggered build
 if echo $JOB_NAME | grep -w "pr-check" > /dev/null; then
-  CONTAINER_NAME="$APP_NAME-pr-check-$ghprbPullId"
+  if [ ! -z "$ghprbPullId" ]; then
+    export IMAGE_TAG="pr-${ghprbPullId}-${IMAGE_TAG}"
+    CONTAINER_NAME="${APP_NAME}-pr-check-${ghprbPullId}"
+  fi
+
+  if [ ! -z "$gitlabMergeRequestIid" ]; then
+    export IMAGE_TAG="pr-${gitlabMergeRequestIid}-${IMAGE_TAG}"
+    CONTAINER_NAME="${APP_NAME}-pr-check-${gitlabMergeRequestIid}"
+  fi
+
   IS_PR=true
 fi
 
@@ -67,6 +76,33 @@ else
   echo "Publishing to Quay without expiration"
 fi
 
-curl -sSL $COMMON_BUILDER/src/quay_push.sh | bash -s
+# source <(curl -sSL $COMMON_BUILDER/src/quay_push.sh | bash -s)
+
+# IMAGE, IMAGE_TAG, and Tokens are exported from upstream pr_check.sh
+export LC_ALL=en_US.utf-8
+export LANG=en_US.utf-8
+export APP_ROOT=${APP_ROOT:-pwd}
+export WORKSPACE=${WORKSPACE:-$APP_ROOT}  # if running in jenkins, use the build's workspace
+# export IMAGE_TAG=$(git rev-parse --short=7 HEAD)
+export GIT_COMMIT=$(git rev-parse HEAD)
+
+
+if [[ -z "$QUAY_USER" || -z "$QUAY_TOKEN" ]]; then
+    echo "QUAY_USER and QUAY_TOKEN must be set"
+    exit 1
+fi
+
+if [[ -z "$RH_REGISTRY_USER" || -z "$RH_REGISTRY_TOKEN" ]]; then
+    echo "RH_REGISTRY_USER and RH_REGISTRY_TOKEN must be set"
+    exit 1
+fi
+
+
+DOCKER_CONF="$PWD/.docker"
+mkdir -p "$DOCKER_CONF"
+echo $QUAY_TOKEN | docker --config="$DOCKER_CONF" login -u="$QUAY_USER" --password-stdin quay.io
+echo $RH_REGISTRY_TOKEN | docker --config="$DOCKER_CONF" login -u="$RH_REGISTRY_USER" --password-stdin registry.redhat.io
+docker --config="$DOCKER_CONF" build -t "${IMAGE}:${IMAGE_TAG}" $APP_ROOT -f $APP_ROOT/Dockerfile
+docker --config="$DOCKER_CONF" push "${IMAGE}:${IMAGE_TAG}"
 
 teardown_docker
