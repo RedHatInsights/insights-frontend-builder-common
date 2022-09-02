@@ -4,10 +4,10 @@
 # Export vars for helper scripts to use
 # --------------------------------------------
 export APP_NAME=$(node -e "console.log(require(\"${WORKSPACE:-.}${APP_DIR:-}/package.json\").insights.appname)")
-export CONTAINER_NAME="$APP_NAME-pr-check-$ghprbPullId"
+export CONTAINER_NAME="$APP_NAME-build-main"
 # main IMAGE var is exported from the pr_check.sh parent file
 export IMAGE_TAG=$(git rev-parse --short=7 HEAD)
-export IS_PR=true
+export IS_PR=false
 COMMON_BUILDER=https://raw.githubusercontent.com/RedHatInsights/insights-frontend-builder-common/master
 
 function teardown_docker() {
@@ -18,9 +18,9 @@ trap "teardown_docker" EXIT SIGINT SIGTERM
 
 # Job name will contain pr-check or build-master. $GIT_BRANCH is not populated on a
 # manually triggered build
-if echo $JOB_NAME | grep -w "build-master" > /dev/null || echo $JOB_NAME | grep -w "build-main" > /dev/null; then
-  CONTAINER_NAME="$APP_NAME-build-main"
-  IS_PR=false
+if echo $JOB_NAME | grep -w "pr-check" > /dev/null; then
+  CONTAINER_NAME="$APP_NAME-pr-check-$ghprbPullId"
+  IS_PR=true
 fi
 
 set -ex
