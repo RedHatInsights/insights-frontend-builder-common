@@ -62,7 +62,7 @@ if [ $IS_PR = true ]; then
   # instead of
   #   CMD npm run start:container
   #   LABEL quay.expires-after=3d
-  echo "LABEL quay.expires-after=3d" >> $APP_ROOT/Dockerfile # tag expires in 3 days
+  # echo "LABEL quay.expires-after=3d" >> $APP_ROOT/Dockerfile # tag expires in 3 days
 else
   echo "Publishing to Quay without expiration"
 fi
