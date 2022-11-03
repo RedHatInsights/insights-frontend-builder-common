@@ -7,6 +7,7 @@ export APP_ROOT=${APP_ROOT:-pwd}
 export WORKSPACE=${WORKSPACE:-$APP_ROOT}  # if running in jenkins, use the build's workspace
 # export IMAGE_TAG=$(git rev-parse --short=7 HEAD)
 export GIT_COMMIT=$(git rev-parse HEAD)
+export LATEST_TAG='latest'
 
 
 if [[ -z "$QUAY_USER" || -z "$QUAY_TOKEN" ]]; then
@@ -24,5 +25,6 @@ DOCKER_CONF="$PWD/.docker"
 mkdir -p "$DOCKER_CONF"
 docker --config="$DOCKER_CONF" login -u="$QUAY_USER" -p="$QUAY_TOKEN" quay.io
 docker --config="$DOCKER_CONF" login -u="$RH_REGISTRY_USER" -p="$RH_REGISTRY_TOKEN" registry.redhat.io
-docker --config="$DOCKER_CONF" build -t "${IMAGE}:${IMAGE_TAG}" $APP_ROOT -f $APP_ROOT/Dockerfile
+docker --config="$DOCKER_CONF" build -t "${IMAGE}:${IMAGE_TAG}" -t "${IMAGE}:${LATEST_TAG}" $APP_ROOT -f $APP_ROOT/Dockerfile
 docker --config="$DOCKER_CONF" push "${IMAGE}:${IMAGE_TAG}"
+docker --config="$DOCKER_CONF" push "${IMAGE}:${LATEST_TAG}"
