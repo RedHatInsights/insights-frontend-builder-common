@@ -16,6 +16,42 @@ function teardown_docker() {
 
 trap "teardown_docker" EXIT SIGINT SIGTERM
 
+# Get the chrome config from cloud-services-config
+function get_chrome_config() {
+  # Create the directory we're gonna plop the config files in
+  if [ -d $APP_ROOT/chrome_config ]; then
+    rm -rf $APP_ROOT/chrome_config;
+  fi
+  mkdir -p $APP_ROOT/chrome_config;
+
+  # If the env var is not set, we don't want to include the config
+  if [ -z ${INCLUDE_CHROME_CONFIG+x} ] ; then
+    return 1
+  fi
+  # If the env var is set to anything but true, we don't want to include the config
+  if [[ "${INCLUDE_CHROME_CONFIG}" != "true" ]]; then
+    return 1
+  fi
+  # If the branch isn't set in the env, we want to use the default
+  if [ -z ${CHROME_CONFIG_BRANCH+x} ] ; then
+    CHROME_CONFIG_BRANCH="ci-stable";
+  fi
+  # belt and braces mate, belt and braces
+  if [ -d $APP_ROOT/cloud-services-config ]; then
+    rm -rf $APP_ROOT/cloud-services-config;
+  fi
+
+  # Clone the config repo
+  git clone --branch $CHROME_CONFIG_BRANCH git@github.com:RedHatInsights/cloud-services-config.git;
+  # Copy the config files into the chrome_config dir
+  cp -r cloud-services-config/chrome/* $APP_ROOT/chrome_config/;
+  # clean up after ourselves? why not
+  rm -rf cloud-services-config;
+  # we're done here
+  return 0
+}
+
+
 # Job name will contain pr-check or build-master. $GIT_BRANCH is not populated on a
 # manually triggered build
 if echo $JOB_NAME | grep -w "pr-check" > /dev/null; then
@@ -60,6 +96,7 @@ fi
 mkdir -p $WORKSPACE/build
 docker cp $CONTAINER_NAME:/container_workspace/ $WORKSPACE/build
 cd $WORKSPACE/build/container_workspace/ && export APP_ROOT="$WORKSPACE/build/container_workspace/"
+get_chrome_config
 
 # ---------------------------
 # Build and Publish to Quay
