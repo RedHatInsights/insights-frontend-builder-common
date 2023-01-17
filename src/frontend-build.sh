@@ -96,7 +96,8 @@ fi
 mkdir -p $WORKSPACE/build
 docker cp $CONTAINER_NAME:/container_workspace/ $WORKSPACE/build
 cd $WORKSPACE/build/container_workspace/ && export APP_ROOT="$WORKSPACE/build/container_workspace/"
-get_chrome_config
+#This is commented out until I figure out how to solve the lack of git creds here
+#get_chrome_config
 
 # ---------------------------
 # Build and Publish to Quay
