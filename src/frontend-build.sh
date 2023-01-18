@@ -26,11 +26,11 @@ function get_chrome_config() {
 
   # If the env var is not set, we don't want to include the config
   if [ -z ${INCLUDE_CHROME_CONFIG+x} ] ; then
-    return 1
+    return 0
   fi
   # If the env var is set to anything but true, we don't want to include the config
   if [[ "${INCLUDE_CHROME_CONFIG}" != "true" ]]; then
-    return 1
+    return 0
   fi
   # If the branch isn't set in the env, we want to use the default
   if [ -z ${CHROME_CONFIG_BRANCH+x} ] ; then
