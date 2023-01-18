@@ -42,7 +42,7 @@ function get_chrome_config() {
   fi
 
   # Clone the config repo
-  git clone --branch $CHROME_CONFIG_BRANCH git@github.com:RedHatInsights/cloud-services-config.git;
+  git clone --branch $CHROME_CONFIG_BRANCH https://github.com/RedHatInsights/cloud-services-config.git;
   # Copy the config files into the chrome_config dir
   cp -r cloud-services-config/chrome/* $APP_ROOT/chrome_config/;
   # clean up after ourselves? why not
@@ -97,7 +97,7 @@ mkdir -p $WORKSPACE/build
 docker cp $CONTAINER_NAME:/container_workspace/ $WORKSPACE/build
 cd $WORKSPACE/build/container_workspace/ && export APP_ROOT="$WORKSPACE/build/container_workspace/"
 #This is commented out until I figure out how to solve the lack of git creds here
-#get_chrome_config
+get_chrome_config
 
 # ---------------------------
 # Build and Publish to Quay
