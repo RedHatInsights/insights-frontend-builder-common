@@ -139,6 +139,7 @@ fi
 
 get_chrome_config
 ls -alsvh
+ls -alsvh chrome_config/
 pwd
 
 
