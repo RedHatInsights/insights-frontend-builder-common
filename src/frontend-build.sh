@@ -96,8 +96,8 @@ fi
 mkdir -p $WORKSPACE/build
 docker cp $CONTAINER_NAME:/container_workspace/ $WORKSPACE/build
 cd $WORKSPACE/build/container_workspace/ && export APP_ROOT="$WORKSPACE/build/container_workspace/"
-#This is commented out until I figure out how to solve the lack of git creds here
-get_chrome_config
+
+
 
 # ---------------------------
 # Build and Publish to Quay
@@ -137,6 +137,7 @@ if [[ -z "$RH_REGISTRY_USER" || -z "$RH_REGISTRY_TOKEN" ]]; then
     exit 1
 fi
 
+get_chrome_config
 
 DOCKER_CONF="$PWD/.docker"
 mkdir -p "$DOCKER_CONF"
