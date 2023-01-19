@@ -138,10 +138,6 @@ if [[ -z "$RH_REGISTRY_USER" || -z "$RH_REGISTRY_TOKEN" ]]; then
 fi
 
 get_chrome_config
-ls -alsvh
-ls -alsvh chrome_config/
-pwd
-
 
 DOCKER_CONF="$PWD/.docker"
 mkdir -p "$DOCKER_CONF"
