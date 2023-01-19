@@ -137,6 +137,8 @@ if [[ -z "$RH_REGISTRY_USER" || -z "$RH_REGISTRY_TOKEN" ]]; then
     exit 1
 fi
 
+ls -alsvh
+pwd
 get_chrome_config
 
 DOCKER_CONF="$PWD/.docker"
