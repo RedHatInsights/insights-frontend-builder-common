@@ -137,7 +137,9 @@ if [[ -z "$RH_REGISTRY_USER" || -z "$RH_REGISTRY_TOKEN" ]]; then
     exit 1
 fi
 
-get_chrome_config
+if [ $APP_NAME == "chrome" ] ; then
+  get_chrome_config;
+fi
 
 DOCKER_CONF="$PWD/.docker"
 mkdir -p "$DOCKER_CONF"
