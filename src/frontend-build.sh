@@ -83,7 +83,7 @@ docker run -i --name $CONTAINER_NAME \
   -e SERVER_NAME=$SERVER_NAME \
   -e INCLUDE_CHROME_CONFIG \
   -e CHROME_CONFIG_BRANCH \
-  quay.io/cloudservices/frontend-build-container:65e8885
+  quay.io/cloudservices/frontend-build-container:eb8acc7
 TEST_RESULT=$?
 
 if [ $TEST_RESULT -ne 0 ]; then
