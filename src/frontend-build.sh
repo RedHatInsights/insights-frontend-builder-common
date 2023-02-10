@@ -3,8 +3,10 @@
 # --------------------------------------------
 # Export vars for helper scripts to use
 # --------------------------------------------
-export APP_NAME=$(node -e "console.log(require(\"${WORKSPACE:-.}${APP_DIR:-}/package.json\").insights.appname)")
-export CONTAINER_NAME="$APP_NAME-build-main"
+# Flexibilty to provide APP_NAME from pr_check.sh parent file.
+export APP_NAME=${APP_NAME:=$(node -e "console.log(require(\"${NODE_ROOT}/package.json\").insights.appname)")}
+BRANCH=$(git rev-parse --abbrev-ref HEAD)
+export CONTAINER_NAME="$APP_NAME-build-$BRANCH"
 # main IMAGE var is exported from the pr_check.sh parent file
 export IMAGE_TAG=$(git rev-parse --short=7 HEAD)
 export IS_PR=false
@@ -52,6 +54,38 @@ function get_chrome_config() {
 }
 
 
+function build_and_push_to_quay() {
+    DOCKER_CONF="$PWD/.docker"
+    mkdir -p "$DOCKER_CONF"
+
+    if [ $QUAY_ORG == "rhoas" ] ; then
+        if [[ -z "$RHOAS_QUAY_USER" || -z "$RHOAS_QUAY_TOKEN" ]]; then
+            echo "RHOAS_QUAY_USER and RHOAS_QUAY_TOKEN must be set"
+            exit 1
+        fi
+        echo $RHOAS_QUAY_TOKEN | docker --config="$DOCKER_CONF" login -u="$RHOAS_QUAY_USER" --password-stdin quay.io
+    else
+        if [[ -z "$QUAY_USER" || -z "$QUAY_TOKEN" ]]; then
+            echo "QUAY_USER and QUAY_TOKEN must be set"
+            exit 1
+        fi
+        if [[ -z "$RH_REGISTRY_USER" || -z "$RH_REGISTRY_TOKEN" ]]; then
+            echo "RH_REGISTRY_USER and RH_REGISTRY_TOKEN must be set"
+            exit 1
+        fi
+        echo $QUAY_TOKEN | docker --config="$DOCKER_CONF" login -u="$QUAY_USER" --password-stdin quay.io
+        echo $RH_REGISTRY_TOKEN | docker --config="$DOCKER_CONF" login -u="$RH_REGISTRY_USER" --password-stdin registry.redhat.io
+    fi
+    
+    # Build Image
+    docker --config="$DOCKER_CONF" build -t "${IMAGE}:${IMAGE_TAG}" $APP_ROOT -f $APP_ROOT/Dockerfile
+    
+    # Push Image
+    docker --config="$DOCKER_CONF" push "${IMAGE}:${IMAGE_TAG}"
+}
+
+
+
 # Job name will contain pr-check or build-master. $GIT_BRANCH is not populated on a
 # manually triggered build
 if echo $JOB_NAME | grep -w "pr-check" > /dev/null; then
@@ -83,6 +117,9 @@ docker run -i --name $CONTAINER_NAME \
   -e SERVER_NAME=$SERVER_NAME \
   -e INCLUDE_CHROME_CONFIG \
   -e CHROME_CONFIG_BRANCH \
+  -e APP_NAME=$APP_NAME \
+  -e SERVER_NAME=$SERVER_NAME \
+  -e DIST_DIR=$DIST \
   quay.io/cloudservices/frontend-build-container:eb8acc7
 TEST_RESULT=$?
 
@@ -127,25 +164,9 @@ export WORKSPACE=${WORKSPACE:-$APP_ROOT}  # if running in jenkins, use the build
 export GIT_COMMIT=$(git rev-parse HEAD)
 
 
-if [[ -z "$QUAY_USER" || -z "$QUAY_TOKEN" ]]; then
-    echo "QUAY_USER and QUAY_TOKEN must be set"
-    exit 1
-fi
-
-if [[ -z "$RH_REGISTRY_USER" || -z "$RH_REGISTRY_TOKEN" ]]; then
-    echo "RH_REGISTRY_USER and RH_REGISTRY_TOKEN must be set"
-    exit 1
-fi
-
 if [ $APP_NAME == "chrome" ] ; then
   get_chrome_config;
 fi
 
-DOCKER_CONF="$PWD/.docker"
-mkdir -p "$DOCKER_CONF"
-echo $QUAY_TOKEN | docker --config="$DOCKER_CONF" login -u="$QUAY_USER" --password-stdin quay.io
-echo $RH_REGISTRY_TOKEN | docker --config="$DOCKER_CONF" login -u="$RH_REGISTRY_USER" --password-stdin registry.redhat.io
-docker --config="$DOCKER_CONF" build -t "${IMAGE}:${IMAGE_TAG}" $APP_ROOT -f $APP_ROOT/Dockerfile
-docker --config="$DOCKER_CONF" push "${IMAGE}:${IMAGE_TAG}"
-
+build_and_push_to_quay
 teardown_docker
