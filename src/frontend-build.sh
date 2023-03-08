@@ -83,6 +83,8 @@ docker run -i --name $CONTAINER_NAME \
   -e SERVER_NAME=$SERVER_NAME \
   -e INCLUDE_CHROME_CONFIG \
   -e CHROME_CONFIG_BRANCH \
+  --add-host stage.foo.redhat.com:127.0.0.1 \
+  --add-host prod.foo.redhat.com:127.0.0.1 \
   quay.io/cloudservices/frontend-build-container:9c23443
 TEST_RESULT=$?
 
