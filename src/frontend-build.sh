@@ -85,7 +85,7 @@ docker run -i --name $CONTAINER_NAME \
   -e CHROME_CONFIG_BRANCH \
   --add-host stage.foo.redhat.com:127.0.0.1 \
   --add-host prod.foo.redhat.com:127.0.0.1 \
-  quay.io/cloudservices/frontend-build-container:9c23443
+  quay.io/cloudservices/frontend-build-container:2e1c8c0
 TEST_RESULT=$?
 
 if [ $TEST_RESULT -ne 0 ]; then
