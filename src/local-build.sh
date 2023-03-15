@@ -66,13 +66,13 @@ function get_chrome_config() {
 # on quay. We attempt to pull 6 images, files from the images are copied out inot subdirecotries of .history
 function getHistory() {
   #Set a container name
-  HISTORY_CONTAINER_NAME = $APP_NAME-history
-  HISTORY_DEPTH = 6
-  HISTORY_FOUND_IMAGES = 0
+  HISTORY_CONTAINER_NAME=$APP_NAME-history
+  HISTORY_DEPTH=6
+  HISTORY_FOUND_IMAGES=0
   mkdir .history
   for REF in $(git log $IMAGE_TAG --first-parent --oneline --format='format:%h' --abbrev=7 )
   do
-    SINGLE_IMAGE = $IMAGE:$REF-single
+    SINGLE_IMAGE=$IMAGE:$REF-single
     echo "Looking for $SINGLE_IMAGE"
     # Pull the image
     docker pull $SINGLE_IMAGE
