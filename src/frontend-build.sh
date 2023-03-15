@@ -52,8 +52,6 @@ function get_chrome_config() {
 }
 
 
-#!/bin/bash
-
 # This function looks back through the git history and attempts to find the last 6 build images
 # on quay. We attempt to pull 6 images, files from the images are copied out inot subdirecotries of .history
 function getHistory() {
