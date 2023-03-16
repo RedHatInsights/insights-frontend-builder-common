@@ -73,8 +73,9 @@ function getArgs() {
       c )
         CURRENT_BUILD_DIR="$OPTARG"
         ;;
-      d }
+      d )
         DEBUG_MODE=true
+        ;;
       \? )
         echo "Invalid option -$OPTARGV" >&2
         ;;
