@@ -52,72 +52,12 @@ function get_chrome_config() {
 }
 
 
-# This function looks back through the git history and attempts to find the last 6 build images
-# on quay. We attempt to pull 6 images, files from the images are copied out inot subdirecotries of .history
 function getHistory() {
-  #Set a container name
-  HISTORY_CONTAINER_NAME=$APP_NAME-history
-  HISTORY_DEPTH=6
-  HISTORY_FOUND_IMAGES=0
-  mkdir .history
-  for REF in $(git log $IMAGE_TAG --first-parent --oneline --format='format:%h' --abbrev=7 )
-  do
-    SINGLE_IMAGE=$IMAGE:$REF-single
-    echo "Looking for $SINGLE_IMAGE"
-    # Pull the image
-    docker pull $SINGLE_IMAGE
-    # if the image is not found skip to the next loop
-    if [ $? -ne 0 ]; then
-      echo "Image not found"
-      continue
-    fi
-    # Increment FOUND_IMAGES
-    HISTORY_FOUND_IMAGES=$((HISTORY_FOUND_IMAGES+1))
-
-    #if thecontainer is running 
-    if [ $(docker ps -q -f name=$HISTORY_CONTAINER_NAME) ]; then
-      # Stop and delete the container
-      docker stop $HISTORY_CONTAINER_NAME
-      docker rm $HISTORY_CONTAINER_NAME
-    fi
-
-    # Make the history level directory
-    mkdir .history/$HISTORY_DEPTH
-
-    #Decrement history depth
-    HISTORY_DEPTH=$((HISTORY_DEPTH-1))
-
-    # Run the image
-    docker run -d --name $HISTORY_CONTAINER_NAME $SINGLE_IMAGE
-
-    # Copy the files out of the docker container into the history level directory
-    docker cp $HISTORY_CONTAINER_NAME:/opt/app-root/src/build .history/$HISTORY_DEPTH
-
-    # if we've found 6 images we're done
-    if [ $HISTORY_FOUND_IMAGES -eq 6 ]; then
-      echo "Processed 6 images for history"
-      break
-    fi
-  done
+  mkdir -p aggregated_history
+  curl https://raw.githubusercontent.com/RedHatInsights/insights-frontend-builder-common/master/src/frontend-build-history.sh > frontend-build-history.sh
+  chmod +x frontend-build-history.sh
+  ./frontend-build-history.sh -q $IMAGE -o aggregated_history -c $APP_ROOT
 }
-
-function copyHistoryBackwardsIntoBuild() {
-  #clear out workspace build
-  rm -rf $WORKSPACE/build
-  mkdir $WORKSPACE/build
-
-  # Copy the files from the history level directories into the build directory
-  for i in {6..1}
-  do
-    if [ -d .history/$i ]; then
-      cp -r .history/$i/* $WORKSPACE/build
-    fi
-  done
-
-  # Copy the files from the current build into the build directory
-  cp -r $WORKSPACE/build_original/* $WORKSPACE/build
-}
-
 
 # Job name will contain pr-check or build-master. $GIT_BRANCH is not populated on a
 # manually triggered build
@@ -163,8 +103,6 @@ fi
 
 # Extract files needed to build contianer
 mkdir -p $WORKSPACE/build
-mkdir -p $WORKSPACE/build_original
-docker cp $CONTAINER_NAME:/container_workspace/ $WORKSPACE/build_original
 docker cp $CONTAINER_NAME:/container_workspace/ $WORKSPACE/build
 cd $WORKSPACE/build/container_workspace/ && export APP_ROOT="$WORKSPACE/build/container_workspace/"
 
@@ -212,19 +150,22 @@ if [ $APP_NAME == "chrome" ] ; then
   get_chrome_config;
 fi
 
-# Build and push the single image
-# single here means it contains only a single copy of the app
-# the contents of single images are aggregated into history images
 DOCKER_CONF="$PWD/.docker"
 mkdir -p "$DOCKER_CONF"
 echo $QUAY_TOKEN | docker --config="$DOCKER_CONF" login -u="$QUAY_USER" --password-stdin quay.io
 echo $RH_REGISTRY_TOKEN | docker --config="$DOCKER_CONF" login -u="$RH_REGISTRY_USER" --password-stdin registry.redhat.io
+
+# Build and push the -single tagged image
+# This image contains only the current build
 docker --config="$DOCKER_CONF" build -t "${IMAGE}:${IMAGE_TAG}-single" $APP_ROOT -f $APP_ROOT/Dockerfile
 docker --config="$DOCKER_CONF" push "${IMAGE}:${IMAGE_TAG}-single"
 
+# Get the the last 6 builds
 getHistory
-copyHistoryBackwardsIntoBuild
 
+# Build and push the aggregated image
+# This image is tagged with just the SHA for the current build
+# as this is the one we want deployed
 docker --config="$DOCKER_CONF" build -t "${IMAGE}:${IMAGE_TAG}" $APP_ROOT -f $APP_ROOT/Dockerfile
 docker --config="$DOCKER_CONF" push "${IMAGE}:${IMAGE_TAG}"
 
