@@ -149,7 +149,7 @@ function getBuildImages() {
     fi
     printSuccess "Running $IMAGE_TEXT image" $SINGLE_IMAGE
     # Copy the files out of the docker container into the history level directory
-    docker cp $HISTORY_CONTAINER_NAME:/opt/app-root/src/dist .history/$HISTORY_DEPTH >/dev/null 2>&1
+    docker cp $HISTORY_CONTAINER_NAME:/opt/app-root/src/dist/. .history/$HISTORY_DEPTH >/dev/null 2>&1
     # If the copy fails log out and move to next
     if [ $? -ne 0 ]; then
       printError "Failed to copy files from image" $SINGLE_IMAGE
@@ -179,7 +179,7 @@ function copyHistoryIntoOutputDir() {
       # if copy failed log an error
       if [ $? -ne 0 ]; then
         printError "Failed to copy files from history level: " $i
-        continue
+        return 1
       fi
       printSuccess "Copied files from history level: " $i
     fi
@@ -194,6 +194,16 @@ function copyCurrentBuildIntoOutputDir() {
     continue
   fi
   printSuccess "Copied files from current build dir" $CURRENT_BUILD_DIR
+}
+
+function copyOutputDirectoryIntoCurrentBuild() {
+  # Copy the output directory into the current build directory
+  cp -r $OUTPUT_DIR/* $CURRENT_BUILD_DIR
+  if [ $? -ne 0 ]; then
+    printError "Failed to copy files from output dir" $OUTPUT_DIR
+    continue
+  fi
+  printSuccess "Copied files from output dir" $OUTPUT_DIR
 }
 
 function main() {
@@ -215,7 +225,8 @@ function main() {
   fi
   copyHistoryIntoOutputDir
   copyCurrentBuildIntoOutputDir
-  printSuccess "History build complete" "Files available at $OUTPUT_DIR"
+  copyOutputDirectoryIntoCurrentBuild
+  printSuccess "History build complete" "Files available at $CURRENT_BUILD_DIR"
 }
 
 main $@

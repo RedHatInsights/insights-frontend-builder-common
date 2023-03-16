@@ -64,8 +64,8 @@ function get_chrome_config() {
 }
 
 function getHistory() {
-  mkdir -p aggregated_history
-  ./frontend-build-history.sh -q $IMAGE -o aggregated_history -c $APP_ROOT
+  mkdir aggregated_history
+  ./frontend-build-history.sh -q $IMAGE -o aggregated_history -c dist
 }
 
 set -ex
