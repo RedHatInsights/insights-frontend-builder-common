@@ -1,24 +1,34 @@
 #!/bin/bash
 
-# Show timestamps, don't exit on error
+# Don't exit on error
+# we need to trap errors to handle cerain conditions
+set +e
 
 # Globals
-SINGLETAG="single"       # used for looking up single build images
-Color_Off='\033[0m'       # Text Reset
-Black='\033[0;30m'        # Black
-Red='\033[0;31m'          # Red
-Green='\033[0;32m'        # Green
-Yellow='\033[0;33m'       # Yellow
-Blue='\033[0;34m'         # Blue
-Purple='\033[0;35m'       # Purple
-Cyan='\033[0;36m'         # Cyan
-White='\033[0;37m'        # White
+SINGLETAG="single" # used for looking up single build images
+Color_Off='\033[0m' # What? I like colors.
+Black='\033[0;30m'
+Red='\033[0;31m'
+Green='\033[0;32m'
+Yellow='\033[0;33m'
+Blue='\033[0;34m'
+Purple='\033[0;35m'
+Cyan='\033[0;36m'
+White='\033[0;37m'
+# we uset the same name each time we spin up a container to copy stuff out of
+# makes it easier
 HISTORY_CONTAINER_NAME="frontend-build-history"
+# If no -single images are found we set this to true
+# allows us to move into a special mode where we use non-single tagged images
+# only used for first time hisotry builds
 SINGLE_IMAGE_FOUND=false
+# where we send our full aggregated history to
 OUTPUT_DIR=false
+# where the current build is located
 CURRENT_BUILD_DIR=false
-BRANCH=false
+# the quay repo we need to interact with
 QUAYREPO=false
+# debug mode. turns on verbose output.
 DEBUG_MODE=false
 
 function debugMode() {
@@ -173,14 +183,16 @@ function copyHistoryIntoOutputDir() {
       printSuccess "Copied files from history level: " $i
     fi
   done
+}
 
+function copyCurrentBuildIntoOutputDir() {
   # Copy the original build into the output directory
   cp -r $CURRENT_BUILD_DIR/* $OUTPUT_DIR
-    if [ $? -ne 0 ]; then
-      printError "Failed to copy files from current build dir" $CURRENT_BUILD_DIR
-      continue
-    fi
-    printSuccess "Copied files from current build dir" $CURRENT_BUILD_DIR
+  if [ $? -ne 0 ]; then
+    printError "Failed to copy files from current build dir" $CURRENT_BUILD_DIR
+    continue
+  fi
+  printSuccess "Copied files from current build dir" $CURRENT_BUILD_DIR
 }
 
 function main() {
@@ -201,6 +213,7 @@ function main() {
     getBuildImages $GET_SINGLE_IMAGES
   fi
   copyHistoryIntoOutputDir
+  copyCurrentBuildIntoOutputDir
   printSuccess "History build complete" "Files available at $OUTPUT_DIR"
 }
 
