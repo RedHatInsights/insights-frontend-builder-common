@@ -62,6 +62,11 @@ function get_chrome_config() {
   return 0
 }
 
+function getHistory() {
+  mkdir -p aggregated_history
+  ./frontend-build-history.sh -q $IMAGE -o aggregated_history -c $APP_ROOT
+}
+
 set -ex
 # NOTE: Make sure this volume is mounted 'ro', otherwise Jenkins cannot clean up the
 # workspace due to file permission errors; the Z is used for SELinux workarounds
@@ -92,6 +97,11 @@ cd $WORKSPACE/build/container_workspace/ && export APP_ROOT="$WORKSPACE/build/co
 if [ $APP_NAME == "chrome" ] ; then
   get_chrome_config;
 fi
+
+docker build -t "${APP_NAME}:${IMAGE_TAG}-single" $APP_ROOT -f $APP_ROOT/Dockerfile
+
+# Get the history
+getHistory
 
 docker build -t "${APP_NAME}:${IMAGE_TAG}" $APP_ROOT -f $APP_ROOT/Dockerfile
 
