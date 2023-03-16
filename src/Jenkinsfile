@@ -40,11 +40,9 @@ node {
       AKAMAI_BASE_PATH = "822386"
       AKAMAI_APP_PATH = "/${AKAMAI_BASE_PATH}/${PREFIX}apps/${APP_NAME}"
 
-      configFileProvider([configFile(fileId: "9f0c91bc-4feb-4076-9f3e-13da94ff3cef", variable: "AKAMAI_HOST_KEY")]) {
-        sh """
+      sh """
            eval `ssh-agent`
            ssh-add \"$privateKeyFile\"
-           cp $AKAMAI_HOST_KEY ~/.ssh/known_hosts
            chmod 600 ~/.ssh/known_hosts ~/.ssh/config
            n=0
            until [ \$n -ge 10 ]
@@ -53,8 +51,7 @@ node {
               n=\$[\$n+1]
               sleep 10
            done
-         """
-      }
+      """
       
       //Clear the cache for the app being deployed
       openShiftUtils.withJnlpNode(
