@@ -22,10 +22,6 @@ BRANCH=false
 QUAYREPO=false
 
 function validateArgs() {
-  if [ -z "$BRANCH" ]; then
-    printError "Error" "Branch is required"
-    exit 1
-  fi
   if [ -z "$QUAYREPO" ]; then
     printError "Error" "Quay repo is required"
     exit 1
