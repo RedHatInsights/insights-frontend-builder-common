@@ -62,73 +62,6 @@ function get_chrome_config() {
   return 0
 }
 
-# This function looks back through the git history and attempts to find the last 6 build images
-# on quay. We attempt to pull 6 images, files from the images are copied out inot subdirecotries of .history
-function getHistory() {
-  #Set a container name
-  HISTORY_CONTAINER_NAME=$APP_NAME-history
-  HISTORY_DEPTH=6
-  HISTORY_FOUND_IMAGES=0
-  mkdir .history
-  for REF in $(git log $IMAGE_TAG --first-parent --oneline --format='format:%h' --abbrev=7 )
-  do
-    SINGLE_IMAGE=$IMAGE:$REF-single
-    echo "Looking for $SINGLE_IMAGE"
-    # Pull the image
-    docker pull $SINGLE_IMAGE
-    # if the image is not found skip to the next loop
-    if [ $? -ne 0 ]; then
-      echo "Image not found"
-      continue
-    fi
-    # Increment FOUND_IMAGES
-    HISTORY_FOUND_IMAGES=$((HISTORY_FOUND_IMAGES+1))
-
-    #if thecontainer is running 
-    if [ $(docker ps -q -f name=$HISTORY_CONTAINER_NAME) ]; then
-      # Stop and delete the container
-      docker stop $HISTORY_CONTAINER_NAME
-      docker rm $HISTORY_CONTAINER_NAME
-    fi
-
-    # Make the history level directory
-    mkdir .history/$HISTORY_DEPTH
-
-    #Decrement history depth
-    HISTORY_DEPTH=$((HISTORY_DEPTH-1))
-
-    # Run the image
-    docker run -d --name $HISTORY_CONTAINER_NAME $SINGLE_IMAGE
-
-    # Copy the files out of the docker container into the history level directory
-    docker cp $HISTORY_CONTAINER_NAME:/opt/app-root/src/build .history/$HISTORY_DEPTH
-
-    # if we've found 6 images we're done
-    if [ $HISTORY_FOUND_IMAGES -eq 6 ]; then
-      echo "Processed 6 images for history"
-      break
-    fi
-  done
-}
-
-function copyHistoryBackwardsIntoBuild() {
-  #clear out workspace build
-  rm -rf $WORKSPACE/build
-  mkdir $WORKSPACE/build
-
-  # Copy the files from the history level directories into the build directory
-  for i in {6..1}
-  do
-    if [ -d .history/$i ]; then
-      cp -r .history/$i/* $WORKSPACE/build
-    fi
-  done
-
-  # Copy the files from the current build into the build directory
-  cp -r $WORKSPACE/build_original/* $WORKSPACE/build
-}
-
-
 set -ex
 # NOTE: Make sure this volume is mounted 'ro', otherwise Jenkins cannot clean up the
 # workspace due to file permission errors; the Z is used for SELinux workarounds
@@ -160,9 +93,5 @@ if [ $APP_NAME == "chrome" ] ; then
   get_chrome_config;
 fi
 
-docker build -t "${APP_NAME}:${IMAGE_TAG}-single" $APP_ROOT -f $APP_ROOT/Dockerfile
+docker build -t "${APP_NAME}:${IMAGE_TAG}" $APP_ROOT -f $APP_ROOT/Dockerfile
 
-getHistory
-copyHistoryBackwardsIntoBuild
-
-docker build -t "${IMAGE}:${IMAGE_TAG}" $APP_ROOT -f $APP_ROOT/Dockerfile
