@@ -192,7 +192,6 @@ function getBuildImages() {
       fi
       # Set output dir to build instead of dist
       OUTPUT_DIR="build"
-      CURRENT_BUILD_DIR="build"
     fi
     printSuccess "Copied files from $IMAGE_TEXT image" $SINGLE_IMAGE
     if [ $GET_SINGLE_IMAGES == false ]; then
