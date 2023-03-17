@@ -192,6 +192,7 @@ function getBuildImages() {
       fi
       # Set output dir to build instead of dist
       OUTPUT_DIR="build"
+      CURRENT_BUILD_DIR="build"
     fi
     printSuccess "Copied files from $IMAGE_TEXT image" $SINGLE_IMAGE
     if [ $GET_SINGLE_IMAGES == false ]; then
@@ -220,8 +221,7 @@ function tagAndPushSingleImage() {
   fi
   local SINGLE_IMAGE=$1
   # Tag HISTORY_CONTAINER_NAME with SHA-single
-  docker tag $HISTORY_CONTAINER_NAME "${SINGLE_IMAGE}-single"
-  docker commit $HISTORY_CONTAINER_NAME "${SINGLE_IMAGE}-single"
+  docker tag $SINGLE_IMAGE "${SINGLE_IMAGE}-single"
   # Push the image
   docker push "${SINGLE_IMAGE}-single"
   # if the push fails log out and move to next
@@ -255,7 +255,7 @@ function copyCurrentBuildIntoOutputDir() {
   cp -r $CURRENT_BUILD_DIR/* $OUTPUT_DIR
   if [ $? -ne 0 ]; then
     printError "Failed to copy files from current build dir" $CURRENT_BUILD_DIR
-    continue
+    return
   fi
   printSuccess "Copied files from current build dir" $CURRENT_BUILD_DIR
 }
