@@ -30,6 +30,10 @@ CURRENT_BUILD_DIR=false
 QUAYREPO=false
 # debug mode. turns on verbose output.
 DEBUG_MODE=false
+# We first check for images tagged -single. If we don't find any we use normal SHA tagged images
+# if this is true we will then take those SHA tagged images, retag them SHA-single, and push those back
+# up. This is so subsequent builds will find -single images
+PUSH_SINGLE_IMAGES=false
 
 function debugMode() {
   if [ $DEBUG_MODE == true ]; then
@@ -61,7 +65,7 @@ function printError() {
 }
 
 function getArgs() {
-  while getopts ":b:q:o:c:d:" opt; do
+  while getopts ":b:q:o:c:d:p:" opt; do
     case $opt in
       # quay.io/cloudservices/api-frontend etc
       q )
@@ -75,6 +79,9 @@ function getArgs() {
         ;;
       d )
         DEBUG_MODE=true
+        ;;
+      p )
+        PUSH_SINGLE_IMAGES="$OPTARG"
         ;;
       \? )
         echo "Invalid option -$OPTARGV" >&2
@@ -156,6 +163,7 @@ function getBuildImages() {
       continue
     fi
     printSuccess "Copied files from $IMAGE_TEXT image" $SINGLE_IMAGE
+    tagAndPushSingleImage $SINGLE_IMAGE
     # Stop the image
     docker stop $HISTORY_CONTAINER_NAME >/dev/null 2>&1
     # delete the container
@@ -168,6 +176,30 @@ function getBuildImages() {
     #Decrement history depth
     HISTORY_DEPTH=$((HISTORY_DEPTH-1))
   done
+}
+
+function tagAndPushSingleImage() {
+  # Guard on PUSH_SINGLE_IMAGES
+  if [ $PUSH_SINGLE_IMAGES == false ]; then
+    return 0
+  fi
+  # Guard on SINGLE_IMAGE_FOUND
+  if [ $SINGLE_IMAGE_FOUND == false ]; then
+    return 0
+  fi
+  local SINGLE_IMAGE = $1
+  # Tag HISTORY_CONTAINER_NAME with SHA-single
+  docker tag $HISTORY_CONTAINER_NAME $SINGLE_IMAGE-single
+  # Push the image
+  docker push $SINGLE_IMAGE
+  # if the push fails log out and move to next
+  if [ $? -ne 0 ]; then
+    printError "Failed to push image" $SINGLE_IMAGE
+    return 1
+  fi
+  # Log out success
+  printSuccess "Pushed single image" $SINGLE_IMAGE
+  return 0
 }
 
 function copyHistoryIntoOutputDir() {

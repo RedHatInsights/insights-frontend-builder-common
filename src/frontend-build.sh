@@ -56,7 +56,7 @@ function getHistory() {
   mkdir aggregated_history
   curl https://raw.githubusercontent.com/RedHatInsights/insights-frontend-builder-common/master/src/frontend-build-history.sh > frontend-build-history.sh
   chmod +x frontend-build-history.sh
-  ./frontend-build-history.sh -q $IMAGE -o aggregated_history -c dist
+  ./frontend-build-history.sh -q $IMAGE -o aggregated_history -c dist -p true
 }
 
 # Job name will contain pr-check or build-master. $GIT_BRANCH is not populated on a
