@@ -3,6 +3,8 @@
 # Don't exit on error
 # we need to trap errors to handle cerain conditions
 set +e
+# show comamnds being run
+set -x
 
 # Globals
 SINGLETAG="single" # used for looking up single build images
