@@ -151,7 +151,7 @@ function getBuildImages() {
     # Increment FOUND_IMAGES
     HISTORY_FOUND_IMAGES=$((HISTORY_FOUND_IMAGES+1))
     # Run the image
-    docker run -d --name $HISTORY_CONTAINER_NAME $SINGLE_IMAGE #>/dev/null 2>&1
+    docker run -d --name $HISTORY_CONTAINER_NAME $SINGLE_IMAGE >/dev/null 2>&1
     # If the run fails log out and move to next
     if [ $? -ne 0 ]; then
       printError "Failed to run image" $SINGLE_IMAGE
@@ -172,7 +172,7 @@ function getBuildImages() {
     # Stop the image
     docker stop $HISTORY_CONTAINER_NAME >/dev/null 2>&1
     # delete the container
-    docker rm $HISTORY_CONTAINER_NAME >/dev/null 2>&1
+    docker rm -f $HISTORY_CONTAINER_NAME >/dev/null 2>&1
     # if we've found 6 images we're done
     if [ $HISTORY_FOUND_IMAGES -eq 6 ]; then
       printSuccess "Found 6 $IMAGE_TEXT images, stopping history search" $SINGLE_IMAGE
@@ -243,7 +243,7 @@ function copyOutputDirectoryIntoCurrentBuild() {
 
 function deleteBuildContainer() {
   # Delete the build container
-  docker rm $HISTORY_CONTAINER_NAME >/dev/null 2>&1
+  docker rm -f $HISTORY_CONTAINER_NAME >/dev/null 2>&1
   if [ $? -ne 0 ]; then
     printError "Failed to delete build container" $HISTORY_CONTAINER_NAME
     return
