@@ -190,8 +190,8 @@ function getBuildImages() {
         printError "Failed to copy files from image" $SINGLE_IMAGE
         continue
       fi
-      # Set output dir to build instead of dist
-      OUTPUT_DIR="build"
+      # Set the current build dir to build instead of dist
+      CURRENT_BUILD_DIR="build"
     fi
     printSuccess "Copied files from $IMAGE_TEXT image" $SINGLE_IMAGE
     if [ $GET_SINGLE_IMAGES == false ]; then
