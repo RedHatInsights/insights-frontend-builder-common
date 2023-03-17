@@ -165,7 +165,9 @@ function getBuildImages() {
       continue
     fi
     printSuccess "Copied files from $IMAGE_TEXT image" $SINGLE_IMAGE
-    tagAndPushSingleImage $SINGLE_IMAGE
+    if [ $GET_SINGLE_IMAGES == false ]; then
+      tagAndPushSingleImage $SINGLE_IMAGE
+    fi
     # Stop the image
     docker stop $HISTORY_CONTAINER_NAME >/dev/null 2>&1
     # delete the container
@@ -181,12 +183,6 @@ function getBuildImages() {
 }
 
 function tagAndPushSingleImage() {
-  # Guard on GET_SINGLE_IMAGES
-  # If we are getting single images then they are already tagged and 
-  # we don't need to retag and push
-  if [ $GET_SINGLE_IMAGES == true ]; then
-    return 0
-  fi
   # Guard on PUSH_SINGLE_IMAGES
   # If the PUSH_SINGLE_IMAGES flag is false then we never engage this
   # feature
