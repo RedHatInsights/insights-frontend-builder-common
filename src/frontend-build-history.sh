@@ -3,8 +3,6 @@
 # Don't exit on error
 # we need to trap errors to handle cerain conditions
 set +e
-# show comamnds being run
-set -x
 
 # Globals
 SINGLETAG="single" # used for looking up single build images
@@ -125,8 +123,6 @@ function getGitHistory() {
   git log --first-parent --oneline --format='format:%h' --abbrev=7  | tail -n +2 > .history/git_history
 }
 
-
-
 function getBuildImages() {
   # We count the number of images found to make sure we don't go over 6
   local HISTORY_FOUND_IMAGES=0
@@ -134,7 +130,6 @@ function getBuildImages() {
   # history cumulative from the oldest to the newest
   local HISTORY_DEPTH=6
   local SINGLE_IMAGE=""
-  #local USE_SINGLE_TAG=$1
   local ITERATIONS=0
   local IMAGE_TEXT="Single-build"
   # Get the single build images
@@ -152,10 +147,6 @@ function getBuildImages() {
     SINGLE_IMAGE=$QUAYREPO:$REF-$SINGLETAG
     IMAGE_TEXT="Single-build"
 
-    #if [ $USE_SINGLE_TAG == false ]; then
-    #  SINGLE_IMAGE=$QUAYREPO:$REF
-    #  IMAGE_TEXT="Fallback build"
-    #fi
     printSuccess "Pulling single-build image" $SINGLE_IMAGE
     # Pull the image
     docker pull $SINGLE_IMAGE >/dev/null 2>&1
@@ -170,13 +161,12 @@ function getBuildImages() {
         continue
       fi
     fi
-    #SINGLE_IMAGE_FOUND=true
     printSuccess "$IMAGE_TEXT image found" $SINGLE_IMAGE
     # Increment FOUND_IMAGES
     HISTORY_FOUND_IMAGES=$((HISTORY_FOUND_IMAGES+1))
     # Run the image
     docker rm -f $HISTORY_CONTAINER_NAME #>/dev/null 2>&1
-    docker run -d --name $HISTORY_CONTAINER_NAME $SINGLE_IMAGE #>/dev/null 2>&1
+    docker run -d --name $HISTORY_CONTAINER_NAME $SINGLE_IMAGE >/dev/null 2>&1
     # If the run fails log out and move to next
     if [ $? -ne 0 ]; then
       printError "Failed to run image" $SINGLE_IMAGE
@@ -184,7 +174,7 @@ function getBuildImages() {
     fi
     printSuccess "Running $IMAGE_TEXT image" $SINGLE_IMAGE
     # Copy the files out of the docker container into the history level directory
-    docker cp $HISTORY_CONTAINER_NAME:/opt/app-root/src/dist/. .history/$HISTORY_DEPTH #>/dev/null 2>&1
+    docker cp $HISTORY_CONTAINER_NAME:/opt/app-root/src/dist/. .history/$HISTORY_DEPTH >/dev/null 2>&1
     # if this fails try build
     # This block handles a corner case. Some apps (one app actually, just chrome)
     # may use the build directory instead of the dist directory.
@@ -193,7 +183,7 @@ function getBuildImages() {
     # history in the finaly container
     if [ $? -ne 0 ]; then
       printError "Couldn't find dist on image, trying build..." $SINGLE_IMAGE
-      docker cp $HISTORY_CONTAINER_NAME:/opt/app-root/src/build/. .history/$HISTORY_DEPTH #>/dev/null 2>&1
+      docker cp $HISTORY_CONTAINER_NAME:/opt/app-root/src/build/. .history/$HISTORY_DEPTH >/dev/null 2>&1
       # If the copy fails log out and move to next
       if [ $? -ne 0 ]; then
         printError "Failed to copy files from image" $SINGLE_IMAGE
@@ -203,9 +193,6 @@ function getBuildImages() {
       CURRENT_BUILD_DIR="build"
     fi
     printSuccess "Copied files from $IMAGE_TEXT image" $SINGLE_IMAGE
-    #if [ $GET_SINGLE_IMAGES == false ]; then
-    #  tagAndPushSingleImage $SINGLE_IMAGE
-    #fi
     # Stop the image
     docker stop $HISTORY_CONTAINER_NAME >/dev/null 2>&1
     # delete the container
@@ -218,28 +205,6 @@ function getBuildImages() {
     #Decrement history depth
     HISTORY_DEPTH=$((HISTORY_DEPTH-1))
   done
-}
-
-function tagAndPushSingleImage() {
-  # Guard on PUSH_SINGLE_IMAGES
-  # If the PUSH_SINGLE_IMAGES flag is false then we never engage this
-  # feature
-  if [ $PUSH_SINGLE_IMAGES == false ]; then
-    return 0
-  fi
-  local SINGLE_IMAGE=$1
-  # Tag HISTORY_CONTAINER_NAME with SHA-single
-  docker tag $SINGLE_IMAGE "${SINGLE_IMAGE}-single"
-  # Push the image
-  docker push "${SINGLE_IMAGE}-single"
-  # if the push fails log out and move to next
-  if [ $? -ne 0 ]; then
-    printError "Failed to push image" $SINGLE_IMAGE
-    return 1
-  fi
-  # Log out success
-  printSuccess "Pushed single image" $SINGLE_IMAGE
-  return 0
 }
 
 function copyHistoryIntoOutputDir() {
@@ -280,7 +245,7 @@ function copyOutputDirectoryIntoCurrentBuild() {
 
 function deleteBuildContainer() {
   # Delete the build container
-  docker rm -f $HISTORY_CONTAINER_NAME #>/dev/null 2>&1
+  docker rm -f $HISTORY_CONTAINER_NAME >/dev/null 2>&1
   if [ $? -ne 0 ]; then
     printError "Failed to delete build container" $HISTORY_CONTAINER_NAME
     return
@@ -297,15 +262,6 @@ function main() {
   getGitHistory
   quayLogin
   getBuildImages
-  #if [ $SINGLE_IMAGE_FOUND == false ]; then
-  #  # If we are in this block then no images were found with the single tag
-  #  # this means we are probably building history for the first time
-  #  # if we didn't have this block then we would never initiate the history build
-  #  # process
-  #  printError "No single-tagged images found." "Using non-single-tagged images instead."
-  #  GET_SINGLE_IMAGES=false
-  #  getBuildImages $GET_SINGLE_IMAGES
-  #fi
   copyHistoryIntoOutputDir
   copyCurrentBuildIntoOutputDir
   copyOutputDirectoryIntoCurrentBuild
