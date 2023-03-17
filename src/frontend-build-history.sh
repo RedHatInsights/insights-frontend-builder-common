@@ -37,6 +37,15 @@ PUSH_SINGLE_IMAGES=false
 # Our default mode is to get images tagged -single
 GET_SINGLE_IMAGES=true
 
+#Quay Stuff
+DOCKER_CONF="$PWD/.docker"
+QUAY_TOKEN=""
+QUAY_USER=""
+
+function quayLogin() {
+  echo $QUAY_TOKEN | docker --config="$DOCKER_CONF" login -u="$QUAY_USER" --password-stdin quay.io
+}
+
 function debugMode() {
   if [ $DEBUG_MODE == true ]; then
     set -x
@@ -67,7 +76,7 @@ function printError() {
 }
 
 function getArgs() {
-  while getopts ":b:q:o:c:d:p:" opt; do
+  while getopts ":b:q:o:c:d:p:t:u:" opt; do
     case $opt in
       # quay.io/cloudservices/api-frontend etc
       q )
@@ -84,6 +93,12 @@ function getArgs() {
         ;;
       p )
         PUSH_SINGLE_IMAGES="$OPTARG"
+        ;;
+      t )
+        QUAY_TOKEN="$OPTARG"
+        ;;
+      u )
+        QUAY_USER="$OPTARG"
         ;;
       \? )
         echo "Invalid option -$OPTARGV" >&2
@@ -205,9 +220,10 @@ function tagAndPushSingleImage() {
   fi
   local SINGLE_IMAGE=$1
   # Tag HISTORY_CONTAINER_NAME with SHA-single
-  docker tag $HISTORY_CONTAINER_NAME $SINGLE_IMAGE-single
+  docker tag $HISTORY_CONTAINER_NAME "${SINGLE_IMAGE}-single"
+  docker commit $HISTORY_CONTAINER_NAME "${SINGLE_IMAGE}-single"
   # Push the image
-  docker push $SINGLE_IMAGE
+  docker push "${SINGLE_IMAGE}-single"
   # if the push fails log out and move to next
   if [ $? -ne 0 ]; then
     printError "Failed to push image" $SINGLE_IMAGE
@@ -271,6 +287,7 @@ function main() {
   deleteBuildContainer
   makeHistoryDirectories
   getGitHistory
+  quayLogin
   getBuildImages $GET_SINGLE_IMAGES
   if [ $SINGLE_IMAGE_FOUND == false ]; then
     # If we are in this block then no images were found with the single tag
