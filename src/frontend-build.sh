@@ -155,9 +155,17 @@ mkdir -p "$DOCKER_CONF"
 echo $QUAY_TOKEN | docker --config="$DOCKER_CONF" login -u="$QUAY_USER" --password-stdin quay.io
 echo $RH_REGISTRY_TOKEN | docker --config="$DOCKER_CONF" login -u="$RH_REGISTRY_USER" --password-stdin registry.redhat.io
 
+#PRs shouldn't get the special treatment for history
+if [ $IS_PR = true ]; then
+  docker --config="$DOCKER_CONF" build --label "image-type=single" -t "${IMAGE}:${IMAGE_TAG}-single" $APP_ROOT -f $APP_ROOT/Dockerfile
+  docker --config="$DOCKER_CONF" push "${IMAGE}:${IMAGE_TAG}-single"
+  teardown_docker
+  exit 0
+fi
+
 # Build and push the -single tagged image
 # This image contains only the current build
-docker --config="$DOCKER_CONF" build --label "image-type=signle" -t "${IMAGE}:${IMAGE_TAG}-single" $APP_ROOT -f $APP_ROOT/Dockerfile
+docker --config="$DOCKER_CONF" build --label "image-type=single" -t "${IMAGE}:${IMAGE_TAG}-single" $APP_ROOT -f $APP_ROOT/Dockerfile
 docker --config="$DOCKER_CONF" push "${IMAGE}:${IMAGE_TAG}-single"
 
 # Get the the last 6 builds

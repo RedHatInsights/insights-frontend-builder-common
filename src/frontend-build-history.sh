@@ -243,12 +243,12 @@ function copyOutputDirectoryIntoCurrentBuild() {
 
 function deleteBuildContainer() {
   # Delete the build container
-  docker rm $BUILD_CONTAINER_NAME >/dev/null 2>&1
+  docker rm $HISTORY_CONTAINER_NAME >/dev/null 2>&1
   if [ $? -ne 0 ]; then
-    printError "Failed to delete build container" $BUILD_CONTAINER_NAME
+    printError "Failed to delete build container" $HISTORY_CONTAINER_NAME
     return
   fi
-  printSuccess "Deleted build container" $BUILD_CONTAINER_NAME
+  printSuccess "Deleted build container" $HISTORY_CONTAINER_NAME
 }
 
 function main() {
@@ -272,6 +272,7 @@ function main() {
   copyCurrentBuildIntoOutputDir
   copyOutputDirectoryIntoCurrentBuild
   printSuccess "History build complete" "Files available at $CURRENT_BUILD_DIR"
+  deleteBuildContainer
 }
 
 main $@
