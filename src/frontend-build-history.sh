@@ -203,7 +203,7 @@ function tagAndPushSingleImage() {
   if [ $PUSH_SINGLE_IMAGES == false ]; then
     return 0
   fi
-  local SINGLE_IMAGE = $1
+  local SINGLE_IMAGE=$1
   # Tag HISTORY_CONTAINER_NAME with SHA-single
   docker tag $HISTORY_CONTAINER_NAME $SINGLE_IMAGE-single
   # Push the image
