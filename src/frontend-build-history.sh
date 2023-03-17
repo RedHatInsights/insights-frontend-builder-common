@@ -241,10 +241,21 @@ function copyOutputDirectoryIntoCurrentBuild() {
   printSuccess "Copied files from output dir" $OUTPUT_DIR
 }
 
+function deleteBuildContainer() {
+  # Delete the build container
+  docker rm $BUILD_CONTAINER_NAME >/dev/null 2>&1
+  if [ $? -ne 0 ]; then
+    printError "Failed to delete build container" $BUILD_CONTAINER_NAME
+    return
+  fi
+  printSuccess "Deleted build container" $BUILD_CONTAINER_NAME
+}
+
 function main() {
   getArgs $@
   validateArgs
   debugMode
+  deleteBuildContainer
   makeHistoryDirectories
   getGitHistory
   getBuildImages $GET_SINGLE_IMAGES
