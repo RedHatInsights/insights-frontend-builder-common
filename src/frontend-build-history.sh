@@ -23,7 +23,7 @@ HISTORY_CONTAINER_NAME="frontend-build-history"
 # If no -single images are found we set this to true
 # allows us to move into a special mode where we use non-single tagged images
 # only used for first time hisotry builds
-SINGLE_IMAGE_FOUND=false
+#SINGLE_IMAGE_FOUND=false
 # where we send our full aggregated history to
 OUTPUT_DIR=false
 # where the current build is located
@@ -134,7 +134,7 @@ function getBuildImages() {
   # history cumulative from the oldest to the newest
   local HISTORY_DEPTH=6
   local SINGLE_IMAGE=""
-  local USE_SINGLE_TAG=$1
+  #local USE_SINGLE_TAG=$1
   local ITERATIONS=0
   local IMAGE_TEXT="Single-build"
   # Get the single build images
@@ -150,20 +150,27 @@ function getBuildImages() {
     # these images contain only a single build of the frontend
     # example: quay.io/cloudservices/api-frontend:7b1b1b1-single
     SINGLE_IMAGE=$QUAYREPO:$REF-$SINGLETAG
+    IMAGE_TEXT="Single-build"
 
-    if [ $USE_SINGLE_TAG == false ]; then
-      SINGLE_IMAGE=$QUAYREPO:$REF
-      IMAGE_TEXT="Fallback build"
-    fi
-    printSuccess "Pulling $IMAGE_TEXT image" $SINGLE_IMAGE
+    #if [ $USE_SINGLE_TAG == false ]; then
+    #  SINGLE_IMAGE=$QUAYREPO:$REF
+    #  IMAGE_TEXT="Fallback build"
+    #fi
+    printSuccess "Pulling single-build image" $SINGLE_IMAGE
     # Pull the image
     docker pull $SINGLE_IMAGE >/dev/null 2>&1
-    # if the image is not found skip to the next loop
+    # if the image is not found trying falling back to a non-single tagged build
     if [ $? -ne 0 ]; then
-      printError "Image not found" $SINGLE_IMAGE
-      continue
+      SINGLE_IMAGE=$QUAYREPO:$REF
+      IMAGE_TEXT="Fallback build"
+      printError "Image not found. Trying build not tagged single." $SINGLE_IMAGE
+      docker pull $SINGLE_IMAGE >/dev/null 2>&1
+      if [ $? -ne 0 ]; then
+        printError "Fallback build not found. Skipping." $SINGLE_IMAGE
+        continue
+      fi
     fi
-    SINGLE_IMAGE_FOUND=true
+    #SINGLE_IMAGE_FOUND=true
     printSuccess "$IMAGE_TEXT image found" $SINGLE_IMAGE
     # Increment FOUND_IMAGES
     HISTORY_FOUND_IMAGES=$((HISTORY_FOUND_IMAGES+1))
@@ -196,16 +203,16 @@ function getBuildImages() {
       CURRENT_BUILD_DIR="build"
     fi
     printSuccess "Copied files from $IMAGE_TEXT image" $SINGLE_IMAGE
-    if [ $GET_SINGLE_IMAGES == false ]; then
-      tagAndPushSingleImage $SINGLE_IMAGE
-    fi
+    #if [ $GET_SINGLE_IMAGES == false ]; then
+    #  tagAndPushSingleImage $SINGLE_IMAGE
+    #fi
     # Stop the image
     docker stop $HISTORY_CONTAINER_NAME >/dev/null 2>&1
     # delete the container
     docker rm -f $HISTORY_CONTAINER_NAME >/dev/null 2>&1
     # if we've found 6 images we're done
     if [ $HISTORY_FOUND_IMAGES -eq 6 ]; then
-      printSuccess "Found 6 $IMAGE_TEXT images, stopping history search" $SINGLE_IMAGE
+      printSuccess "Found 6 images, stopping history search" $SINGLE_IMAGE
       break
     fi
     #Decrement history depth
@@ -289,16 +296,16 @@ function main() {
   makeHistoryDirectories
   getGitHistory
   quayLogin
-  getBuildImages $GET_SINGLE_IMAGES
-  if [ $SINGLE_IMAGE_FOUND == false ]; then
-    # If we are in this block then no images were found with the single tag
-    # this means we are probably building history for the first time
-    # if we didn't have this block then we would never initiate the history build
-    # process
-    printError "No single-tagged images found." "Using non-single-tagged images instead."
-    GET_SINGLE_IMAGES=false
-    getBuildImages $GET_SINGLE_IMAGES
-  fi
+  getBuildImages
+  #if [ $SINGLE_IMAGE_FOUND == false ]; then
+  #  # If we are in this block then no images were found with the single tag
+  #  # this means we are probably building history for the first time
+  #  # if we didn't have this block then we would never initiate the history build
+  #  # process
+  #  printError "No single-tagged images found." "Using non-single-tagged images instead."
+  #  GET_SINGLE_IMAGES=false
+  #  getBuildImages $GET_SINGLE_IMAGES
+  #fi
   copyHistoryIntoOutputDir
   copyCurrentBuildIntoOutputDir
   copyOutputDirectoryIntoCurrentBuild
