@@ -52,6 +52,13 @@ function get_chrome_config() {
 }
 
 
+function getHistory() {
+  mkdir aggregated_history
+  curl https://raw.githubusercontent.com/RedHatInsights/insights-frontend-builder-common/master/src/frontend-build-history.sh > frontend-build-history.sh
+  chmod +x frontend-build-history.sh
+  ./frontend-build-history.sh -q $IMAGE -o aggregated_history -c dist -p true
+}
+
 # Job name will contain pr-check or build-master. $GIT_BRANCH is not populated on a
 # manually triggered build
 if echo $JOB_NAME | grep -w "pr-check" > /dev/null; then
@@ -147,7 +154,19 @@ DOCKER_CONF="$PWD/.docker"
 mkdir -p "$DOCKER_CONF"
 echo $QUAY_TOKEN | docker --config="$DOCKER_CONF" login -u="$QUAY_USER" --password-stdin quay.io
 echo $RH_REGISTRY_TOKEN | docker --config="$DOCKER_CONF" login -u="$RH_REGISTRY_USER" --password-stdin registry.redhat.io
-docker --config="$DOCKER_CONF" build -t "${IMAGE}:${IMAGE_TAG}" $APP_ROOT -f $APP_ROOT/Dockerfile
+
+# Build and push the -single tagged image
+# This image contains only the current build
+docker --config="$DOCKER_CONF" build --label "image-type=signle" -t "${IMAGE}:${IMAGE_TAG}-single" $APP_ROOT -f $APP_ROOT/Dockerfile
+docker --config="$DOCKER_CONF" push "${IMAGE}:${IMAGE_TAG}-single"
+
+# Get the the last 6 builds
+getHistory
+
+# Build and push the aggregated image
+# This image is tagged with just the SHA for the current build
+# as this is the one we want deployed
+docker --config="$DOCKER_CONF" build --label "image-type=aggregate" -t "${IMAGE}:${IMAGE_TAG}" $APP_ROOT -f $APP_ROOT/Dockerfile
 docker --config="$DOCKER_CONF" push "${IMAGE}:${IMAGE_TAG}"
 
 teardown_docker

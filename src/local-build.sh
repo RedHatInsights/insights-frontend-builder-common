@@ -6,7 +6,8 @@
 
 # Usage:
 # 1. Clone a frontend like https://github.com/RedHatInsights/edge-frontend/
-# 2. Copy this file into the root of the repo
+# 2. Copy this file and frontend-build-history.sh into the root of the repo
+# 3. Change the IMAGE var at the top of this script to the value from build_deploy.sh
 # 3. Run the script
 # 4. Run the container podman run -p 8000:8000 localhost/edge:5316bd7
 # 5. Open the app in your browser at http://localhost:8000/apps/edge 
@@ -20,9 +21,9 @@
 # --------------------------------------------
 export WORKSPACE=$(pwd)
 export APP_NAME=$(node -e "console.log(require(\"${WORKSPACE:-.}${APP_DIR:-}/package.json\").insights.appname)")
-export CONTAINER_NAME="$APP_NAME-build-main"
+export CONTAINER_NAME="$APP_NAME"
 # main IMAGE var is exported from the pr_check.sh parent file
-export IMAGE="$APP_NAME-build-main"
+export IMAGE="quay.io/cloudservices/edge-frontend"
 export IMAGE_TAG=$(git rev-parse --short=7 HEAD)
 export IS_PR=false
 COMMON_BUILDER=https://raw.githubusercontent.com/RedHatInsights/insights-frontend-builder-common/master
@@ -62,6 +63,11 @@ function get_chrome_config() {
   return 0
 }
 
+function getHistory() {
+  mkdir aggregated_history
+  ./frontend-build-history.sh -q $IMAGE -o aggregated_history -c dist
+}
+
 set -ex
 # NOTE: Make sure this volume is mounted 'ro', otherwise Jenkins cannot clean up the
 # workspace due to file permission errors; the Z is used for SELinux workarounds
@@ -93,5 +99,10 @@ if [ $APP_NAME == "chrome" ] ; then
   get_chrome_config;
 fi
 
-docker build -t "${APP_NAME}:${IMAGE_TAG}" $APP_ROOT -f $APP_ROOT/Dockerfile
+docker build -t "${IMAGE}:${IMAGE_TAG}-single" $APP_ROOT -f $APP_ROOT/Dockerfile
+
+# Get the history
+getHistory
+
+docker build -t "${IMAGE}:${IMAGE_TAG}" $APP_ROOT -f $APP_ROOT/Dockerfile
 
