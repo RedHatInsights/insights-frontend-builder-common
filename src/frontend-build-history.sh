@@ -239,7 +239,7 @@ function copyHistoryIntoOutputDir() {
   for i in {6..1}
   do
     if [ -d .history/$i ]; then
-      cp -r .history/$i/* $OUTPUT_DIR
+      cp -rf .history/$i/* $OUTPUT_DIR
       # if copy failed log an error
       if [ $? -ne 0 ]; then
         printError "Failed to copy files from history level: " $i
@@ -252,7 +252,7 @@ function copyHistoryIntoOutputDir() {
 
 function copyCurrentBuildIntoOutputDir() {
   # Copy the original build into the output directory
-  cp -r $CURRENT_BUILD_DIR/* $OUTPUT_DIR
+  cp -rf $CURRENT_BUILD_DIR/* $OUTPUT_DIR
   if [ $? -ne 0 ]; then
     printError "Failed to copy files from current build dir" $CURRENT_BUILD_DIR
     return
@@ -262,7 +262,7 @@ function copyCurrentBuildIntoOutputDir() {
 
 function copyOutputDirectoryIntoCurrentBuild() {
   # Copy the output directory into the current build directory
-  cp -r $OUTPUT_DIR/* $CURRENT_BUILD_DIR
+  cp -rf $OUTPUT_DIR/* $CURRENT_BUILD_DIR
   if [ $? -ne 0 ]; then
     printError "Failed to copy files from output dir" $OUTPUT_DIR
     return
