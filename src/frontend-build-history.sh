@@ -104,7 +104,8 @@ function makeHistoryDirectories() {
 
 function getGitHistory() {
   # Get the git history
-  git log --first-parent --oneline --format='format:%h' --abbrev=7 > .history/git_history
+  # tail is to omit the first line, which would correspond to the current commit
+  git log --first-parent --oneline --format='format:%h' --abbrev=7  | tail -n +2 > .history/git_history
 }
 
 
@@ -235,7 +236,7 @@ function copyOutputDirectoryIntoCurrentBuild() {
   cp -r $OUTPUT_DIR/* $CURRENT_BUILD_DIR
   if [ $? -ne 0 ]; then
     printError "Failed to copy files from output dir" $OUTPUT_DIR
-    continue
+    return
   fi
   printSuccess "Copied files from output dir" $OUTPUT_DIR
 }
