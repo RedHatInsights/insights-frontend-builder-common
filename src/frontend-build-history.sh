@@ -15,7 +15,7 @@ Blue='\033[0;34m'
 Purple='\033[0;35m'
 Cyan='\033[0;36m'
 White='\033[0;37m'
-# we uset the same name each time we spin up a container to copy stuff out of
+# we use the same name each time we spin up a container to copy stuff out of
 # makes it easier
 HISTORY_CONTAINER_NAME="frontend-build-history"
 # If no -single images are found we set this to true
@@ -34,6 +34,8 @@ DEBUG_MODE=false
 # if this is true we will then take those SHA tagged images, retag them SHA-single, and push those back
 # up. This is so subsequent builds will find -single images
 PUSH_SINGLE_IMAGES=false
+# Our default mode is to get images tagged -single
+GET_SINGLE_IMAGES=true
 
 function debugMode() {
   if [ $DEBUG_MODE == true ]; then
@@ -179,12 +181,16 @@ function getBuildImages() {
 }
 
 function tagAndPushSingleImage() {
-  # Guard on PUSH_SINGLE_IMAGES
-  if [ $PUSH_SINGLE_IMAGES == false ]; then
+  # Guard on GET_SINGLE_IMAGES
+  # If we are getting single images then they are already tagged and 
+  # we don't need to retag and push
+  if [ $GET_SINGLE_IMAGES == true ]; then
     return 0
   fi
-  # Guard on SINGLE_IMAGE_FOUND
-  if [ $SINGLE_IMAGE_FOUND == false ]; then
+  # Guard on PUSH_SINGLE_IMAGES
+  # If the PUSH_SINGLE_IMAGES flag is false then we never engage this
+  # feature
+  if [ $PUSH_SINGLE_IMAGES == false ]; then
     return 0
   fi
   local SINGLE_IMAGE = $1
@@ -244,7 +250,6 @@ function main() {
   debugMode
   makeHistoryDirectories
   getGitHistory
-  GET_SINGLE_IMAGES=true
   getBuildImages $GET_SINGLE_IMAGES
   if [ $SINGLE_IMAGE_FOUND == false ]; then
     # If we are in this block then no images were found with the single tag
