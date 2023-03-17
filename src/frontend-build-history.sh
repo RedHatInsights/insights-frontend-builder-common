@@ -161,10 +161,22 @@ function getBuildImages() {
     printSuccess "Running $IMAGE_TEXT image" $SINGLE_IMAGE
     # Copy the files out of the docker container into the history level directory
     docker cp $HISTORY_CONTAINER_NAME:/opt/app-root/src/dist/. .history/$HISTORY_DEPTH #>/dev/null 2>&1
-    # If the copy fails log out and move to next
+    # if this fails try build
+    # This block handles a corner case. Some apps (one app actually, just chrome)
+    # may use the build directory instead of the dist directory.
+    # we assume dist, because that's the standard, but if we don't find it we try build
+    # if a build copy works then we change the output dir to build so thaat we end up with 
+    # history in the finaly container
     if [ $? -ne 0 ]; then
-      printError "Failed to copy files from image" $SINGLE_IMAGE
-      continue
+      printError "Couldn't find dist on image, trying build..." $SINGLE_IMAGE
+      docker cp $HISTORY_CONTAINER_NAME:/opt/app-root/src/build/. .history/$HISTORY_DEPTH #>/dev/null 2>&1
+      # If the copy fails log out and move to next
+      if [ $? -ne 0 ]; then
+        printError "Failed to copy files from image" $SINGLE_IMAGE
+        continue
+      fi
+      # Set output dir to build instead of dist
+      OUTPUT_DIR="build"
     fi
     printSuccess "Copied files from $IMAGE_TEXT image" $SINGLE_IMAGE
     if [ $GET_SINGLE_IMAGES == false ]; then
