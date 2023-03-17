@@ -160,7 +160,7 @@ function getBuildImages() {
     fi
     printSuccess "Running $IMAGE_TEXT image" $SINGLE_IMAGE
     # Copy the files out of the docker container into the history level directory
-    docker cp $HISTORY_CONTAINER_NAME:/opt/app-root/src/dist/. .history/$HISTORY_DEPTH >/dev/null 2>&1
+    docker cp $HISTORY_CONTAINER_NAME:/opt/app-root/src/dist/. .history/$HISTORY_DEPTH #>/dev/null 2>&1
     # If the copy fails log out and move to next
     if [ $? -ne 0 ]; then
       printError "Failed to copy files from image" $SINGLE_IMAGE
