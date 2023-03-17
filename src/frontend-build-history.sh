@@ -165,7 +165,7 @@ function getBuildImages() {
     # Increment FOUND_IMAGES
     HISTORY_FOUND_IMAGES=$((HISTORY_FOUND_IMAGES+1))
     # Run the image
-    docker rm -f $HISTORY_CONTAINER_NAME #>/dev/null 2>&1
+    docker rm -f $HISTORY_CONTAINER_NAME >/dev/null 2>&1
     docker run -d --name $HISTORY_CONTAINER_NAME $SINGLE_IMAGE >/dev/null 2>&1
     # If the run fails log out and move to next
     if [ $? -ne 0 ]; then
