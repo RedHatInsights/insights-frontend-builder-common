@@ -11,7 +11,7 @@ export IS_PR=false
 COMMON_BUILDER=https://raw.githubusercontent.com/RedHatInsights/insights-frontend-builder-common/master
 
 function teardown_docker() {
-  [ "$(docker ps -a | grep $CONTAINER_NAME)" ] && docker rm -f $CONTAINER_NAME || true
+  docker rm -f $CONTAINER_NAME || true
 }
 
 trap "teardown_docker" EXIT SIGINT SIGTERM
