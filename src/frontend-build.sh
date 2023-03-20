@@ -10,12 +10,6 @@ export IMAGE_TAG=$(git rev-parse --short=7 HEAD)
 export IS_PR=false
 COMMON_BUILDER=https://raw.githubusercontent.com/RedHatInsights/insights-frontend-builder-common/master
 
-function teardown_docker() {
-  docker rm -f $CONTAINER_NAME || true
-}
-
-trap "teardown_docker" EXIT SIGINT SIGTERM
-
 # Get the chrome config from cloud-services-config
 function get_chrome_config() {
   # Create the directory we're gonna plop the config files in
@@ -97,7 +91,6 @@ TEST_RESULT=$?
 
 if [ $TEST_RESULT -ne 0 ]; then
   echo "Test failure observed; aborting"
-  teardown_docker
   exit 1
 fi
 
@@ -159,7 +152,6 @@ echo $RH_REGISTRY_TOKEN | docker --config="$DOCKER_CONF" login -u="$RH_REGISTRY_
 if [ $IS_PR = true ]; then
   docker --config="$DOCKER_CONF" build -t "${IMAGE}:${IMAGE_TAG}" $APP_ROOT -f $APP_ROOT/Dockerfile
   docker --config="$DOCKER_CONF" push "${IMAGE}:${IMAGE_TAG}"
-  teardown_docker
 else
   # Build and push the -single tagged image
   # This image contains only the current build
@@ -174,6 +166,4 @@ else
   # as this is the one we want deployed
   docker --config="$DOCKER_CONF" build --label "image-type=aggregate" -t "${IMAGE}:${IMAGE_TAG}" $APP_ROOT -f $APP_ROOT/Dockerfile
   docker --config="$DOCKER_CONF" push "${IMAGE}:${IMAGE_TAG}"
-
-  teardown_docker
 fi
