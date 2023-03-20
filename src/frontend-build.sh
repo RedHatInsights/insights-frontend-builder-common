@@ -157,8 +157,8 @@ echo $RH_REGISTRY_TOKEN | docker --config="$DOCKER_CONF" login -u="$RH_REGISTRY_
 
 #PRs shouldn't get the special treatment for history
 if [ $IS_PR = true ]; then
-  docker --config="$DOCKER_CONF" build --label "image-type=single" -t "${IMAGE}:${IMAGE_TAG}-single" $APP_ROOT -f $APP_ROOT/Dockerfile
-  docker --config="$DOCKER_CONF" push "${IMAGE}:${IMAGE_TAG}-single"
+  docker --config="$DOCKER_CONF" build -t "${IMAGE}:${IMAGE_TAG}" $APP_ROOT -f $APP_ROOT/Dockerfile
+  docker --config="$DOCKER_CONF" push "${IMAGE}:${IMAGE_TAG}"
   teardown_docker
   exit 0
 fi
