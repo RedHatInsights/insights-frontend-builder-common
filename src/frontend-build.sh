@@ -160,21 +160,20 @@ if [ $IS_PR = true ]; then
   docker --config="$DOCKER_CONF" build -t "${IMAGE}:${IMAGE_TAG}" $APP_ROOT -f $APP_ROOT/Dockerfile
   docker --config="$DOCKER_CONF" push "${IMAGE}:${IMAGE_TAG}"
   teardown_docker
-  exit 0
+else
+  # Build and push the -single tagged image
+  # This image contains only the current build
+  docker --config="$DOCKER_CONF" build --label "image-type=single" -t "${IMAGE}:${IMAGE_TAG}-single" $APP_ROOT -f $APP_ROOT/Dockerfile
+  docker --config="$DOCKER_CONF" push "${IMAGE}:${IMAGE_TAG}-single"
+
+  # Get the the last 6 builds
+  getHistory
+
+  # Build and push the aggregated image
+  # This image is tagged with just the SHA for the current build
+  # as this is the one we want deployed
+  docker --config="$DOCKER_CONF" build --label "image-type=aggregate" -t "${IMAGE}:${IMAGE_TAG}" $APP_ROOT -f $APP_ROOT/Dockerfile
+  docker --config="$DOCKER_CONF" push "${IMAGE}:${IMAGE_TAG}"
+
+  teardown_docker
 fi
-
-# Build and push the -single tagged image
-# This image contains only the current build
-docker --config="$DOCKER_CONF" build --label "image-type=single" -t "${IMAGE}:${IMAGE_TAG}-single" $APP_ROOT -f $APP_ROOT/Dockerfile
-docker --config="$DOCKER_CONF" push "${IMAGE}:${IMAGE_TAG}-single"
-
-# Get the the last 6 builds
-getHistory
-
-# Build and push the aggregated image
-# This image is tagged with just the SHA for the current build
-# as this is the one we want deployed
-docker --config="$DOCKER_CONF" build --label "image-type=aggregate" -t "${IMAGE}:${IMAGE_TAG}" $APP_ROOT -f $APP_ROOT/Dockerfile
-docker --config="$DOCKER_CONF" push "${IMAGE}:${IMAGE_TAG}"
-
-teardown_docker
