@@ -1,5 +1,10 @@
 #!/bin/bash
 
+#dump env
+ENV_DUMP=`env`
+echo $ENV_DUMP
+
+
 # --------------------------------------------
 # Export vars for helper scripts to use
 # --------------------------------------------
