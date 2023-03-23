@@ -13,7 +13,7 @@ COMMON_BUILDER=https://raw.githubusercontent.com/RedHatInsights/insights-fronten
 
 export BETA=false
 # Get current git branch
-BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD)
+BRANCH_NAME=GIT_BRANCH
 # If branch name is one of these:
 # 'master', 'qa-beta', 'ci-beta', 'prod-beta', 'main', 'devel', 'stage-beta'
 # then we need to set BETA to true
