@@ -10,6 +10,18 @@ export IMAGE_TAG=$(git rev-parse --short=7 HEAD)
 export IS_PR=false
 COMMON_BUILDER=https://raw.githubusercontent.com/RedHatInsights/insights-frontend-builder-common/master
 
+
+export BETA=false
+# Get current git branch
+BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD)
+# If branch name is one of these:
+# 'master', 'qa-beta', 'ci-beta', 'prod-beta', 'main', 'devel', 'stage-beta'
+# then we need to set BETA to true
+# this list is taken from https://github.com/RedHatInsights/frontend-components/blob/master/packages/config/index.js#L8
+if [[ $BRANCH_NAME =~ ^(master|qa-beta|ci-beta|prod-beta|main|devel|stage-beta)$ ]]; then
+    export BETA=true
+fi
+
 function teardown_docker() {
   docker rm -f $CONTAINER_NAME || true
 }
@@ -90,6 +102,7 @@ docker run -i --name $CONTAINER_NAME \
   -e SERVER_NAME=$SERVER_NAME \
   -e INCLUDE_CHROME_CONFIG \
   -e CHROME_CONFIG_BRANCH \
+  -e BETA \
   --add-host stage.foo.redhat.com:127.0.0.1 \
   --add-host prod.foo.redhat.com:127.0.0.1 \
   quay.io/cloudservices/frontend-build-container:8b281e3 
