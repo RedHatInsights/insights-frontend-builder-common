@@ -19,8 +19,11 @@ COMMON_BUILDER=https://raw.githubusercontent.com/RedHatInsights/insights-fronten
 #The BUILD_SCRIPT env var is used in the frontend build container
 #and is the script we run with NPM at build time
 #the default is build, but we give apps the option to override
-if [ -z "$BUILD_SCRIPT" ]; then
-  export BUILD_SCRIPT="build"
+if [ -z "$NPM_BUILD_SCRIPT" ]; then
+  export NPM_BUILD_SCRIPT="build"
+fi
+if [ -z "$YARN_BUILD_SCRIPT" ]; then
+  export YARN_BUILD_SCRIPT="build:prod"
 fi
 
 export BETA=false
@@ -120,7 +123,8 @@ docker run -i --name $CONTAINER_NAME \
   -e INCLUDE_CHROME_CONFIG \
   -e CHROME_CONFIG_BRANCH \
   -e BETA \
-  -e BUILD_SCRIPT \
+  -e NPM_BUILD_SCRIPT \
+  -e YARN_BUILD_SCRIPT \
   --add-host stage.foo.redhat.com:127.0.0.1 \
   --add-host prod.foo.redhat.com:127.0.0.1 \
   quay.io/cloudservices/frontend-build-container:8b281e3 
