@@ -16,6 +16,16 @@ export IS_PR=false
 COMMON_BUILDER=https://raw.githubusercontent.com/RedHatInsights/insights-frontend-builder-common/master
 
 
+#The BUILD_SCRIPT env var is used in the frontend build container
+#and is the script we run with NPM at build time
+#the default is build, but we give apps the option to override
+if [ -z "$NPM_BUILD_SCRIPT" ]; then
+  export NPM_BUILD_SCRIPT="build"
+fi
+if [ -z "$YARN_BUILD_SCRIPT" ]; then
+  export YARN_BUILD_SCRIPT="build:prod"
+fi
+
 export BETA=false
 # Get current git branch
 # The current branch is going to be the GIT_BRANCH env var but with origin/ stripped off
@@ -113,9 +123,11 @@ docker run -i --name $CONTAINER_NAME \
   -e INCLUDE_CHROME_CONFIG \
   -e CHROME_CONFIG_BRANCH \
   -e BETA \
+  -e NPM_BUILD_SCRIPT \
+  -e YARN_BUILD_SCRIPT \
   --add-host stage.foo.redhat.com:127.0.0.1 \
   --add-host prod.foo.redhat.com:127.0.0.1 \
-  quay.io/cloudservices/frontend-build-container:8b281e3 
+  quay.io/cloudservices/frontend-build-container:438485e 
 TEST_RESULT=$?
 
 if [ $TEST_RESULT -ne 0 ]; then
