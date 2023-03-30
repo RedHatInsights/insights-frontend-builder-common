@@ -15,6 +15,13 @@ export IMAGE_TAG=$(git rev-parse --short=7 HEAD)
 export IS_PR=false
 COMMON_BUILDER=https://raw.githubusercontent.com/RedHatInsights/insights-frontend-builder-common/master
 EPOCH=$(date +%s)
+# Get current git branch
+# The current branch is going to be the GIT_BRANCH env var but with origin/ stripped off
+if [[ $GIT_BRANCH == origin/* ]]; then
+    BRANCH_NAME=${GIT_BRANCH:7}
+else
+    BRANCH_NAME=$GIT_BRANCH
+fi
 # We want to be really, really, really sure we have a unique container name
 export CONTAINER_NAME="$APP_NAME-$BRANCH_NAME-$IMAGE_TAG-$EPOCH"
 
@@ -29,13 +36,7 @@ if [ -z "$YARN_BUILD_SCRIPT" ]; then
 fi
 
 export BETA=false
-# Get current git branch
-# The current branch is going to be the GIT_BRANCH env var but with origin/ stripped off
-if [[ $GIT_BRANCH == origin/* ]]; then
-    BRANCH_NAME=${GIT_BRANCH:7}
-else
-    BRANCH_NAME=$GIT_BRANCH
-fi
+
 # If branch name is one of these:
 # 'master', 'qa-beta', 'ci-beta', 'prod-beta', 'main', 'devel', 'stage-beta'
 # then we need to set BETA to true
