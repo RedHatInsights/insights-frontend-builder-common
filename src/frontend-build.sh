@@ -9,12 +9,14 @@ echo $ENV_DUMP
 # Export vars for helper scripts to use
 # --------------------------------------------
 export APP_NAME=$(node -e "console.log(require(\"${WORKSPACE:-.}${APP_DIR:-}/package.json\").insights.appname)")
-export CONTAINER_NAME="$APP_NAME-build-main"
+
 # main IMAGE var is exported from the pr_check.sh parent file
 export IMAGE_TAG=$(git rev-parse --short=7 HEAD)
 export IS_PR=false
 COMMON_BUILDER=https://raw.githubusercontent.com/RedHatInsights/insights-frontend-builder-common/master
-
+EPOCH=$(date +%s)
+# We want to be really, really, really sure we have a unique container name
+export CONTAINER_NAME="$APP_NAME-$BRANCH_NAME-$IMAGE_TAG-$EPOCH"
 
 #The BUILD_SCRIPT env var is used in the frontend build container
 #and is the script we run with NPM at build time
