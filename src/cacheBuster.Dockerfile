@@ -3,7 +3,7 @@
 #
 # Example usage:
 # $ podman build -f cacheBuster.Dockerfile -t akamai-purge .
-# $ podman run -it -v .edgerc:/opt/app-root/edgerc:z -it akamai-purge invalidate https://somewhere.com/some/cached/file
+# $ podman run -it -v ~/.edgerc:/opt/app-root/edgerc:z -it akamai-purge invalidate https://somewhere.com/some/cached/file https://somewhere.com/some/other/cached/file
 #
 # Notes: 
 #   * you have to have your akamai creds in a file that you mount to /opt/app-root/edgerc
