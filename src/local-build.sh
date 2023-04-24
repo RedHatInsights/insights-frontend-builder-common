@@ -72,7 +72,7 @@ set -ex
 # NOTE: Make sure this volume is mounted 'ro', otherwise Jenkins cannot clean up the
 # workspace due to file permission errors; the Z is used for SELinux workarounds
 # -e NODE_BUILD_VERSION can be used to specify a version other than 12
-docker run -i --name $CONTAINER_NAME \
+docker run --rm -it --name $CONTAINER_NAME \
   -v $PWD:/workspace:ro,Z \
   -e APP_DIR=$APP_DIR \
   -e IS_PR=$IS_PR \
