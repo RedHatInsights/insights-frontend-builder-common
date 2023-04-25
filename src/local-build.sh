@@ -68,6 +68,10 @@ function getHistory() {
   ./frontend-build-history.sh -q $IMAGE -o aggregated_history -c dist
 }
 
+function teardown_docker() {
+  docker rm -f $CONTAINER_NAME || true
+}
+
 set -ex
 # NOTE: Make sure this volume is mounted 'ro', otherwise Jenkins cannot clean up the
 # workspace due to file permission errors; the Z is used for SELinux workarounds
@@ -106,3 +110,5 @@ getHistory
 
 docker build -t "${IMAGE}:${IMAGE_TAG}" $APP_ROOT -f $APP_ROOT/Dockerfile
 
+# Cleanup
+teardown_docker
