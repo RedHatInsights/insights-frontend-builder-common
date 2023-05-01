@@ -184,9 +184,11 @@ if [[ -z "$RH_REGISTRY_USER" || -z "$RH_REGISTRY_TOKEN" ]]; then
     exit 1
 fi
 
-if [ $APP_NAME == "chrome" ] ; then
-  get_chrome_config;
-fi
+# Crome isn't currently using our config, don't need this complexity for now
+# Not deleting, as we may need to re-enable later
+#if [ $APP_NAME == "chrome" ] ; then
+  # get_chrome_config;
+#fi
 
 DOCKER_CONF="$PWD/.docker"
 mkdir -p "$DOCKER_CONF"
