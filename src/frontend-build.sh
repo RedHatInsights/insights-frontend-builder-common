@@ -130,7 +130,7 @@ docker run -i --name $CONTAINER_NAME \
   -e YARN_BUILD_SCRIPT \
   --add-host stage.foo.redhat.com:127.0.0.1 \
   --add-host prod.foo.redhat.com:127.0.0.1 \
-  quay.io/cloudservices/frontend-build-container:3cfd142
+  quay.io/cloudservices/frontend-build-container:1edd778
 TEST_RESULT=$?
 
 if [ $TEST_RESULT -ne 0 ]; then
