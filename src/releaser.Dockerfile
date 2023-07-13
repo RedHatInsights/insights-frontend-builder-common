@@ -5,7 +5,9 @@ ENV GOPATH=/go
 RUN dnf update -y && \
         dnf install 'dnf-command(copr)' -y && \
         dnf copr enable @caddy/caddy -y && \
-        dnf install nodejs caddy rsync unzip openssh-clients golang -y && \
+        dnf group install "C Development Tools and Libraries" -y && \
+        dnf install nodejs caddy rsync unzip openssh-clients golang pandoc asciidoctor ruby-devel zlib-devel -y && \
+        gem install asciidoctor-plantuml && \
         npm i -g yarn && \
         dnf clean all
 
