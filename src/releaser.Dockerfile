@@ -6,8 +6,9 @@ RUN dnf update -y && \
         dnf install 'dnf-command(copr)' -y && \
         dnf copr enable @caddy/caddy -y && \
         dnf group install "C Development Tools and Libraries" -y && \
-        dnf install nodejs caddy rsync unzip openssh-clients golang pandoc asciidoctor ruby-devel zlib-devel -y && \
+        dnf install nodejs caddy rsync unzip openssh-clients golang pandoc asciidoctor ruby-devel zlib-devel graphviz -y && \
         gem install asciidoctor-plantuml && \
+        gem install asciidoctor-diagram && \
         npm i -g yarn && \
         dnf clean all
 
