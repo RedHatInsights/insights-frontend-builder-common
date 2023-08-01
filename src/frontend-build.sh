@@ -4,6 +4,8 @@
 ENV_DUMP=`env`
 echo $ENV_DUMP
 
+which docker
+docker --version
 
 # --------------------------------------------
 # Export vars for helper scripts to use
