@@ -156,7 +156,9 @@ function build() {
 }
 
 # Run a stable build
-build $WORKSPACE/build false
+# The $BETA here is to ensure we don't break compatibility
+# until we make the corresponding changes to the frontend-build-container
+build $WORKSPACE/build $BETA
 # Run a preview build
 build $WORKSPACE/build/dist/preview true
 
