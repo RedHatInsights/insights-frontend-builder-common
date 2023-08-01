@@ -120,8 +120,8 @@ cd $WORKSPACE/build/container_workspace/ && export APP_ROOT="$WORKSPACE/build/co
 
 
 function build() {
-  local OUTPUT_DIR = $1
-  local IS_PREVIEW = $2
+  local OUTPUT_DIR=$1
+  local IS_PREVIEW=$2
   # NOTE: Make sure this volume is mounted 'ro', otherwise Jenkins cannot clean up the
   # workspace due to file permission errors; the Z is used for SELinux workarounds
   # -e NODE_BUILD_VERSION can be used to specify a version other than 12
