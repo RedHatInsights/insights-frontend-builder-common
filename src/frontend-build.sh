@@ -166,7 +166,7 @@ build $WORKSPACE/build $BETA
 # build $WORKSPACE/build/preview true
 
 # Copy the preview build output so its gets picked up in the copy from the stable dist
-cp -r $WORKSPACE/build/preview/container_workspace/dist $WORKSPACE/build/container_workspace/dist/preview
+#cp -r $WORKSPACE/build/preview/container_workspace/dist $WORKSPACE/build/container_workspace/dist/preview
 
 # Set the APP_ROOT
 cd $WORKSPACE/build/container_workspace/ && export APP_ROOT="$WORKSPACE/build/container_workspace/"
