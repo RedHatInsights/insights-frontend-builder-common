@@ -12,11 +12,13 @@ docker --version
 # --------------------------------------------
 export APP_NAME=$(node -e "console.log(require(\"${WORKSPACE:-.}${APP_DIR:-}/package.json\").insights.appname)")
 
+
 # main IMAGE var is exported from the pr_check.sh parent file
 export IMAGE_TAG=$(git rev-parse --short=7 HEAD)
 export IS_PR=false
 COMMON_BUILDER=https://raw.githubusercontent.com/RedHatInsights/insights-frontend-builder-common/master
 EPOCH=$(date +%s)
+BUILD_IMAGE_TAG=642ff08
 # Get current git branch
 # The current branch is going to be the GIT_BRANCH env var but with origin/ stripped off
 if [[ $GIT_BRANCH == origin/* ]]; then
@@ -113,40 +115,52 @@ if echo $JOB_NAME | grep -w "pr-check" > /dev/null; then
 fi
 
 set -ex
-# NOTE: Make sure this volume is mounted 'ro', otherwise Jenkins cannot clean up the
-# workspace due to file permission errors; the Z is used for SELinux workarounds
-# -e NODE_BUILD_VERSION can be used to specify a version other than 12
-docker run -i --name $CONTAINER_NAME \
-  -v $PWD:/workspace:ro,Z \
-  -e QUAY_USER=$QUAY_USER \
-  -e QUAY_TOKEN=$QUAY_TOKEN \
-  -e APP_DIR=$APP_DIR \
-  -e IS_PR=$IS_PR \
-  -e CI_ROOT=$CI_ROOT \
-  -e NODE_BUILD_VERSION=$NODE_BUILD_VERSION \
-  -e SERVER_NAME=$SERVER_NAME \
-  -e INCLUDE_CHROME_CONFIG \
-  -e CHROME_CONFIG_BRANCH \
-  -e BETA \
-  -e NPM_BUILD_SCRIPT \
-  -e YARN_BUILD_SCRIPT \
-  --add-host stage.foo.redhat.com:127.0.0.1 \
-  --add-host prod.foo.redhat.com:127.0.0.1 \
-  quay.io/cloudservices/frontend-build-container:642ff08 
-TEST_RESULT=$?
 
-if [ $TEST_RESULT -ne 0 ]; then
-  echo "Test failure observed; aborting"
-  teardown_docker
-  exit 1
-fi
-
-# Extract files needed to build contianer
-mkdir -p $WORKSPACE/build
-docker cp $CONTAINER_NAME:/container_workspace/ $WORKSPACE/build
 cd $WORKSPACE/build/container_workspace/ && export APP_ROOT="$WORKSPACE/build/container_workspace/"
 
 
+function build() {
+  local OUTPUT_DIR=$1
+  local IS_PREVIEW=$2
+  # NOTE: Make sure this volume is mounted 'ro', otherwise Jenkins cannot clean up the
+  # workspace due to file permission errors; the Z is used for SELinux workarounds
+  # -e NODE_BUILD_VERSION can be used to specify a version other than 12
+  docker run -i --name $CONTAINER_NAME \
+    -v $PWD:/workspace:ro,Z \
+    -e QUAY_USER=$QUAY_USER \
+    -e QUAY_TOKEN=$QUAY_TOKEN \
+    -e APP_DIR=$APP_DIR \
+    -e IS_PR=$IS_PR \
+    -e CI_ROOT=$CI_ROOT \
+    -e NODE_BUILD_VERSION=$NODE_BUILD_VERSION \
+    -e SERVER_NAME=$SERVER_NAME \
+    -e INCLUDE_CHROME_CONFIG \
+    -e CHROME_CONFIG_BRANCH \
+    -e BETA=$IS_PREVIEW \
+    -e NPM_BUILD_SCRIPT \
+    -e YARN_BUILD_SCRIPT \
+    --add-host stage.foo.redhat.com:127.0.0.1 \
+    --add-host prod.foo.redhat.com:127.0.0.1 \
+    quay.io/cloudservices/frontend-build-container:$BUILD_IMAGE_TAG 
+  RESULT=$?
+
+  if [ $RESULT -ne 0 ]; then
+    echo "Test failure observed; aborting"
+    teardown_docker
+    exit 1
+  fi
+
+  # Extract files needed to build contianer
+  mkdir -p $OUTPUT_DIR
+  docker cp $CONTAINER_NAME:/container_workspace/ $OUTPUT_DIR
+}
+
+# Run a stable build
+# The $BETA here is to ensure we don't break compatibility
+# until we make the corresponding changes to the frontend-build-container
+build $WORKSPACE/build $BETA
+# Run a preview build
+build $WORKSPACE/build/dist/preview true
 
 # ---------------------------
 # Build and Publish to Quay
@@ -186,7 +200,7 @@ if [[ -z "$RH_REGISTRY_USER" || -z "$RH_REGISTRY_TOKEN" ]]; then
     exit 1
 fi
 
-# Crome isn't currently using our config, don't need this complexity for now
+# Chrome isn't currently using our config, don't need this complexity for now
 # Not deleting, as we may need to re-enable later
 #if [ $APP_NAME == "chrome" ] ; then
   # get_chrome_config;
