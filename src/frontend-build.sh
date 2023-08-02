@@ -18,7 +18,7 @@ export IMAGE_TAG=$(git rev-parse --short=7 HEAD)
 export IS_PR=false
 COMMON_BUILDER=https://raw.githubusercontent.com/RedHatInsights/insights-frontend-builder-common/master
 EPOCH=$(date +%s)
-BUILD_IMAGE_TAG=353f5b8
+BUILD_IMAGE_TAG=642ff08
 # Get current git branch
 # The current branch is going to be the GIT_BRANCH env var but with origin/ stripped off
 if [[ $GIT_BRANCH == origin/* ]]; then
@@ -160,10 +160,10 @@ function build() {
 # Run a stable build
 # this will result in a $WORKSPACE/build/container_workspace directory that has build, dist, and the Dcokerfile and what not
 # dist and the Caddyfile and stuff will be copied from here into the container
-build $WORKSPACE/build false
+build $WORKSPACE/build $BETA
 
 # Run a preview build
-build $WORKSPACE/build/preview true
+# build $WORKSPACE/build/preview true
 
 # Copy the preview build output so its gets picked up in the copy from the stable dist
 cp -r $WORKSPACE/build/preview/container_workspace/dist $WORKSPACE/build/container_workspace/dist/preview
