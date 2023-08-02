@@ -155,15 +155,22 @@ function build() {
   teardown_docker
 }
 
-# If $WORKSPACE/build doesn't exist, create it
-mkdir -p $WORKSPACE/build
+
+
 # Run a stable build
 # The $BETA here is to ensure we don't break compatibility
 # until we make the corresponding changes to the frontend-build-container
+# this will result in a $WORKSPACE/build/container_workspace directory that has build, dist, and the Dcokerfile and what not
+# dist and the Caddyfile and stuff will be copied from here into the container
 build $WORKSPACE/build $BETA
-# Run a preview build
-build $WORKSPACE/build/dist/preview true
 
+# Run a preview build
+build $WORKSPACE/build/preview true
+
+# Copy the preview build output so its gets picked up in the copy from the stable dist
+cp -r $WORKSPACE/build/preview/container_workspace/dist $WORKSPACE/build/container_workspace/dist/preview
+
+# Set the APP_ROOT
 cd $WORKSPACE/build/container_workspace/ && export APP_ROOT="$WORKSPACE/build/container_workspace/"
 
 # ---------------------------
