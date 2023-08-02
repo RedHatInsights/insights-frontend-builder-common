@@ -116,8 +116,6 @@ fi
 
 set -ex
 
-cd $WORKSPACE/build/container_workspace/ && export APP_ROOT="$WORKSPACE/build/container_workspace/"
-
 
 function build() {
   local OUTPUT_DIR=$1
@@ -157,12 +155,16 @@ function build() {
   teardown_docker
 }
 
+# If $WORKSPACE/build doesn't exist, create it
+mkdir -p $WORKSPACE/build
 # Run a stable build
 # The $BETA here is to ensure we don't break compatibility
 # until we make the corresponding changes to the frontend-build-container
 build $WORKSPACE/build $BETA
 # Run a preview build
 build $WORKSPACE/build/dist/preview true
+
+cd $WORKSPACE/build/container_workspace/ && export APP_ROOT="$WORKSPACE/build/container_workspace/"
 
 # ---------------------------
 # Build and Publish to Quay
