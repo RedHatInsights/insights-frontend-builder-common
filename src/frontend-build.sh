@@ -206,21 +206,21 @@ fi
   # get_chrome_config;
 #fi
 
-DOCKER_CONF="$PWD/.docker"
-mkdir -p "$DOCKER_CONF"
-echo $QUAY_TOKEN | docker --config="$DOCKER_CONF" login -u="$QUAY_USER" --password-stdin quay.io
-echo $RH_REGISTRY_TOKEN | docker --config="$DOCKER_CONF" login -u="$RH_REGISTRY_USER" --password-stdin registry.redhat.io
+DOCKER_CONFIG="$PWD/.docker"
+mkdir -p "$DOCKER_CONFIG"
+echo $QUAY_TOKEN | docker  login -u="$QUAY_USER" --password-stdin quay.io
+echo $RH_REGISTRY_TOKEN | docker  login -u="$RH_REGISTRY_USER" --password-stdin registry.redhat.io
 
 #PRs shouldn't get the special treatment for history
 if [ $IS_PR = true ]; then
-  docker --config="$DOCKER_CONF" build -t "${IMAGE}:${IMAGE_TAG}" $APP_ROOT -f $APP_ROOT/Dockerfile
-  docker --config="$DOCKER_CONF" push "${IMAGE}:${IMAGE_TAG}"
+  docker  build -t "${IMAGE}:${IMAGE_TAG}" $APP_ROOT -f $APP_ROOT/Dockerfile
+  docker  push "${IMAGE}:${IMAGE_TAG}"
   teardown_docker
 else
   # Build and push the -single tagged image
   # This image contains only the current build
-  docker --config="$DOCKER_CONF" build --label "image-type=single" -t "${IMAGE}:${IMAGE_TAG}-single" $APP_ROOT -f $APP_ROOT/Dockerfile
-  docker --config="$DOCKER_CONF" push "${IMAGE}:${IMAGE_TAG}-single"
+  docker  build --label "image-type=single" -t "${IMAGE}:${IMAGE_TAG}-single" $APP_ROOT -f $APP_ROOT/Dockerfile
+  docker  push "${IMAGE}:${IMAGE_TAG}-single"
 
   # Get the the last 6 builds
   getHistory
@@ -228,8 +228,8 @@ else
   # Build and push the aggregated image
   # This image is tagged with just the SHA for the current build
   # as this is the one we want deployed
-  docker --config="$DOCKER_CONF" build --label "image-type=aggregate" -t "${IMAGE}:${IMAGE_TAG}" $APP_ROOT -f $APP_ROOT/Dockerfile
-  docker --config="$DOCKER_CONF" push "${IMAGE}:${IMAGE_TAG}"
+  docker  build --label "image-type=aggregate" -t "${IMAGE}:${IMAGE_TAG}" $APP_ROOT -f $APP_ROOT/Dockerfile
+  docker  push "${IMAGE}:${IMAGE_TAG}"
 
   teardown_docker
 fi
