@@ -1,8 +1,9 @@
 #!/bin/bash
 
-
-CONTAINER_ENGINE_CMD=''
+export CONTAINER_ENGINE_CMD=''
 PREFER_CONTAINER_ENGINE="${PREFER_CONTAINER_ENGINE:-}"
+export LOCAL_BUILD="${LOCAL_BUILD:-false}"
+export WORKSPACE="${WORKSPACE:-$PWD}"
 
 container_engine_cmd() {
 
@@ -84,13 +85,16 @@ _docker_seems_emulated() {
     return 1
 }
 
+local_build() {
+  [ "$LOCAL_BUILD" = true ]
+}
+
 #dump env
 ENV_DUMP=`env`
 echo $ENV_DUMP
 
 container_engine_cmd --version
 
-exit 99
 # --------------------------------------------
 # Export vars for helper scripts to use
 # --------------------------------------------
@@ -100,7 +104,6 @@ export APP_NAME=$(node -e "console.log(require(\"${WORKSPACE:-.}${APP_DIR:-}/pac
 # main IMAGE var is exported from the pr_check.sh parent file
 export IMAGE_TAG=$(git rev-parse --short=7 HEAD)
 export IS_PR=false
-COMMON_BUILDER=https://raw.githubusercontent.com/RedHatInsights/insights-frontend-builder-common/master
 EPOCH=$(date +%s)
 BUILD_IMAGE_TAG=353f5b8
 # Get current git branch
@@ -134,7 +137,7 @@ if [[ $BRANCH_NAME =~ ^(master|qa-beta|ci-beta|prod-beta|main|devel|stage-beta)$
 fi
 
 function teardown_docker() {
-  docker rm -f $CONTAINER_NAME || true
+  container_engine_cmd rm -f $CONTAINER_NAME || true
 }
 
 trap "teardown_docker" EXIT SIGINT SIGTERM
@@ -177,9 +180,13 @@ function get_chrome_config() {
 
 function getHistory() {
   mkdir aggregated_history
-  curl https://raw.githubusercontent.com/RedHatInsights/insights-frontend-builder-common/master/src/frontend-build-history.sh > frontend-build-history.sh
-  chmod +x frontend-build-history.sh
-  ./frontend-build-history.sh -q $IMAGE -o aggregated_history -c dist -p true -t $QUAY_TOKEN -u $QUAY_USER
+  #curl https://raw.githubusercontent.com/RedHatInsights/insights-frontend-builder-common/master/src/frontend-build-history.sh > frontend-build-history.sh
+  #chmod +x frontend-build-history.sh
+  local SCRIPT
+
+  SCRIPT="${HOME}/dev/projects/insights-frontend-builder-common/src/frontend-build-history.sh"
+
+  "$SCRIPT" -q $IMAGE -o aggregated_history -c dist -p true -t $QUAY_TOKEN -u $QUAY_USER
 }
 
 # Job name will contain pr-check or build-master. $GIT_BRANCH is not populated on a
@@ -207,7 +214,7 @@ function build() {
   # NOTE: Make sure this volume is mounted 'ro', otherwise Jenkins cannot clean up the
   # workspace due to file permission errors; the Z is used for SELinux workarounds
   # -e NODE_BUILD_VERSION can be used to specify a version other than 12
-  docker run -i --name $CONTAINER_NAME \
+  container_engine_cmd run -i --name $CONTAINER_NAME \
     -v $PWD:/workspace:ro,Z \
     -e QUAY_USER=$QUAY_USER \
     -e QUAY_TOKEN=$QUAY_TOKEN \
@@ -234,7 +241,7 @@ function build() {
 
   # Extract files needed to build contianer
   mkdir -p $OUTPUT_DIR
-  docker cp $CONTAINER_NAME:/container_workspace/ $OUTPUT_DIR
+  container_engine_cmd cp $CONTAINER_NAME:/container_workspace/ $OUTPUT_DIR
 
   teardown_docker
 }
@@ -272,8 +279,6 @@ else
   echo "Publishing to Quay without expiration"
 fi
 
-# source <(curl -sSL $COMMON_BUILDER/src/quay_push.sh | bash -s)
-
 # IMAGE, IMAGE_TAG, and Tokens are exported from upstream pr_check.sh
 export LC_ALL=en_US.utf-8
 export LANG=en_US.utf-8
@@ -283,14 +288,16 @@ export WORKSPACE=${WORKSPACE:-$APP_ROOT}  # if running in jenkins, use the build
 export GIT_COMMIT=$(git rev-parse HEAD)
 
 
-if [[ -z "$QUAY_USER" || -z "$QUAY_TOKEN" ]]; then
-    echo "QUAY_USER and QUAY_TOKEN must be set"
-    exit 1
-fi
+if ! local_build; then 
+    if [[ -z "$QUAY_USER" || -z "$QUAY_TOKEN" ]]; then
+        echo "QUAY_USER and QUAY_TOKEN must be set"
+        exit 1
+    fi
 
-if [[ -z "$RH_REGISTRY_USER" || -z "$RH_REGISTRY_TOKEN" ]]; then
-    echo "RH_REGISTRY_USER and RH_REGISTRY_TOKEN must be set"
-    exit 1
+    if [[ -z "$RH_REGISTRY_USER" || -z "$RH_REGISTRY_TOKEN" ]]; then
+        echo "RH_REGISTRY_USER and RH_REGISTRY_TOKEN must be set"
+        exit 1
+    fi
 fi
 
 # Chrome isn't currently using our config, don't need this complexity for now
@@ -301,19 +308,33 @@ fi
 
 DOCKER_CONFIG="$PWD/.docker"
 mkdir -p "$DOCKER_CONFIG"
-echo $QUAY_TOKEN | docker  login -u="$QUAY_USER" --password-stdin quay.io
-echo $RH_REGISTRY_TOKEN | docker  login -u="$RH_REGISTRY_USER" --password-stdin registry.redhat.io
+if ! local_build; then
+  echo $QUAY_TOKEN | container_engine_cmd login -u="$QUAY_USER" --password-stdin quay.io
+  echo $RH_REGISTRY_TOKEN | container_engine_cmd login -u="$RH_REGISTRY_USER" --password-stdin registry.redhat.io
+else
+  echo "Local build: Skipping container registries logging"
+fi
 
 #PRs shouldn't get the special treatment for history
 if [ $IS_PR = true ]; then
-  docker  build -t "${IMAGE}:${IMAGE_TAG}" $APP_ROOT -f $APP_ROOT/Dockerfile
-  docker  push "${IMAGE}:${IMAGE_TAG}"
+  container_engine_cmd build -t "${IMAGE}:${IMAGE_TAG}" $APP_ROOT -f $APP_ROOT/Dockerfile
+
+  if ! local_build; then
+      container_engine_cmd push "${IMAGE}:${IMAGE_TAG}"
+  else
+      echo "local build, skipping command 'push ${IMAGE}:${IMAGE_TAG}'"
+  fi
   teardown_docker
 else
   # Build and push the -single tagged image
   # This image contains only the current build
-  docker  build --label "image-type=single" -t "${IMAGE}:${IMAGE_TAG}-single" $APP_ROOT -f $APP_ROOT/Dockerfile
-  docker  push "${IMAGE}:${IMAGE_TAG}-single"
+  container_engine_cmd build --label "image-type=single" -t "${IMAGE}:${IMAGE_TAG}-single" $APP_ROOT -f $APP_ROOT/Dockerfile
+  if ! local_build; then
+    container_engine_cmd push "${IMAGE}:${IMAGE_TAG}-single"
+  else
+      echo "local build, skipping command 'push ${IMAGE}:${IMAGE_TAG}-single'"
+  fi
+  teardown_docker
 
   # Get the the last 6 builds
   getHistory
@@ -321,8 +342,13 @@ else
   # Build and push the aggregated image
   # This image is tagged with just the SHA for the current build
   # as this is the one we want deployed
-  docker  build --label "image-type=aggregate" -t "${IMAGE}:${IMAGE_TAG}" $APP_ROOT -f $APP_ROOT/Dockerfile
-  docker  push "${IMAGE}:${IMAGE_TAG}"
+  container_engine_cmd build --label "image-type=aggregate" -t "${IMAGE}:${IMAGE_TAG}" $APP_ROOT -f $APP_ROOT/Dockerfile
+
+  if ! local_build; then
+    container_engine_cmd push "${IMAGE}:${IMAGE_TAG}"
+  else
+      echo "local build, skipping command 'push ${IMAGE}:${IMAGE_TAG}'"
+  fi
 
   teardown_docker
 fi

@@ -149,13 +149,13 @@ function getBuildImages() {
 
     printSuccess "Pulling single-build image" $SINGLE_IMAGE
     # Pull the image
-    docker pull $SINGLE_IMAGE >/dev/null 2>&1
+    container_engine_cmd pull $SINGLE_IMAGE >/dev/null 2>&1
     # if the image is not found trying falling back to a non-single tagged build
     if [ $? -ne 0 ]; then
       SINGLE_IMAGE=$QUAYREPO:$REF
       IMAGE_TEXT="Fallback build"
       printError "Image not found. Trying build not tagged single." $SINGLE_IMAGE
-      docker pull $SINGLE_IMAGE >/dev/null 2>&1
+      container_engine_cmd pull $SINGLE_IMAGE >/dev/null 2>&1
       if [ $? -ne 0 ]; then
         printError "Fallback build not found. Skipping." $SINGLE_IMAGE
         continue
@@ -165,8 +165,8 @@ function getBuildImages() {
     # Increment FOUND_IMAGES
     HISTORY_FOUND_IMAGES=$((HISTORY_FOUND_IMAGES+1))
     # Run the image
-    docker rm -f $HISTORY_CONTAINER_NAME >/dev/null 2>&1
-    docker run -d --name $HISTORY_CONTAINER_NAME $SINGLE_IMAGE >/dev/null 2>&1
+    container_engine_cmd rm -f $HISTORY_CONTAINER_NAME >/dev/null 2>&1
+    container_engine_cmd run -d --name $HISTORY_CONTAINER_NAME $SINGLE_IMAGE >/dev/null 2>&1
     # If the run fails log out and move to next
     if [ $? -ne 0 ]; then
       printError "Failed to run image" $SINGLE_IMAGE
@@ -174,7 +174,7 @@ function getBuildImages() {
     fi
     printSuccess "Running $IMAGE_TEXT image" $SINGLE_IMAGE
     # Copy the files out of the docker container into the history level directory
-    docker cp $HISTORY_CONTAINER_NAME:/opt/app-root/src/dist/. .history/$HISTORY_DEPTH >/dev/null 2>&1
+    container_engine_cmd cp $HISTORY_CONTAINER_NAME:/opt/app-root/src/dist/. .history/$HISTORY_DEPTH >/dev/null 2>&1
     # if this fails try build
     # This block handles a corner case. Some apps (one app actually, just chrome)
     # may use the build directory instead of the dist directory.
@@ -183,7 +183,7 @@ function getBuildImages() {
     # history in the finaly container
     if [ $? -ne 0 ]; then
       printError "Couldn't find dist on image, trying build..." $SINGLE_IMAGE
-      docker cp $HISTORY_CONTAINER_NAME:/opt/app-root/src/build/. .history/$HISTORY_DEPTH >/dev/null 2>&1
+      container_engine_cmd cp $HISTORY_CONTAINER_NAME:/opt/app-root/src/build/. .history/$HISTORY_DEPTH >/dev/null 2>&1
       # If the copy fails log out and move to next
       if [ $? -ne 0 ]; then
         printError "Failed to copy files from image" $SINGLE_IMAGE
@@ -194,9 +194,9 @@ function getBuildImages() {
     fi
     printSuccess "Copied files from $IMAGE_TEXT image" $SINGLE_IMAGE
     # Stop the image
-    docker stop $HISTORY_CONTAINER_NAME >/dev/null 2>&1
+    container_engine_cmd stop $HISTORY_CONTAINER_NAME >/dev/null 2>&1
     # delete the container
-    docker rm -f $HISTORY_CONTAINER_NAME >/dev/null 2>&1
+    container_engine_cmd rm -f $HISTORY_CONTAINER_NAME >/dev/null 2>&1
     # if we've found 6 images we're done
     if [ $HISTORY_FOUND_IMAGES -eq 6 ]; then
       printSuccess "Found 6 images, stopping history search" $SINGLE_IMAGE
@@ -245,7 +245,7 @@ function copyOutputDirectoryIntoCurrentBuild() {
 
 function deleteBuildContainer() {
   # Delete the build container
-  docker rm -f $HISTORY_CONTAINER_NAME >/dev/null 2>&1
+  container_engine_cmd rm -f $HISTORY_CONTAINER_NAME >/dev/null 2>&1
   if [ $? -ne 0 ]; then
     printError "Failed to delete build container" $HISTORY_CONTAINER_NAME
     return
@@ -260,7 +260,7 @@ function main() {
   deleteBuildContainer
   makeHistoryDirectories
   getGitHistory
-  quayLogin
+  #quayLogin
   getBuildImages
   copyHistoryIntoOutputDir
   copyCurrentBuildIntoOutputDir
