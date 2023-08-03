@@ -18,7 +18,7 @@ export IMAGE_TAG=$(git rev-parse --short=7 HEAD)
 export IS_PR=false
 COMMON_BUILDER=https://raw.githubusercontent.com/RedHatInsights/insights-frontend-builder-common/master
 EPOCH=$(date +%s)
-BUILD_IMAGE_TAG=642ff08
+BUILD_IMAGE_TAG=5b6f638
 # Get current git branch
 # The current branch is going to be the GIT_BRANCH env var but with origin/ stripped off
 if [[ $GIT_BRANCH == origin/* ]]; then
@@ -37,16 +37,6 @@ if [ -z "$NPM_BUILD_SCRIPT" ]; then
 fi
 if [ -z "$YARN_BUILD_SCRIPT" ]; then
   export YARN_BUILD_SCRIPT="build:prod"
-fi
-
-export BETA=false
-
-# If branch name is one of these:
-# 'master', 'qa-beta', 'ci-beta', 'prod-beta', 'main', 'devel', 'stage-beta'
-# then we need to set BETA to true
-# this list is taken from https://github.com/RedHatInsights/frontend-components/blob/master/packages/config/index.js#L8
-if [[ $BRANCH_NAME =~ ^(master|qa-beta|ci-beta|prod-beta|main|devel|stage-beta)$ ]]; then
-    export BETA=true
 fi
 
 function teardown_docker() {
@@ -118,8 +108,6 @@ set -ex
 
 
 function build() {
-  local OUTPUT_DIR=$1
-  local IS_PREVIEW=$2
   # NOTE: Make sure this volume is mounted 'ro', otherwise Jenkins cannot clean up the
   # workspace due to file permission errors; the Z is used for SELinux workarounds
   # -e NODE_BUILD_VERSION can be used to specify a version other than 12
@@ -134,7 +122,6 @@ function build() {
     -e SERVER_NAME=$SERVER_NAME \
     -e INCLUDE_CHROME_CONFIG \
     -e CHROME_CONFIG_BRANCH \
-    -e BETA=$IS_PREVIEW \
     -e NPM_BUILD_SCRIPT \
     -e YARN_BUILD_SCRIPT \
     --add-host stage.foo.redhat.com:127.0.0.1 \
@@ -150,23 +137,13 @@ function build() {
 
   # Extract files needed to build contianer
   mkdir -p $OUTPUT_DIR
-  docker cp $CONTAINER_NAME:/container_workspace/ $OUTPUT_DIR
+  docker cp $CONTAINER_NAME:/container_workspace/ $WORKSPACE/build
 
   teardown_docker
 }
 
 
-
-# Run a stable build
-# this will result in a $WORKSPACE/build/container_workspace directory that has build, dist, and the Dcokerfile and what not
-# dist and the Caddyfile and stuff will be copied from here into the container
-build $WORKSPACE/build $BETA
-
-# Run a preview build
-# build $WORKSPACE/build/preview true
-
-# Copy the preview build output so its gets picked up in the copy from the stable dist
-#cp -r $WORKSPACE/build/preview/container_workspace/dist $WORKSPACE/build/container_workspace/dist/preview
+build  
 
 # Set the APP_ROOT
 cd $WORKSPACE/build/container_workspace/ && export APP_ROOT="$WORKSPACE/build/container_workspace/"
