@@ -136,6 +136,7 @@ function build() {
   fi
 
   # Extract files needed to build contianer
+  mkdir -p $WORKSPACE/build
   docker cp $CONTAINER_NAME:/container_workspace/ $WORKSPACE/build
 
   teardown_docker
