@@ -1,12 +1,96 @@
 #!/bin/bash
 
+
+CONTAINER_ENGINE_CMD=''
+PREFER_CONTAINER_ENGINE="${PREFER_CONTAINER_ENGINE:-}"
+
+container_engine_cmd() {
+
+    if [ -z "$(get_container_engine_cmd)" ]; then
+        if ! set_container_engine_cmd; then
+            return 1
+        fi
+    fi
+
+    if [ "$(get_container_engine_cmd)" = "podman" ]; then
+        podman "$@"
+    else
+        docker "--config=${DOCKER_CONF}" "$@"
+    fi
+}
+
+get_container_engine_cmd() {
+    echo -n "$CONTAINER_ENGINE_CMD"
+}
+
+set_container_engine_cmd() {
+
+    if _configured_container_engine_available; then
+        CONTAINER_ENGINE_CMD="$PREFER_CONTAINER_ENGINE"
+    else
+        if container_engine_available 'podman'; then
+            CONTAINER_ENGINE_CMD='podman'
+        elif container_engine_available 'docker'; then
+            CONTAINER_ENGINE_CMD='docker'
+        else
+            echo "ERROR, no container engine found, please install either podman or docker first"
+            return 1
+        fi
+    fi
+
+    echo "Container engine selected: $CONTAINER_ENGINE_CMD"
+}
+
+_configured_container_engine_available() {
+
+    local CONTAINER_ENGINE_AVAILABLE=1
+
+    if [ -n "$PREFER_CONTAINER_ENGINE" ]; then
+        if container_engine_available "$PREFER_CONTAINER_ENGINE"; then
+            CONTAINER_ENGINE_AVAILABLE=0
+        else
+            echo "WARNING!: specified container engine '${PREFER_CONTAINER_ENGINE}' not present, finding alternative..."
+        fi
+    fi
+
+    return "$CONTAINER_ENGINE_AVAILABLE"
+}
+
+container_engine_available() {
+
+    local CONTAINER_ENGINE_TO_CHECK="$1"
+    local CONTAINER_ENGINE_AVAILABLE=1
+
+    if _command_is_present "$CONTAINER_ENGINE_TO_CHECK"; then
+        if [[ "$CONTAINER_ENGINE_TO_CHECK" != "docker" ]] || ! _docker_seems_emulated; then
+            CONTAINER_ENGINE_AVAILABLE=0
+        fi
+    fi
+    return "$CONTAINER_ENGINE_AVAILABLE"
+}
+
+_command_is_present() {
+    command -v "$1" > /dev/null 2>&1
+}
+
+_docker_seems_emulated() {
+
+    local DOCKER_COMMAND_PATH
+    DOCKER_COMMAND_PATH=$(command -v docker)
+
+    if [[ $(file "$DOCKER_COMMAND_PATH") == *"ASCII text"* ]]; then
+        return 0
+    fi
+    return 1
+}
+
 #dump env
 ENV_DUMP=`env`
 echo $ENV_DUMP
 
-which docker
-docker --version
+container_engine_cmd --version
 
+exit 99
 # --------------------------------------------
 # Export vars for helper scripts to use
 # --------------------------------------------
