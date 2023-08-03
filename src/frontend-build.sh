@@ -196,6 +196,10 @@ mkdir -p "$DOCKER_CONFIG"
 echo $QUAY_TOKEN | docker  login -u="$QUAY_USER" --password-stdin quay.io
 echo $RH_REGISTRY_TOKEN | docker  login -u="$RH_REGISTRY_USER" --password-stdin registry.redhat.io
 
+pwd
+ls -alsvh
+cat Dockerfile
+
 #PRs shouldn't get the special treatment for history
 if [ $IS_PR = true ]; then
   docker  build -t "${IMAGE}:${IMAGE_TAG}" $APP_ROOT -f $APP_ROOT/Dockerfile
