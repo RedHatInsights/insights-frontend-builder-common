@@ -123,6 +123,8 @@ function build() {
     -e DIST_FOLDER \
     -e INCLUDE_CHROME_CONFIG \
     -e CHROME_CONFIG_BRANCH \
+    -e GIT_BRANCH \
+    -e BRANCH_NAME \
     -e NPM_BUILD_SCRIPT \
     -e YARN_BUILD_SCRIPT \
     --add-host stage.foo.redhat.com:127.0.0.1 \
