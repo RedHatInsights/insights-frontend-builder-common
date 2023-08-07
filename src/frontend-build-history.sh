@@ -1,5 +1,14 @@
 #!/bin/bash
 
+load_cicd_helper_functions() {
+    set -e
+    CICD_TOOLS_REPO_BRANCH='add-container-engine-helper-tools'
+    CICD_TOOLS_REPO_ORG=Victoremepunto
+    source <(curl -sSL https://raw.githubusercontent.com/${CICD_TOOLS_REPO_ORG}/cicd-tools/${CICD_TOOLS_REPO_BRANCH}/src/bootstrap.sh)
+    set +e
+}
+load_cicd_helper_functions
+
 # Don't exit on error
 # we need to trap errors to handle cerain conditions
 set +e
@@ -42,8 +51,14 @@ DOCKER_CONF="$PWD/.docker"
 QUAY_TOKEN=""
 QUAY_USER=""
 
+
 function quayLogin() {
-  echo $QUAY_TOKEN | docker --config="$DOCKER_CONF" login -u="$QUAY_USER" --password-stdin quay.io
+
+  if ! local_build; then 
+      echo $QUAY_TOKEN | container_engine_cmd --config="$DOCKER_CONF" login -u="$QUAY_USER" --password-stdin quay.io
+  else
+    echo "Local build: Skipping container registries logging"
+  fi
 }
 
 function debugMode() {
@@ -53,16 +68,25 @@ function debugMode() {
 }
 
 function validateArgs() {
+
+  local VALIDATION_ERROR
+
   if [ -z "$QUAYREPO" ]; then
-    printError "Error" "Quay repo is required"
-    exit 1
+    VALIDATION_ERROR="Quay repo is required"
+  elif [ -z "$OUTPUT_DIR" ]; then
+    VALIDATION_ERROR="Output directory is required"
+  elif ! [ -d "$OUTPUT_DIR" ]; then
+    VALIDATION_ERROR="Output directory: '$OUTPUT_DIR' does not exist!"
+  elif [ -z "$CURRENT_BUILD_DIR" ]; then
+    VALIDATION_ERROR="Current build directory is required"
+  elif ! [ -d "$CURRENT_BUILD_DIR" ]; then
+    VALIDATION_ERROR="Current build directory: '$CURRENT_BUILD_DIR' does not exist!"
+  elif [ -z "$(ls -A $CURRENT_BUILD_DIR)" ]; then
+    VALIDATION_ERROR="Current build directory: '$CURRENT_BUILD_DIR' should not be empty!"
   fi
-  if [ -z "$OUTPUT_DIR" ]; then
-    printError "Error" "Output directory is required"
-    exit 1
-  fi
-  if [ -z "$CURRENT_BUILD_DIR" ]; then
-    printError "Error" "Current build directory is required"
+
+  if ! [ -z "$VALIDATION_ERROR" ]; then
+    printError "Error" "$VALIDATION_ERROR"
     exit 1
   fi
 }
@@ -260,7 +284,7 @@ function main() {
   deleteBuildContainer
   makeHistoryDirectories
   getGitHistory
-  #quayLogin
+  quayLogin
   getBuildImages
   copyHistoryIntoOutputDir
   copyCurrentBuildIntoOutputDir
