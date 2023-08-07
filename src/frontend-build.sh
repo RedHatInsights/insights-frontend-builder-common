@@ -1,10 +1,13 @@
 #!/bin/bash
 
-set -e
-CICD_TOOLS_REPO_BRANCH='add-container-engine-helper-tools'
-CICD_TOOLS_REPO_ORG=Victoremepunto
-source <(curl -sSL https://raw.githubusercontent.com/${CICD_TOOLS_REPO_ORG}/cicd-tools/${CICD_TOOLS_REPO_BRANCH}/src/bootstrap.sh)
-set +e
+load_cicd_helper_functions() {
+  set -e
+  CICD_TOOLS_REPO_BRANCH='add-container-engine-helper-tools'
+  CICD_TOOLS_REPO_ORG=Victoremepunto
+  source <(curl -sSL https://raw.githubusercontent.com/${CICD_TOOLS_REPO_ORG}/cicd-tools/${CICD_TOOLS_REPO_BRANCH}/src/bootstrap.sh)
+  set +e
+}
+load_cicd_helper_functions
 
 WORKSPACE="${WORKSPACE:-$PWD}"
 LOCAL_BUILD="${LOCAL_BUILD:-false}"
