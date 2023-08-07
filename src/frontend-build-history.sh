@@ -1,11 +1,11 @@
 #!/bin/bash
 
 load_cicd_helper_functions() {
-    set -e
-    CICD_TOOLS_REPO_BRANCH='add-container-engine-helper-tools'
-    CICD_TOOLS_REPO_ORG=Victoremepunto
-    source <(curl -sSL https://raw.githubusercontent.com/${CICD_TOOLS_REPO_ORG}/cicd-tools/${CICD_TOOLS_REPO_BRANCH}/src/bootstrap.sh)
-    set +e
+  set -e
+  CICD_TOOLS_REPO_BRANCH='add-container-engine-helper-tools'
+  CICD_TOOLS_REPO_ORG=Victoremepunto
+  source <(curl -sSL https://raw.githubusercontent.com/${CICD_TOOLS_REPO_ORG}/cicd-tools/${CICD_TOOLS_REPO_BRANCH}/src/bootstrap.sh)
+  set +e
 }
 load_cicd_helper_functions
 
@@ -54,8 +54,8 @@ QUAY_USER=""
 
 function quayLogin() {
 
-  if ! local_build; then 
-      echo $QUAY_TOKEN | container_engine_cmd --config="$DOCKER_CONF" login -u="$QUAY_USER" --password-stdin quay.io
+  if ! local_build; then
+    echo $QUAY_TOKEN | container_engine_cmd --config="$DOCKER_CONF" login -u="$QUAY_USER" --password-stdin quay.io
   else
     echo "Local build: Skipping container registries logging"
   fi
@@ -203,7 +203,7 @@ function getBuildImages() {
     # This block handles a corner case. Some apps (one app actually, just chrome)
     # may use the build directory instead of the dist directory.
     # we assume dist, because that's the standard, but if we don't find it we try build
-    # if a build copy works then we change the output dir to build so thaat we end up with 
+    # if a build copy works then we change the output dir to build so thaat we end up with
     # history in the finaly container
     if [ $? -ne 0 ]; then
       printError "Couldn't find dist on image, trying build..." $SINGLE_IMAGE
