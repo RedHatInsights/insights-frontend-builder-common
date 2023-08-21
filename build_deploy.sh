@@ -3,8 +3,8 @@
 # --------------------------------------------
 # Export vars for helper scripts to use
 # --------------------------------------------
-export WORKSPACE=${WORKSPACE:-$APP_ROOT} # if running in jenkins, use the build's workspace
 export APP_ROOT=$(pwd)
+export WORKSPACE=${WORKSPACE:-$APP_ROOT} # if running in jenkins, use the build's workspace
 export IMAGE="quay.io/cloudservices/releaser"
 export IMAGE_TAG=$(git rev-parse --short=7 HEAD)
 
