@@ -14,7 +14,10 @@ export APP_NAME=$(node -e "console.log(require(\"${WORKSPACE:-.}${APP_DIR:-}/pac
 
 
 # main IMAGE var is exported from the pr_check.sh parent file
-export IMAGE_TAG=$(git rev-parse --short=7 HEAD)
+if [[ ! -n "$IMAGE_TAG" ]]; then
+    export IMAGE_TAG=$(git rev-parse --short=7 HEAD)
+fi
+
 export IS_PR=false
 COMMON_BUILDER=https://raw.githubusercontent.com/RedHatInsights/insights-frontend-builder-common/master
 EPOCH=$(date +%s)
