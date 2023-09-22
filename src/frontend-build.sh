@@ -103,12 +103,12 @@ function getHistory() {
 if echo $JOB_NAME | grep -w "pr-check" > /dev/null; then
   if [ ! -z "$ghprbPullId" ]; then
     export IMAGE_TAG="pr-${ghprbPullId}-${IMAGE_TAG}"
-    CONTAINER_NAME="${APP_NAME}-pr-check-${ghprbPullId}"
+    CONTAINER_NAME="${APP_NAME}-pr-check-${ghprbPullId}-${IMAGE_TAG}"
   fi
 
   if [ ! -z "$gitlabMergeRequestIid" ]; then
     export IMAGE_TAG="pr-${gitlabMergeRequestIid}-${IMAGE_TAG}"
-    CONTAINER_NAME="${APP_NAME}-pr-check-${gitlabMergeRequestIid}"
+    CONTAINER_NAME="${APP_NAME}-pr-check-${gitlabMergeRequestIid}-${IMAGE_TAG}"
   fi
 
   IS_PR=true
