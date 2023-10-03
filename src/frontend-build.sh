@@ -21,7 +21,7 @@ fi
 export IS_PR=false
 COMMON_BUILDER=https://raw.githubusercontent.com/RedHatInsights/insights-frontend-builder-common/master
 EPOCH=$(date +%s)
-BUILD_IMAGE_TAG=a3446a5  
+BUILD_IMAGE_TAG=a02363c   
 # Get current git branch
 # The current branch is going to be the GIT_BRANCH env var but with origin/ stripped off
 if [[ $GIT_BRANCH == origin/* ]]; then
