@@ -48,7 +48,13 @@ build_and_push_aggregated_image() {
   
   # Build and push the -single tagged image
   # This image contains only the current build
-  cicd_tools::image_builder::build_and_push --label "image-type=single" -t "${IMAGE}:${IMAGE_TAG}-single" "$APP_ROOT" -f "$APP_ROOT/Dockerfile"
+  local default_tag=$(cicd::image_builder::get_image_tag)
+  export BUILD_CONTEXT="APP_ROOT"
+  export LABELS=("image-type=single")
+  export ADDITIONAL_TAGS=("${default_tag}-single")
+  export CONTAINERFILE_PATH="${APP_ROOT}/Dockerfile"
+  export IMAGE_NAME="$IMAGE"
+  cicd_tools::image_builder::build_and_push
 
   # Get the last 6 builds
   get_history
@@ -56,8 +62,13 @@ build_and_push_aggregated_image() {
   # Build and push the aggregated image
   # This image is tagged with just the SHA for the current build
   # as this is the one we want deployed
-  cicd_tools::image_builder::build_and_push --label "image-type=aggregate" -t "${IMAGE}:${IMAGE_TAG}" "$APP_ROOT" -f "$APP_ROOT/Dockerfile"
-
+  local default_tag=$(cicd::image_builder::get_image_tag)
+  export BUILD_CONTEXT="APP_ROOT"
+  export LABELS=("image-type=aggregate")
+  export ADDITIONAL_TAGS=("${default_tag}")
+  export CONTAINERFILE_PATH="${APP_ROOT}/Dockerfile"
+  export IMAGE_NAME="$IMAGE"
+  cicd_tools::image_builder::build_and_push
   delete_running_container
 }
 
@@ -67,7 +78,12 @@ build_and_push_pr_image() {
     return
   fi
 
-  cicd_tools::image_builder::build_and_push -t "${IMAGE}:${IMAGE_TAG}" "$APP_ROOT" -f "$APP_ROOT/Dockerfile"
+  local default_tag=$(cicd::image_builder::get_image_tag)
+  export BUILD_CONTEXT="APP_ROOT"
+  export ADDITIONAL_TAGS=("${default_tag}")
+  export CONTAINERFILE_PATH="${APP_ROOT}/Dockerfile"
+  export IMAGE_NAME="$IMAGE"
+  cicd_tools::image_builder::build_and_push
   delete_running_container
 }
 
