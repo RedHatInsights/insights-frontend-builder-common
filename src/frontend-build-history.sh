@@ -1,5 +1,34 @@
 #!/bin/bash
 
+# -------------------------------------------
+# Script Name: Frontend Build History Aggregator
+# Description:
+#   This script is designed to retrieve and aggregate the build history of frontend containers
+#   for applications deployed on the ConsoleDot platform. The main goal is to gather
+#   historical builds (typically the last 6 builds) and compile them into a current directory.
+#
+#   Features:
+#   - Supports both 'single-build' and 'fallback' tagged images from Quay.
+#   - Provides colorful terminal output for clear status tracking.
+#   - Employs error handling and logging to streamline debugging and traceability.
+#   - Uses an external CICD helper script to manage container interactions.
+#
+# Usage:
+#   Run this script with appropriate command-line arguments. Ensure you provide necessary
+#   information like Quay repo, output directory, and current build directory.
+#
+# Dependencies:
+#   - Docker: Required for pulling and interacting with container images.
+#   - Git: Used for fetching historical commits.
+#   - External CICD tools: Expects functions from a CICD script hosted on GitHub.
+#   - Bash utilities: grep, mkdir, rm, cp, etc.
+#
+# Arguments:
+#   This script expects command-line arguments to specify Quay repo, current build directory,
+#   output directory, debug mode, etc. Use `-h` or refer to `get_args()` function for specifics.
+#
+# -------------------------------------------
+
 # Don't exit on error
 # we need to trap errors to handle cerain conditions
 set +e

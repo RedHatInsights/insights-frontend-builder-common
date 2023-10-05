@@ -1,5 +1,31 @@
 #!/bin/bash
 
+# -------------------------------------------
+# Script Name: frontend-build.sh
+# Description:
+#   This script automates the process of building frontend containers
+#   for the ConsoleDot platform. It includes functions to handle builds for 
+#   both regular merges and Pull Requests (PRs). Furthermore ensures required environment 
+#   variables are set, logs into registries, builds and pushes the appropriate image tags, 
+#   and manages containers.
+#
+# Usage:
+#   Execute this script directly, or source it and call its functions individually
+#   for granular control.
+#
+# Dependencies:
+#   - Node.js: Used to fetch the application name from the package.json.
+#   - Docker or Podman: Required for building and pushing container images.
+#   - External CICD tools: Abstracts the container engine away
+#   - Git: Used for various operations, like fetching the latest commit.
+#
+# Environment Variables:
+#   The script uses a variety of environment variables, some mandatory. These can
+#   include QUAY_USER, QUAY_TOKEN, RH_REGISTRY_USER, RH_REGISTRY_TOKEN, GIT_BRANCH,
+#   WORKSPACE, APP_DIR, and others. These are set by Jenkins in the CI/CD pipeline.
+#
+# -------------------------------------------
+
 set -ex
 
 export IS_PR=false
@@ -188,24 +214,31 @@ setup_docker_config_and_login() {
     echo "$RH_REGISTRY_TOKEN" | cicd::container::cmd login -u="$RH_REGISTRY_USER" --password-stdin registry.redhat.io
 }
 
-# Load the CICD helper scripts
-load_cicd_helper_functions container
-load_cicd_helper_functions image_builder
-# Ensure we teardown docker on exit
-trap "delete_running_container" EXIT SIGINT SIGTERM
-# Make sure we have login credentials for the container registry
-check_registry_env_vars
-# Set the appropriate variables if this is a PR build
-set_pr_details
-# Delete any running containers with the same name
-delete_running_container
-# Build the container and copy the files we need
-build_and_setup
-# Set directory paths, update Dockerfile for PR builds, and retrieve the latest git commit hash.
-initialize_environment
-# Set up the Docker config and log in to the container registry
-setup_docker_config_and_login
-# Build and push the PR image if this is a PR build
-build_and_push_pr_image
-# Build and push the aggregated image if this is NOT a PR build
-build_and_push_aggregated_image
+main() {
+  # Load the CICD helper scripts
+  load_cicd_helper_functions container
+  load_cicd_helper_functions image_builder
+  # Ensure we teardown docker on exit
+  trap "delete_running_container" EXIT SIGINT SIGTERM
+  # Make sure we have login credentials for the container registry
+  check_registry_env_vars
+  # Set the appropriate variables if this is a PR build
+  set_pr_details
+  # Delete any running containers with the same name
+  delete_running_container
+  # Build the container and copy the files we need
+  build_and_setup
+  # Set directory paths, update Dockerfile for PR builds, and retrieve the latest git commit hash.
+  initialize_environment
+  # Set up the Docker config and log in to the container registry
+  setup_docker_config_and_login
+  # Build and push the PR image if this is a PR build
+  build_and_push_pr_image
+  # Build and push the aggregated image if this is NOT a PR build
+  build_and_push_aggregated_image
+}
+
+# Only run main() if this script is being executed, not sourced
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+    main
+fi
