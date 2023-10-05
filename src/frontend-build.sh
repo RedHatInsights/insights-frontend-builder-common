@@ -198,7 +198,6 @@ set_pr_details() {
 
 main() {
   # Load the CICD helper scripts
-  load_cicd_helper_functions container
   load_cicd_helper_functions image_builder
   # Ensure we teardown docker on exit
   trap "delete_running_container" EXIT SIGINT SIGTERM
