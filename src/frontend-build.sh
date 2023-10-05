@@ -152,6 +152,7 @@ initialize_environment() {
     export WORKSPACE="${WORKSPACE:-$APP_ROOT}"
 
     # Change to the desired directory and set APP_ROOT
+    mkdir -p "$WORKSPACE/build/container_workspace/"
     cd "$WORKSPACE/build/container_workspace/"
     export APP_ROOT="$WORKSPACE/build/container_workspace/"
 
