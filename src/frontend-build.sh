@@ -238,7 +238,4 @@ main() {
   build_and_push_aggregated_image
 }
 
-# Only run main() if this script is being executed, not sourced
-if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
-    main
-fi
+main
