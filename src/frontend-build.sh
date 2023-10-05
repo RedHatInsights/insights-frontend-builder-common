@@ -69,7 +69,6 @@ build_and_push_aggregated_image() {
   export CONTAINERFILE_PATH="${APP_ROOT}/Dockerfile"
   export IMAGE_NAME="$IMAGE"
   cicd_tools::image_builder::build_and_push
-  delete_running_container
 }
 
 build_and_push_pr_image() {
@@ -210,6 +209,8 @@ main() {
   build_and_push_pr_image
   # Build and push the aggregated image if this is NOT a PR build
   build_and_push_aggregated_image
+  # clean up
+  delete_running_container
 }
 
 main
