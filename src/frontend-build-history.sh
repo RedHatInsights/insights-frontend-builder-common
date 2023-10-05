@@ -15,13 +15,8 @@ Blue='\033[0;34m'
 Purple='\033[0;35m'
 Cyan='\033[0;36m'
 White='\033[0;37m'
-# we use the same name each time we spin up a container to copy stuff out of
-# makes it easier
-HISTORY_CONTAINER_NAME="frontend-build-history"
-# If no -single images are found we set this to true
-# allows us to move into a special mode where we use non-single tagged images
-# only used for first time hisotry builds
-#SINGLE_IMAGE_FOUND=false
+# The name of the container we use to build history
+HISTORY_CONTAINER_NAME="frontend-build-history-$(date +%s)"
 # where we send our full aggregated history to
 OUTPUT_DIR=false
 # where the current build is located
@@ -42,40 +37,48 @@ DOCKER_CONF="$PWD/.docker"
 QUAY_TOKEN=""
 QUAY_USER=""
 
-function quayLogin() {
-  echo $QUAY_TOKEN | docker --config="$DOCKER_CONF" login -u="$QUAY_USER" --password-stdin quay.io
+load_cicd_helper_functions() {
+    local LIBRARY_TO_LOAD="$1"
+    local CICD_TOOLS_REPO_BRANCH='main'
+    local CICD_TOOLS_REPO_ORG='RedHatInsights'
+    local CICD_TOOLS_URL="https://raw.githubusercontent.com/${CICD_TOOLS_REPO_ORG}/cicd-tools/${CICD_TOOLS_REPO_BRANCH}/src/bootstrap.sh"
+    source <(curl -sSL "$CICD_TOOLS_URL") "$LIBRARY_TO_LOAD"
 }
 
-function debugMode() {
+quay_login() {
+  echo $QUAY_TOKEN | cicd::container::cmd --config="$DOCKER_CONF" login -u="$QUAY_USER" --password-stdin quay.io
+}
+
+debug_mode() {
   if [ $DEBUG_MODE == true ]; then
     set -x
   fi
 }
 
-function validateArgs() {
+validate_args() {
   if [ -z "$QUAYREPO" ]; then
-    printError "Error" "Quay repo is required"
+    print_error "Error" "Quay repo is required"
     exit 1
   fi
   if [ -z "$OUTPUT_DIR" ]; then
-    printError "Error" "Output directory is required"
+    print_error "Error" "Output directory is required"
     exit 1
   fi
   if [ -z "$CURRENT_BUILD_DIR" ]; then
-    printError "Error" "Current build directory is required"
+    print_error "Error" "Current build directory is required"
     exit 1
   fi
 }
 
-function printSuccess() {
+print_success() {
   echo -e "${Blue}HISTORY: ${Green}$1${Color_Off} - $2"
 }
 
-function printError() {
+print_error() {
    echo -e "${Blue}HISTORY: ${Red}$1${Color_Off} - $2"
 }
 
-function getArgs() {
+get_args() {
   while getopts ":b:q:o:c:d:p:t:u:" opt; do
     case $opt in
       # quay.io/cloudservices/api-frontend etc
@@ -107,7 +110,7 @@ function getArgs() {
   done
 }
 
-function makeHistoryDirectories() {
+make_history_directories() {
   rm -rf .history
   mkdir .history
   # Make the history level directories
@@ -117,13 +120,13 @@ function makeHistoryDirectories() {
   done
 }
 
-function getGitHistory() {
+get_git_history() {
   # Get the git history
   # tail is to omit the first line, which would correspond to the current commit
   git log --first-parent --oneline --format='format:%h' --abbrev=7  | tail -n +2 > .history/git_history
 }
 
-function getBuildImages() {
+get_build_images() {
   # We count the number of images found to make sure we don't go over 6
   local HISTORY_FOUND_IMAGES=0
   # We track the history found backwards, from 6 down, because we need to build
@@ -138,7 +141,7 @@ function getBuildImages() {
     # If we've gone 12 iterations then bail
     ITERATIONS=$((ITERATIONS+1))
     if [ $ITERATIONS -eq 12 ]; then
-      printError "Exiting image search after 12 iterations." ""
+      print_error "Exiting image search after 12 iterations." ""
       break
     fi
     # A "single image" is an images with its tag postpended with "-single"
@@ -147,34 +150,34 @@ function getBuildImages() {
     SINGLE_IMAGE=$QUAYREPO:$REF-$SINGLETAG
     IMAGE_TEXT="Single-build"
 
-    printSuccess "Pulling single-build image" $SINGLE_IMAGE
+    print_success "Pulling single-build image" $SINGLE_IMAGE
     # Pull the image
-    docker pull $SINGLE_IMAGE >/dev/null 2>&1
+    cicd::container::cmd pull $SINGLE_IMAGE >/dev/null 2>&1
     # if the image is not found trying falling back to a non-single tagged build
     if [ $? -ne 0 ]; then
       SINGLE_IMAGE=$QUAYREPO:$REF
       IMAGE_TEXT="Fallback build"
-      printError "Image not found. Trying build not tagged single." $SINGLE_IMAGE
-      docker pull $SINGLE_IMAGE >/dev/null 2>&1
+      print_error "Image not found. Trying build not tagged single." $SINGLE_IMAGE
+      cicd::container::cmd pull $SINGLE_IMAGE >/dev/null 2>&1
       if [ $? -ne 0 ]; then
-        printError "Fallback build not found. Skipping." $SINGLE_IMAGE
+        print_error "Fallback build not found. Skipping." $SINGLE_IMAGE
         continue
       fi
     fi
-    printSuccess "$IMAGE_TEXT image found" $SINGLE_IMAGE
+    print_success "$IMAGE_TEXT image found" $SINGLE_IMAGE
     # Increment FOUND_IMAGES
     HISTORY_FOUND_IMAGES=$((HISTORY_FOUND_IMAGES+1))
     # Run the image
-    docker rm -f $HISTORY_CONTAINER_NAME >/dev/null 2>&1
-    docker run -d --name $HISTORY_CONTAINER_NAME $SINGLE_IMAGE >/dev/null 2>&1
+    cicd::container::cmd rm -f $HISTORY_CONTAINER_NAME >/dev/null 2>&1
+    cicd::container::cmd run -d --name $HISTORY_CONTAINER_NAME $SINGLE_IMAGE >/dev/null 2>&1
     # If the run fails log out and move to next
     if [ $? -ne 0 ]; then
-      printError "Failed to run image" $SINGLE_IMAGE
+      print_error "Failed to run image" $SINGLE_IMAGE
       continue
     fi
-    printSuccess "Running $IMAGE_TEXT image" $SINGLE_IMAGE
-    # Copy the files out of the docker container into the history level directory
-    docker cp $HISTORY_CONTAINER_NAME:/opt/app-root/src/dist/. .history/$HISTORY_DEPTH >/dev/null 2>&1
+    print_success "Running $IMAGE_TEXT image" $SINGLE_IMAGE
+    # Copy the files out of the container into the history level directory
+    cicd::container::cmd cp $HISTORY_CONTAINER_NAME:/opt/app-root/src/dist/. .history/$HISTORY_DEPTH >/dev/null 2>&1
     # if this fails try build
     # This block handles a corner case. Some apps (one app actually, just chrome)
     # may use the build directory instead of the dist directory.
@@ -182,24 +185,24 @@ function getBuildImages() {
     # if a build copy works then we change the output dir to build so thaat we end up with 
     # history in the finaly container
     if [ $? -ne 0 ]; then
-      printError "Couldn't find dist on image, trying build..." $SINGLE_IMAGE
-      docker cp $HISTORY_CONTAINER_NAME:/opt/app-root/src/build/. .history/$HISTORY_DEPTH >/dev/null 2>&1
+      print_error "Couldn't find dist on image, trying build..." $SINGLE_IMAGE
+      cicd::container::cmd cp $HISTORY_CONTAINER_NAME:/opt/app-root/src/build/. .history/$HISTORY_DEPTH >/dev/null 2>&1
       # If the copy fails log out and move to next
       if [ $? -ne 0 ]; then
-        printError "Failed to copy files from image" $SINGLE_IMAGE
+        print_error "Failed to copy files from image" $SINGLE_IMAGE
         continue
       fi
       # Set the current build dir to build instead of dist
       CURRENT_BUILD_DIR="build"
     fi
-    printSuccess "Copied files from $IMAGE_TEXT image" $SINGLE_IMAGE
+    print_success "Copied files from $IMAGE_TEXT image" $SINGLE_IMAGE
     # Stop the image
-    docker stop $HISTORY_CONTAINER_NAME >/dev/null 2>&1
+    cicd::container::cmd stop $HISTORY_CONTAINER_NAME >/dev/null 2>&1
     # delete the container
-    docker rm -f $HISTORY_CONTAINER_NAME >/dev/null 2>&1
+    cicd::container::cmd rm -f $HISTORY_CONTAINER_NAME >/dev/null 2>&1
     # if we've found 6 images we're done
     if [ $HISTORY_FOUND_IMAGES -eq 6 ]; then
-      printSuccess "Found 6 images, stopping history search" $SINGLE_IMAGE
+      print_success "Found 6 images, stopping history search" $SINGLE_IMAGE
       break
     fi
     #Decrement history depth
@@ -207,7 +210,7 @@ function getBuildImages() {
   done
 }
 
-function copyHistoryIntoOutputDir() {
+copy_history_into_output_directory() {
   # Copy the files from the history level directories into the build directory
   for i in {6..1}
   do
@@ -215,58 +218,60 @@ function copyHistoryIntoOutputDir() {
       cp -rf .history/$i/* $OUTPUT_DIR
       # if copy failed log an error
       if [ $? -ne 0 ]; then
-        printError "Failed to copy files from history level: " $i
+        print_error "Failed to copy files from history level: " $i
         return 1
       fi
-      printSuccess "Copied files from history level: " $i
+      print_success "Copied files from history level: " $i
     fi
   done
 }
 
-function copyCurrentBuildIntoOutputDir() {
+copy_current_build_into_output_dir() {
   # Copy the original build into the output directory
   cp -rf $CURRENT_BUILD_DIR/* $OUTPUT_DIR
   if [ $? -ne 0 ]; then
-    printError "Failed to copy files from current build dir" $CURRENT_BUILD_DIR
+    print_error "Failed to copy files from current build dir" $CURRENT_BUILD_DIR
     return
   fi
-  printSuccess "Copied files from current build dir" $CURRENT_BUILD_DIR
+  print_success "Copied files from current build dir" $CURRENT_BUILD_DIR
 }
 
-function copyOutputDirectoryIntoCurrentBuild() {
+copy_output_directory_into_current_build() {
   # Copy the output directory into the current build directory
   cp -rf $OUTPUT_DIR/* $CURRENT_BUILD_DIR
   if [ $? -ne 0 ]; then
-    printError "Failed to copy files from output dir" $OUTPUT_DIR
+    print_error "Failed to copy files from output dir" $OUTPUT_DIR
     return
   fi
-  printSuccess "Copied files from output dir" $OUTPUT_DIR
+  print_success "Copied files from output dir" $OUTPUT_DIR
 }
 
-function deleteBuildContainer() {
+delete_build_container() {
   # Delete the build container
-  docker rm -f $HISTORY_CONTAINER_NAME >/dev/null 2>&1
+  cicd::container::cmd rm -f $HISTORY_CONTAINER_NAME >/dev/null 2>&1
   if [ $? -ne 0 ]; then
-    printError "Failed to delete build container" $HISTORY_CONTAINER_NAME
+    print_error "Failed to delete build container" $HISTORY_CONTAINER_NAME
     return
   fi
-  printSuccess "Deleted build container" $HISTORY_CONTAINER_NAME
+  print_success "Deleted build container" $HISTORY_CONTAINER_NAME
 }
 
-function main() {
-  getArgs $@
-  validateArgs
-  debugMode
-  deleteBuildContainer
-  makeHistoryDirectories
-  getGitHistory
-  quayLogin
-  getBuildImages
-  copyHistoryIntoOutputDir
-  copyCurrentBuildIntoOutputDir
-  copyOutputDirectoryIntoCurrentBuild
-  printSuccess "History build complete" "Files available at $CURRENT_BUILD_DIR"
-  deleteBuildContainer
+main() {
+  get_args $@
+  validate_args
+  load_cicd_helper_functions container
+  load_cicd_helper_functions image_builder
+  debug_mode
+  delete_build_container
+  make_history_directories
+  get_git_history
+  quay_login
+  get_build_images
+  copy_history_into_output_directory
+  copy_current_build_into_output_dir
+  copy_output_directory_into_current_build
+  print_success "History build complete" "Files available at $CURRENT_BUILD_DIR"
+  delete_build_container
 }
 
 main $@
