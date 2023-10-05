@@ -130,32 +130,6 @@ build_and_setup() {
   delete_running_container
 }
 
-check_registry_env_vars() {
-    local missing_vars=()
-
-    # Check Quay credentials
-    if [[ -z "$QUAY_USER" ]]; then
-        missing_vars+=("QUAY_USER")
-    fi
-    if [[ -z "$QUAY_TOKEN" ]]; then
-        missing_vars+=("QUAY_TOKEN")
-    fi
-
-    # Check RH Registry credentials
-    if [[ -z "$RH_REGISTRY_USER" ]]; then
-        missing_vars+=("RH_REGISTRY_USER")
-    fi
-    if [[ -z "$RH_REGISTRY_TOKEN" ]]; then
-        missing_vars+=("RH_REGISTRY_TOKEN")
-    fi
-
-    # If any required variables are missing, print an error and exit
-    if [[ ${#missing_vars[@]} -ne 0 ]]; then
-        echo "The following environment variables must be set: ${missing_vars[@]}"
-        exit 1
-    fi
-}
-
 delete_running_container() {
   if cicd::container::cmd  ps | grep $CONTAINER_NAME > /dev/null; then
     cicd::container::cmd  rm -f $CONTAINER_NAME || true
@@ -218,23 +192,12 @@ set_pr_details() {
   export IS_PR=true
 }
 
-setup_docker_config_and_login() {
-    local DOCKER_CONFIG="$PWD/.docker"
-    mkdir -p "$DOCKER_CONFIG"
-
-    # Log in to registries
-    echo "$QUAY_TOKEN" | cicd::container::cmd login -u="$QUAY_USER" --password-stdin quay.io
-    echo "$RH_REGISTRY_TOKEN" | cicd::container::cmd login -u="$RH_REGISTRY_USER" --password-stdin registry.redhat.io
-}
-
 main() {
   # Load the CICD helper scripts
   load_cicd_helper_functions container
   load_cicd_helper_functions image_builder
   # Ensure we teardown docker on exit
   trap "delete_running_container" EXIT SIGINT SIGTERM
-  # Make sure we have login credentials for the container registry
-  check_registry_env_vars
   # Set the appropriate variables if this is a PR build
   set_pr_details
   # Delete any running containers with the same name
@@ -243,8 +206,6 @@ main() {
   build_and_setup
   # Set directory paths, update Dockerfile for PR builds, and retrieve the latest git commit hash.
   initialize_environment
-  # Set up the Docker config and log in to the container registry
-  setup_docker_config_and_login
   # Build and push the PR image if this is a PR build
   build_and_push_pr_image
   # Build and push the aggregated image if this is NOT a PR build
