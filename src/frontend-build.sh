@@ -136,9 +136,13 @@ delete_running_container() {
 }
 
 get_history() {
-  mkdir aggregated_history
-  curl https://raw.githubusercontent.com/RedHatInsights/insights-frontend-builder-common/master/src/frontend-build-history.sh > frontend-build-history.sh
-  chmod +x frontend-build-history.sh
+  mkdir -p aggregated_history
+  
+  if [ ! -f frontend-build-history.sh ]; then
+    curl https://raw.githubusercontent.com/RedHatInsights/insights-frontend-builder-common/master/src/frontend-build-history.sh > frontend-build-history.sh
+    chmod +x frontend-build-history.sh
+  fi
+
   ./frontend-build-history.sh -q $IMAGE -o aggregated_history -c dist -p true -t $QUAY_TOKEN -u $QUAY_USER
 }
 
