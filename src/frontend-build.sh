@@ -30,7 +30,7 @@ set -ex
 
 export IS_PR=false
 export APP_NAME=$(node -p "require('${WORKSPACE:-.}${APP_DIR:-}/package.json').insights.appname")
-export IMAGE_TAG=$(cicd_tools::image_builder::get_image_tag)
+export IMAGE_TAG=$(cicd::image_builder::get_image_tag)
 export CONTAINER_NAME="$APP_NAME-$BRANCH_NAME-$IMAGE_TAG-$(date +%s)"
 export NPM_BUILD_SCRIPT="${NPM_BUILD_SCRIPT:-build}"
 export YARN_BUILD_SCRIPT="${YARN_BUILD_SCRIPT:-build:prod}"
@@ -54,7 +54,7 @@ build_and_push_aggregated_image() {
   export ADDITIONAL_TAGS=("${default_tag}-single")
   export CONTAINERFILE_PATH="${APP_ROOT}/Dockerfile"
   export IMAGE_NAME="$IMAGE"
-  cicd_tools::image_builder::build_and_push
+  cicd::image_builder::build_and_push
 
   # Get the last 6 builds
   get_history
@@ -68,7 +68,7 @@ build_and_push_aggregated_image() {
   export ADDITIONAL_TAGS=("${default_tag}")
   export CONTAINERFILE_PATH="${APP_ROOT}/Dockerfile"
   export IMAGE_NAME="$IMAGE"
-  cicd_tools::image_builder::build_and_push
+  cicd::image_builder::build_and_push
 }
 
 build_and_push_pr_image() {
@@ -82,7 +82,7 @@ build_and_push_pr_image() {
   export ADDITIONAL_TAGS=("${default_tag}")
   export CONTAINERFILE_PATH="${APP_ROOT}/Dockerfile"
   export IMAGE_NAME="$IMAGE"
-  cicd_tools::image_builder::build_and_push
+  cicd::image_builder::build_and_push
   delete_running_container
 }
 
@@ -169,10 +169,10 @@ initialize_environment() {
 
 load_cicd_helper_functions() {
     local LIBRARY_TO_LOAD="$1"
-    local CICD_TOOLS_REPO_BRANCH='main'
-    local CICD_TOOLS_REPO_ORG='RedHatInsights'
-    local CICD_TOOLS_URL="https://raw.githubusercontent.com/${CICD_TOOLS_REPO_ORG}/cicd-tools/${CICD_TOOLS_REPO_BRANCH}/src/bootstrap.sh"
-    source <(curl -sSL "$CICD_TOOLS_URL") "$LIBRARY_TO_LOAD"
+    local cicd_REPO_BRANCH='main'
+    local cicd_REPO_ORG='RedHatInsights'
+    local cicd_URL="https://raw.githubusercontent.com/${cicd_REPO_ORG}/cicd-tools/${cicd_REPO_BRANCH}/src/bootstrap.sh"
+    source <(curl -sSL "$cicd_URL") "$LIBRARY_TO_LOAD"
 }
 
 # Detect if this is a PR build and set the appropriate variables

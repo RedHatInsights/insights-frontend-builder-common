@@ -68,10 +68,10 @@ QUAY_USER=""
 
 load_cicd_helper_functions() {
     local LIBRARY_TO_LOAD="$1"
-    local CICD_TOOLS_REPO_BRANCH='main'
-    local CICD_TOOLS_REPO_ORG='RedHatInsights'
-    local CICD_TOOLS_URL="https://raw.githubusercontent.com/${CICD_TOOLS_REPO_ORG}/cicd-tools/${CICD_TOOLS_REPO_BRANCH}/src/bootstrap.sh"
-    source <(curl -sSL "$CICD_TOOLS_URL") "$LIBRARY_TO_LOAD"
+    local cicd_REPO_BRANCH='main'
+    local cicd_REPO_ORG='RedHatInsights'
+    local cicd_URL="https://raw.githubusercontent.com/${cicd_REPO_ORG}/cicd-tools/${cicd_REPO_BRANCH}/src/bootstrap.sh"
+    source <(curl -sSL "$cicd_URL") "$LIBRARY_TO_LOAD"
 }
 
 debug_mode() {
