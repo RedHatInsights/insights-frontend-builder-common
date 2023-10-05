@@ -74,10 +74,6 @@ load_cicd_helper_functions() {
     source <(curl -sSL "$CICD_TOOLS_URL") "$LIBRARY_TO_LOAD"
 }
 
-quay_login() {
-  echo $QUAY_TOKEN | cicd::container::cmd --config="$DOCKER_CONF" login -u="$QUAY_USER" --password-stdin quay.io
-}
-
 debug_mode() {
   if [ $DEBUG_MODE == true ]; then
     set -x
@@ -294,7 +290,6 @@ main() {
   delete_build_container
   make_history_directories
   get_git_history
-  quay_login
   get_build_images
   copy_history_into_output_directory
   copy_current_build_into_output_dir
