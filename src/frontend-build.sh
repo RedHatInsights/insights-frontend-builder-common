@@ -28,7 +28,6 @@
 
 set -ex
 
-export IS_PR=false
 export APP_NAME=$(node -p "require('${WORKSPACE:-.}${APP_DIR:-}/package.json').insights.appname")
 export IMAGE_TAG=$(cicd::image_builder::get_image_tag)
 export CONTAINER_NAME="$APP_NAME-$BRANCH_NAME-$IMAGE_TAG-$(date +%s)"
@@ -42,7 +41,7 @@ BRANCH_NAME=${GIT_BRANCH#origin/}
 
 build_and_push_aggregated_image() {
   # Guard clause to ensure this function is NOT for PR builds
-  if [ "$IS_PR" = true ]; then
+  if [ $(cicd::image_builder::is_change_request_context) = true ]; then
     return
   fi
   
@@ -65,7 +64,6 @@ build_and_push_aggregated_image() {
   local default_tag=$(cicd::image_builder::get_image_tag)
   export BUILD_CONTEXT="APP_ROOT"
   export LABELS=("image-type=aggregate")
-  export ADDITIONAL_TAGS=("${default_tag}")
   export CONTAINERFILE_PATH="${APP_ROOT}/Dockerfile"
   export IMAGE_NAME="$IMAGE"
   cicd::image_builder::build_and_push
@@ -73,13 +71,12 @@ build_and_push_aggregated_image() {
 
 build_and_push_pr_image() {
   # Guard clause to ensure this function is for PR builds
-  if [ "$IS_PR" != true ]; then
+  if [ $(cicd::image_builder::is_change_request_context) != true ]; then
     return
   fi
 
   local default_tag=$(cicd::image_builder::get_image_tag)
   export BUILD_CONTEXT="APP_ROOT"
-  export ADDITIONAL_TAGS=("${default_tag}")
   export CONTAINERFILE_PATH="${APP_ROOT}/Dockerfile"
   export IMAGE_NAME="$IMAGE"
   cicd::image_builder::build_and_push
@@ -90,7 +87,8 @@ build_and_setup() {
   # Constants
   local STAGE_HOST="stage.foo.redhat.com"
   local PROD_HOST="prod.foo.redhat.com"
-  
+  local IS_PR=$(cicd::image_builder::is_change_request_context)
+
   # NOTE: Make sure this volume is mounted 'ro', otherwise Jenkins cannot clean up the
   # workspace due to file permission errors; the Z is used for SELinux workarounds
   # -e NODE_BUILD_VERSION can be used to specify a version other than 12
@@ -155,16 +153,6 @@ initialize_environment() {
     mkdir -p "$WORKSPACE/build/container_workspace/"
     cd "$WORKSPACE/build/container_workspace/"
     export APP_ROOT="$WORKSPACE/build/container_workspace/"
-
-    # If this is a PR build, append expiration label to Dockerfile
-    if [ "$IS_PR" = true ]; then
-        echo -e "\nLABEL quay.expires-after=3d" >> "$APP_ROOT/Dockerfile"
-    else
-        echo "Publishing to Quay without expiration"
-    fi
-
-    # Get the latest git commit hash
-    export GIT_COMMIT=$(git rev-parse HEAD)
 }
 
 load_cicd_helper_functions() {
@@ -175,34 +163,11 @@ load_cicd_helper_functions() {
     source <(curl -sSL "$cicd_URL") "$LIBRARY_TO_LOAD"
 }
 
-# Detect if this is a PR build and set the appropriate variables
-set_pr_details() {
-  # If the job name doesn't contain "pr-check", exit early
-  if ! echo "$JOB_NAME" | grep -w "pr-check" > /dev/null; then
-    return
-  fi
-
-  local timestamp=$(date +%s)
-  local pr_id="unknown_pr_id"
-  
-  if [ -n "$ghprbPullId" ]; then
-    pr_id=$ghprbPullId
-  elif [ -n "$gitlabMergeRequestIid" ]; then
-    pr_id=$gitlabMergeRequestIid
-  fi
-
-  export IMAGE_TAG="pr-${pr_id}-${IMAGE_TAG}"
-  export CONTAINER_NAME="${APP_NAME}-pr-check-${pr_id}-${timestamp}"
-  export IS_PR=true
-}
-
 main() {
   # Load the CICD helper scripts
   load_cicd_helper_functions image_builder
   # Ensure we teardown docker on exit
   trap "delete_running_container" EXIT SIGINT SIGTERM
-  # Set the appropriate variables if this is a PR build
-  set_pr_details
   # Delete any running containers with the same name
   delete_running_container
   # Build the container and copy the files we need
