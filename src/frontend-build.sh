@@ -104,12 +104,10 @@ if echo $JOB_NAME | grep -w "pr-check" > /dev/null; then
   timestamp=$(date +%s)
 
   if [ ! -z "$ghprbPullId" ]; then
-    export IMAGE_TAG="pr-${ghprbPullId}-${IMAGE_TAG}"
     CONTAINER_NAME="${APP_NAME}-pr-check-${ghprbPullId}-${timestamp}"
   fi
 
   if [ ! -z "$gitlabMergeRequestIid" ]; then
-    export IMAGE_TAG="pr-${gitlabMergeRequestIid}-${IMAGE_TAG}"
     CONTAINER_NAME="${APP_NAME}-pr-check-${gitlabMergeRequestIid}-${timestamp}"
   fi
 
