@@ -12,6 +12,8 @@ docker --version
 # --------------------------------------------
 export APP_NAME=$(node -e "console.log(require(\"${WORKSPACE:-.}${APP_DIR:-}/package.json\").insights.appname)")
 
+# Caller can set a duration for the image life in quay otherwise it is defaulted to 3 days
+: ${QUAY_EXPIRE_TIME:="3d"}
 
 # main IMAGE var is exported from the pr_check.sh parent file
 if [[ ! -n "$IMAGE_TAG" ]]; then
@@ -175,7 +177,7 @@ if [ $IS_PR = true ]; then
   # instead of
   #   CMD npm run start:container
   #   LABEL quay.expires-after=3d
-  echo "LABEL quay.expires-after=3d" >> $APP_ROOT/Dockerfile # tag expires in 3 days
+  echo "LABEL quay.expires-after=${QUAY_EXPIRE_TIME}" >> $APP_ROOT/Dockerfile # tag expires in 3 days
 else
   echo "Publishing to Quay without expiration"
 fi
