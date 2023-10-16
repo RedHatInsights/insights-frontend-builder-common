@@ -1,242 +1,185 @@
 #!/bin/bash
 
-#dump env
-ENV_DUMP=`env`
-echo $ENV_DUMP
-
-which docker
-docker --version
-
-# --------------------------------------------
-# Export vars for helper scripts to use
-# --------------------------------------------
-export APP_NAME=$(node -e "console.log(require(\"${WORKSPACE:-.}${APP_DIR:-}/package.json\").insights.appname)")
-
-# Caller can set a duration for the image life in quay otherwise it is defaulted to 3 days
-: ${QUAY_EXPIRE_TIME:="3d"}
-
-# main IMAGE var is exported from the pr_check.sh parent file
-if [[ ! -n "$IMAGE_TAG" ]]; then
-    export IMAGE_TAG=$(git rev-parse --short=7 HEAD)
-fi
-
-export IS_PR=false
-COMMON_BUILDER=https://raw.githubusercontent.com/RedHatInsights/insights-frontend-builder-common/master
-EPOCH=$(date +%s)
-BUILD_IMAGE_TAG=c026352
-# Get current git branch
-# The current branch is going to be the GIT_BRANCH env var but with origin/ stripped off
-if [[ $GIT_BRANCH == origin/* ]]; then
-    BRANCH_NAME=${GIT_BRANCH:7}
-else
-    BRANCH_NAME=$GIT_BRANCH
-fi
-# We want to be really, really, really sure we have a unique container name
-export CONTAINER_NAME="$APP_NAME-$BRANCH_NAME-$IMAGE_TAG-$EPOCH"
-
-#The BUILD_SCRIPT env var is used in the frontend build container
-#and is the script we run with NPM at build time
-#the default is build, but we give apps the option to override
-if [ -z "$NPM_BUILD_SCRIPT" ]; then
-  export NPM_BUILD_SCRIPT="build"
-fi
-if [ -z "$YARN_BUILD_SCRIPT" ]; then
-  export YARN_BUILD_SCRIPT="build:prod"
-fi
-
-function teardown_docker() {
-  docker rm -f $CONTAINER_NAME || true
-}
-
-trap "teardown_docker" EXIT SIGINT SIGTERM
-
-# Detect if the container is running
-if docker ps | grep $CONTAINER_NAME > /dev/null; then
-  # Delete it
-  # We do this because an aborted run could leave the container around
-  teardown_docker
-fi
-
-# Get the chrome config from cloud-services-config
-function get_chrome_config() {
-  # Create the directory we're gonna plop the config files in
-  if [ -d $APP_ROOT/chrome_config ]; then
-    rm -rf $APP_ROOT/chrome_config;
-  fi
-  mkdir -p $APP_ROOT/chrome_config;
-
-  # If the env var is not set, we don't want to include the config
-  if [ -z ${INCLUDE_CHROME_CONFIG+x} ] ; then
-    return 0
-  fi
-  # If the env var is set to anything but true, we don't want to include the config
-  if [[ "${INCLUDE_CHROME_CONFIG}" != "true" ]]; then
-    return 0
-  fi
-  # If the branch isn't set in the env, we want to use the default
-  if [ -z ${CHROME_CONFIG_BRANCH+x} ] ; then
-    CHROME_CONFIG_BRANCH="ci-stable";
-  fi
-  # belt and braces mate, belt and braces
-  if [ -d $APP_ROOT/cloud-services-config ]; then
-    rm -rf $APP_ROOT/cloud-services-config;
-  fi
-
-  # Clone the config repo
-  git clone --branch $CHROME_CONFIG_BRANCH https://github.com/RedHatInsights/cloud-services-config.git;
-  # Copy the config files into the chrome_config dir
-  cp -r cloud-services-config/chrome/* $APP_ROOT/chrome_config/;
-  # clean up after ourselves? why not
-  rm -rf cloud-services-config;
-  # we're done here
-  return 0
-}
-
-
-function getHistory() {
-  mkdir aggregated_history
-  curl https://raw.githubusercontent.com/RedHatInsights/insights-frontend-builder-common/master/src/frontend-build-history.sh > frontend-build-history.sh
-  chmod +x frontend-build-history.sh
-  ./frontend-build-history.sh -q $IMAGE -o aggregated_history -c dist -p true -t $QUAY_TOKEN -u $QUAY_USER
-}
-
-# Job name will contain pr-check or build-master. $GIT_BRANCH is not populated on a
-# manually triggered build
-if echo $JOB_NAME | grep -w "pr-check" > /dev/null; then
-  timestamp=$(date +%s)
-
-  if [ ! -z "$ghprbPullId" ]; then
-    export IMAGE_TAG="pr-${ghprbPullId}-${IMAGE_TAG}"
-    CONTAINER_NAME="${APP_NAME}-pr-check-${ghprbPullId}-${timestamp}"
-  fi
-
-  if [ ! -z "$gitlabMergeRequestIid" ]; then
-    export IMAGE_TAG="pr-${gitlabMergeRequestIid}-${IMAGE_TAG}"
-    CONTAINER_NAME="${APP_NAME}-pr-check-${gitlabMergeRequestIid}-${timestamp}"
-  fi
-
-  IS_PR=true
-fi
+# -------------------------------------------
+# Script Name: frontend-build.sh
+# Description:
+#   This script automates the process of building frontend containers
+#   for the ConsoleDot platform. It includes functions to handle builds for 
+#   both regular merges and Pull Requests (PRs). Furthermore ensures required environment 
+#   variables are set, logs into registries, builds and pushes the appropriate image tags, 
+#   and manages containers.
+#
+# Usage:
+#   Execute this script directly, or source it and call its functions individually
+#   for granular control.
+#
+# Dependencies:
+#   - Node.js: Used to fetch the application name from the package.json.
+#   - Docker or Podman: Required for building and pushing container images.
+#   - External CICD tools: Abstracts the container engine away
+#   - Git: Used for various operations, like fetching the latest commit.
+#
+# Environment Variables:
+#   The script uses a variety of environment variables, some mandatory. These can
+#   include QUAY_USER, QUAY_TOKEN, RH_REGISTRY_USER, RH_REGISTRY_TOKEN, GIT_BRANCH,
+#   WORKSPACE, APP_DIR, and others. These are set by Jenkins in the CI/CD pipeline.
+#
+# -------------------------------------------
 
 set -ex
 
-
-function build() {
-  # NOTE: Make sure this volume is mounted 'ro', otherwise Jenkins cannot clean up the
-  # workspace due to file permission errors; the Z is used for SELinux workarounds
-  # -e NODE_BUILD_VERSION can be used to specify a version other than 12
-  docker run -i --name $CONTAINER_NAME \
-    -v $PWD:/workspace:ro,Z \
-    -e QUAY_USER=$QUAY_USER \
-    -e QUAY_TOKEN=$QUAY_TOKEN \
-    -e APP_DIR=$APP_DIR \
-    -e IS_PR=$IS_PR \
-    -e CI_ROOT=$CI_ROOT \
-    -e NODE_BUILD_VERSION=$NODE_BUILD_VERSION \
-    -e SERVER_NAME=$SERVER_NAME \
-    -e DIST_FOLDER \
-    -e INCLUDE_CHROME_CONFIG \
-    -e CHROME_CONFIG_BRANCH \
-    -e GIT_BRANCH \
-    -e BRANCH_NAME \
-    -e NPM_BUILD_SCRIPT \
-    -e YARN_BUILD_SCRIPT \
-    --add-host stage.foo.redhat.com:127.0.0.1 \
-    --add-host prod.foo.redhat.com:127.0.0.1 \
-    quay.io/cloudservices/frontend-build-container:$BUILD_IMAGE_TAG 
-  RESULT=$?
-
-  if [ $RESULT -ne 0 ]; then
-    echo "Test failure observed; aborting"
-    teardown_docker
-    exit 1
-  fi
-
-  # Extract files needed to build contianer
-  mkdir -p $WORKSPACE/build
-  docker cp $CONTAINER_NAME:/container_workspace/ $WORKSPACE/build
-
-  teardown_docker
-}
-
-
-build  
-
-# Set the APP_ROOT
-cd $WORKSPACE/build/container_workspace/ && export APP_ROOT="$WORKSPACE/build/container_workspace/"
-
-# ---------------------------
-# Build and Publish to Quay
-# ---------------------------
-
-if [ $IS_PR = true ]; then
-  echo $'\n'>> $APP_ROOT/Dockerfile
-  # downstream developers may remove newline at end of dockerfile
-  # this will result in something like
-  #   CMD npm run start:containerLABEL quay.expires-after=3d
-  # instead of
-  #   CMD npm run start:container
-  #   LABEL quay.expires-after=3d
-  echo "LABEL quay.expires-after=${QUAY_EXPIRE_TIME}" >> $APP_ROOT/Dockerfile # tag expires in 3 days
-else
-  echo "Publishing to Quay without expiration"
-fi
-
-# source <(curl -sSL $COMMON_BUILDER/src/quay_push.sh | bash -s)
-
-# IMAGE, IMAGE_TAG, and Tokens are exported from upstream pr_check.sh
+export APP_NAME=$(node -p "require('${WORKSPACE:-.}${APP_DIR:-}/package.json').insights.appname")
+export IMAGE_TAG=$(cicd::image_builder::get_image_tag)
+export CONTAINER_NAME="$APP_NAME-$BRANCH_NAME-$IMAGE_TAG-$(date +%s)"
+export NPM_BUILD_SCRIPT="${NPM_BUILD_SCRIPT:-build}"
+export YARN_BUILD_SCRIPT="${YARN_BUILD_SCRIPT:-build:prod}"
 export LC_ALL=en_US.utf-8
 export LANG=en_US.utf-8
-export APP_ROOT=${APP_ROOT:-pwd}
-export WORKSPACE=${WORKSPACE:-$APP_ROOT}  # if running in jenkins, use the build's workspace
-# export IMAGE_TAG=$(git rev-parse --short=7 HEAD)
-export GIT_COMMIT=$(git rev-parse HEAD)
 
+BUILD_IMAGE_TAG=c026352
+BRANCH_NAME=${GIT_BRANCH#origin/}
 
-if [[ -z "$QUAY_USER" || -z "$QUAY_TOKEN" ]]; then
-    echo "QUAY_USER and QUAY_TOKEN must be set"
-    exit 1
-fi
-
-if [[ -z "$RH_REGISTRY_USER" || -z "$RH_REGISTRY_TOKEN" ]]; then
-    echo "RH_REGISTRY_USER and RH_REGISTRY_TOKEN must be set"
-    exit 1
-fi
-
-# Chrome isn't currently using our config, don't need this complexity for now
-# Not deleting, as we may need to re-enable later
-#if [ $APP_NAME == "chrome" ] ; then
-  # get_chrome_config;
-#fi
-
-DOCKER_CONFIG="$PWD/.docker"
-mkdir -p "$DOCKER_CONFIG"
-echo $QUAY_TOKEN | docker  login -u="$QUAY_USER" --password-stdin quay.io
-echo $RH_REGISTRY_TOKEN | docker  login -u="$RH_REGISTRY_USER" --password-stdin registry.redhat.io
-
-pwd
-ls -alsvh
-cat Dockerfile
-
-#PRs shouldn't get the special treatment for history
-if [ $IS_PR = true ]; then
-  docker  build -t "${IMAGE}:${IMAGE_TAG}" $APP_ROOT -f $APP_ROOT/Dockerfile
-  docker  push "${IMAGE}:${IMAGE_TAG}"
-  teardown_docker
-else
+build_and_push_aggregated_image() {
+  # Guard clause to ensure this function is NOT for PR builds
+  if [ $(cicd::image_builder::is_change_request_context) = true ]; then
+    return
+  fi
+  
   # Build and push the -single tagged image
   # This image contains only the current build
-  docker  build --label "image-type=single" -t "${IMAGE}:${IMAGE_TAG}-single" $APP_ROOT -f $APP_ROOT/Dockerfile
-  docker  push "${IMAGE}:${IMAGE_TAG}-single"
+  local default_tag=$(cicd::image_builder::get_image_tag)
+  export BUILD_CONTEXT="APP_ROOT"
+  export LABELS=("image-type=single")
+  export ADDITIONAL_TAGS=("${default_tag}-single")
+  export CONTAINERFILE_PATH="${APP_ROOT}/Dockerfile"
+  export IMAGE_NAME="$IMAGE"
+  cicd::image_builder::build_and_push
 
-  # Get the the last 6 builds
-  getHistory
+  # Get the last 6 builds
+  get_history
 
   # Build and push the aggregated image
   # This image is tagged with just the SHA for the current build
   # as this is the one we want deployed
-  docker  build --label "image-type=aggregate" -t "${IMAGE}:${IMAGE_TAG}" $APP_ROOT -f $APP_ROOT/Dockerfile
-  docker  push "${IMAGE}:${IMAGE_TAG}"
+  local default_tag=$(cicd::image_builder::get_image_tag)
+  export BUILD_CONTEXT="APP_ROOT"
+  export LABELS=("image-type=aggregate")
+  export CONTAINERFILE_PATH="${APP_ROOT}/Dockerfile"
+  export IMAGE_NAME="$IMAGE"
+  cicd::image_builder::build_and_push
+}
 
-  teardown_docker
-fi
+build_and_push_pr_image() {
+  # Guard clause to ensure this function is for PR builds
+  if [ $(cicd::image_builder::is_change_request_context) != true ]; then
+    return
+  fi
+
+  local default_tag=$(cicd::image_builder::get_image_tag)
+  export BUILD_CONTEXT="APP_ROOT"
+  export CONTAINERFILE_PATH="${APP_ROOT}/Dockerfile"
+  export IMAGE_NAME="$IMAGE"
+  cicd::image_builder::build_and_push
+  delete_running_container
+}
+
+build_and_setup() {
+  # Constants
+  local STAGE_HOST="stage.foo.redhat.com"
+  local PROD_HOST="prod.foo.redhat.com"
+  local IS_PR=$(cicd::image_builder::is_change_request_context)
+
+  # NOTE: Make sure this volume is mounted 'ro', otherwise Jenkins cannot clean up the
+  # workspace due to file permission errors; the Z is used for SELinux workarounds
+  # -e NODE_BUILD_VERSION can be used to specify a version other than 12
+  cicd::container::cmd run -i --name "$CONTAINER_NAME" \
+    -v "$PWD:/workspace:ro,Z" \
+    -e QUAY_USER="$QUAY_USER" \
+    -e QUAY_TOKEN="$QUAY_TOKEN" \
+    -e APP_DIR="$APP_DIR" \
+    -e IS_PR="$IS_PR" \
+    -e CI_ROOT="$CI_ROOT" \
+    -e NODE_BUILD_VERSION="$NODE_BUILD_VERSION" \
+    -e SERVER_NAME="$SERVER_NAME" \
+    -e DIST_FOLDER="$DIST_FOLDER" \
+    -e INCLUDE_CHROME_CONFIG="$INCLUDE_CHROME_CONFIG" \
+    -e CHROME_CONFIG_BRANCH="$CHROME_CONFIG_BRANCH" \
+    -e GIT_BRANCH="$GIT_BRANCH" \
+    -e BRANCH_NAME="$BRANCH_NAME" \
+    -e NPM_BUILD_SCRIPT="$NPM_BUILD_SCRIPT" \
+    -e YARN_BUILD_SCRIPT="$YARN_BUILD_SCRIPT" \
+    --add-host "$STAGE_HOST":127.0.0.1 \
+    --add-host "$PROD_HOST":127.0.0.1 \
+    quay.io/cloudservices/frontend-build-container:"$BUILD_IMAGE_TAG"
+    
+  local RESULT=$?
+
+  if [ $RESULT -ne 0 ]; then
+    echo "Build failure observed; aborting"
+    delete_running_container
+    exit 1
+  fi
+
+  # Extract files needed to build container
+  mkdir -p "$WORKSPACE/build"
+  cicd::container::cmd cp "$CONTAINER_NAME:/container_workspace/" "$WORKSPACE/build"
+
+  delete_running_container
+}
+
+delete_running_container() {
+  if cicd::container::cmd  ps | grep $CONTAINER_NAME > /dev/null; then
+    cicd::container::cmd  rm -f $CONTAINER_NAME || true
+  fi
+}
+
+get_history() {
+  mkdir -p aggregated_history
+  
+  if [ ! -f frontend-build-history.sh ]; then
+    curl https://raw.githubusercontent.com/RedHatInsights/insights-frontend-builder-common/master/src/frontend-build-history.sh > frontend-build-history.sh
+    chmod +x frontend-build-history.sh
+  fi
+
+  ./frontend-build-history.sh -q $IMAGE -o aggregated_history -c dist -p true -t $QUAY_TOKEN -u $QUAY_USER
+}
+
+initialize_environment() {
+    # Set default values for directories
+    export APP_ROOT="${APP_ROOT:-$(pwd)}"
+    export WORKSPACE="${WORKSPACE:-$APP_ROOT}"
+
+    # Change to the desired directory and set APP_ROOT
+    mkdir -p "$WORKSPACE/build/container_workspace/"
+    cd "$WORKSPACE/build/container_workspace/"
+    export APP_ROOT="$WORKSPACE/build/container_workspace/"
+}
+
+load_cicd_helper_functions() {
+    local LIBRARY_TO_LOAD="$1"
+    local cicd_REPO_BRANCH='main'
+    local cicd_REPO_ORG='RedHatInsights'
+    local cicd_URL="https://raw.githubusercontent.com/${cicd_REPO_ORG}/cicd-tools/${cicd_REPO_BRANCH}/src/bootstrap.sh"
+    source <(curl -sSL "$cicd_URL") "$LIBRARY_TO_LOAD"
+}
+
+main() {
+  # Load the CICD helper scripts
+  load_cicd_helper_functions image_builder
+  # Ensure we teardown docker on exit
+  trap "delete_running_container" EXIT SIGINT SIGTERM
+  # Delete any running containers with the same name
+  delete_running_container
+  # Build the container and copy the files we need
+  build_and_setup
+  # Set directory paths, update Dockerfile for PR builds, and retrieve the latest git commit hash.
+  initialize_environment
+  # Build and push the PR image if this is a PR build
+  build_and_push_pr_image
+  # Build and push the aggregated image if this is NOT a PR build
+  build_and_push_aggregated_image
+  # clean up
+  delete_running_container
+}
+
+main
