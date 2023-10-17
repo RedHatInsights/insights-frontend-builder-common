@@ -39,12 +39,10 @@ export LANG=en_US.utf-8
 BUILD_IMAGE_TAG=c026352
 BRANCH_NAME=${GIT_BRANCH#origin/}
 
-cicd::image_builder::is_change_request_context
-IS_PR=$?
 
 build_and_push_aggregated_image() {
   # Guard clause to ensure this function is NOT for PR builds
-  if [ "$IS_PR" -eq 0 ]; then
+  if ! cicd::image_builder::is_change_request_context; then
       return
   fi
 
@@ -74,7 +72,7 @@ build_and_push_aggregated_image() {
 
 build_and_push_pr_image() {
   # Guard clause to ensure this function is for PR builds
-  if [ "$IS_PR" -eq 0 ]; then
+  if cicd::image_builder::is_change_request_context; then
       return
   fi
 
