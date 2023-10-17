@@ -117,6 +117,9 @@ build_and_setup() {
     exit 1
   fi
 
+  # Delete node_modules from the container
+  cicd::container::cmd rm "$CONTAINER_NAME:/container_workspace/node_modules"
+  
   # Extract files needed to build container
   mkdir -p "$WORKSPACE/build"
   cicd::container::cmd cp "$CONTAINER_NAME:/container_workspace/" "$WORKSPACE/build"
