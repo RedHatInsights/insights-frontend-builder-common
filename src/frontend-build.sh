@@ -49,6 +49,7 @@ build_and_push_aggregated_image() {
   # This image contains only the current build
   export BUILD_CONTEXT="${APP_ROOT}"
   export LABELS=("image-type=single")
+  local default_tag=$(cicd::image_builder::get_image_tag)
   export ADDITIONAL_TAGS=("${default_tag}-single")
   export CONTAINERFILE_PATH="${APP_ROOT}/Dockerfile"
   export IMAGE_NAME="$IMAGE"
