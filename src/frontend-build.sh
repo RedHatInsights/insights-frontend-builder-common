@@ -39,12 +39,15 @@ export LANG=en_US.utf-8
 BUILD_IMAGE_TAG=c026352
 BRANCH_NAME=${GIT_BRANCH#origin/}
 
+cicd::image_builder::is_change_request_context
+IS_PR=$?
+
 build_and_push_aggregated_image() {
   # Guard clause to ensure this function is NOT for PR builds
-  if [ $(cicd::image_builder::is_change_request_context) = true ]; then
-    return
+  if [ "$IS_PR" -eq 0 ]; then
+      return
   fi
-  
+
   # Build and push the -single tagged image
   # This image contains only the current build
   local default_tag=$(cicd::image_builder::get_image_tag)
@@ -71,8 +74,8 @@ build_and_push_aggregated_image() {
 
 build_and_push_pr_image() {
   # Guard clause to ensure this function is for PR builds
-  if [ $(cicd::image_builder::is_change_request_context) != true ]; then
-    return
+  if [ "$IS_PR" -eq 0 ]; then
+      return
   fi
 
   local default_tag=$(cicd::image_builder::get_image_tag)
@@ -87,7 +90,6 @@ build_and_setup() {
   # Constants
   local STAGE_HOST="stage.foo.redhat.com"
   local PROD_HOST="prod.foo.redhat.com"
-  local IS_PR=$(cicd::image_builder::is_change_request_context)
 
   # NOTE: Make sure this volume is mounted 'ro', otherwise Jenkins cannot clean up the
   # workspace due to file permission errors; the Z is used for SELinux workarounds
