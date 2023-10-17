@@ -39,15 +39,15 @@ export LANG=en_US.utf-8
 BUILD_IMAGE_TAG=c026352
 BRANCH_NAME=${GIT_BRANCH#origin/}
 
+
 build_and_push_aggregated_image() {
   # Guard clause to ensure this function is NOT for PR builds
-  if [ $(cicd::image_builder::is_change_request_context) = true ]; then
-    return
+  if ! cicd::image_builder::is_change_request_context; then
+      return
   fi
-  
+
   # Build and push the -single tagged image
   # This image contains only the current build
-  local default_tag=$(cicd::image_builder::get_image_tag)
   export BUILD_CONTEXT="${APP_ROOT}"
   export LABELS=("image-type=single")
   export ADDITIONAL_TAGS=("${default_tag}-single")
@@ -61,7 +61,7 @@ build_and_push_aggregated_image() {
   # Build and push the aggregated image
   # This image is tagged with just the SHA for the current build
   # as this is the one we want deployed
-  local default_tag=$(cicd::image_builder::get_image_tag)
+  
   export BUILD_CONTEXT="${APP_ROOT}"
   export LABELS=("image-type=aggregate")
   export CONTAINERFILE_PATH="${APP_ROOT}/Dockerfile"
@@ -71,11 +71,10 @@ build_and_push_aggregated_image() {
 
 build_and_push_pr_image() {
   # Guard clause to ensure this function is for PR builds
-  if [ $(cicd::image_builder::is_change_request_context) != true ]; then
-    return
+  if cicd::image_builder::is_change_request_context; then
+      return
   fi
 
-  local default_tag=$(cicd::image_builder::get_image_tag)
   export BUILD_CONTEXT="${APP_ROOT}"
   export CONTAINERFILE_PATH="${APP_ROOT}/Dockerfile"
   export IMAGE_NAME="$IMAGE"
@@ -87,7 +86,6 @@ build_and_setup() {
   # Constants
   local STAGE_HOST="stage.foo.redhat.com"
   local PROD_HOST="prod.foo.redhat.com"
-  local IS_PR=$(cicd::image_builder::is_change_request_context)
 
   # NOTE: Make sure this volume is mounted 'ro', otherwise Jenkins cannot clean up the
   # workspace due to file permission errors; the Z is used for SELinux workarounds
