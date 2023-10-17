@@ -34,8 +34,10 @@ export NPM_BUILD_SCRIPT="${NPM_BUILD_SCRIPT:-build}"
 export YARN_BUILD_SCRIPT="${YARN_BUILD_SCRIPT:-build:prod}"
 export LC_ALL=en_US.utf-8
 export LANG=en_US.utf-8
+cicd::image_builder::is_change_request_context
+export IS_PR=$?
 
-BUILD_IMAGE_TAG=c026352
+BUILD_IMAGE_TAG=f8b081e 
 BRANCH_NAME=${GIT_BRANCH#origin/}
 
 
@@ -118,9 +120,6 @@ build_and_setup() {
     exit 1
   fi
 
-  # Delete node_modules from the container
-  cicd::container::cmd exec "$CONTAINER_NAME" rm -rf /container_workspace/node_modules
-  
   # Extract files needed to build container
   mkdir -p "$WORKSPACE/build"
   cicd::container::cmd cp "$CONTAINER_NAME:/container_workspace/" "$WORKSPACE/build"
