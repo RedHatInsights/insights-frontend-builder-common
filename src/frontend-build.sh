@@ -42,7 +42,7 @@ BRANCH_NAME=${GIT_BRANCH#origin/}
 
 build_and_push_aggregated_image() {
   # Guard clause to ensure this function is NOT for PR builds
-  if ! cicd::image_builder::is_change_request_context; then
+  if cicd::image_builder::is_change_request_context; then
       return
   fi
 
@@ -71,7 +71,7 @@ build_and_push_aggregated_image() {
 
 build_and_push_pr_image() {
   # Guard clause to ensure this function is for PR builds
-  if cicd::image_builder::is_change_request_context; then
+  if ! cicd::image_builder::is_change_request_context; then
       return
   fi
 
