@@ -29,7 +29,6 @@
 set -ex
 
 export APP_NAME=$(node -p "require('${WORKSPACE:-.}${APP_DIR:-}/package.json').insights.appname")
-export IMAGE_TAG=$(cicd::image_builder::get_image_tag)
 export CONTAINER_NAME="$APP_NAME-$BRANCH_NAME-$IMAGE_TAG-$(date +%s)"
 export NPM_BUILD_SCRIPT="${NPM_BUILD_SCRIPT:-build}"
 export YARN_BUILD_SCRIPT="${YARN_BUILD_SCRIPT:-build:prod}"
