@@ -37,7 +37,7 @@ export LANG=en_US.utf-8
 cicd::image_builder::is_change_request_context
 export IS_PR=$?
 
-BUILD_IMAGE_TAG=f8b081e 
+BUILD_IMAGE_TAG=6f41e6e 
 BRANCH_NAME=${GIT_BRANCH#origin/}
 
 
