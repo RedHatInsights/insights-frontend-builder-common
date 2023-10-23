@@ -23,7 +23,7 @@ fi
 export IS_PR=false
 COMMON_BUILDER=https://raw.githubusercontent.com/RedHatInsights/insights-frontend-builder-common/master
 EPOCH=$(date +%s)
-BUILD_IMAGE_TAG="6f41e6e"
+BUILD_IMAGE_TAG="379809a"
 # Get current git branch
 # The current branch is going to be the GIT_BRANCH env var but with origin/ stripped off
 if [[ $GIT_BRANCH == origin/* ]]; then
@@ -138,6 +138,9 @@ function build() {
     -e INCLUDE_CHROME_CONFIG \
     -e CHROME_CONFIG_BRANCH \
     -e GIT_BRANCH \
+    -e ROUTE_PATH \
+    -e BETA_ROUTE_PATH \
+    -e PREVIEW_ROUTE_PATH \
     -e BRANCH_NAME \
     -e NPM_BUILD_SCRIPT \
     -e YARN_BUILD_SCRIPT \
