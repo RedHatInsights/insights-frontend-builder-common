@@ -23,7 +23,6 @@ fi
 export IS_PR=false
 COMMON_BUILDER=https://raw.githubusercontent.com/RedHatInsights/insights-frontend-builder-common/master
 EPOCH=$(date +%s)
-BUILD_IMAGE_TAG="6371cbe"
 # Get current git branch
 # The current branch is going to be the GIT_BRANCH env var but with origin/ stripped off
 if [[ $GIT_BRANCH == origin/* ]]; then
@@ -146,7 +145,7 @@ function build() {
     -e YARN_BUILD_SCRIPT \
     --add-host stage.foo.redhat.com:127.0.0.1 \
     --add-host prod.foo.redhat.com:127.0.0.1 \
-    quay.io/cloudservices/frontend-build-container:$BUILD_IMAGE_TAG 
+    quay.io/cloudservices/frontend-build-container:latest
   RESULT=$?
 
   if [ $RESULT -ne 0 ]; then
@@ -212,14 +211,8 @@ fi
   # get_chrome_config;
 #fi
 
-DOCKER_CONFIG="$PWD/.docker"
-mkdir -p "$DOCKER_CONFIG"
-echo $QUAY_TOKEN | docker  login -u="$QUAY_USER" --password-stdin quay.io
-echo $RH_REGISTRY_TOKEN | docker  login -u="$RH_REGISTRY_USER" --password-stdin registry.redhat.io
-
-pwd
-ls -alsvh
-cat Dockerfile
+docker login -u="$QUAY_USER" -p="$QUAY_TOKEN" quay.io
+docker login -u="$RH_REGISTRY_USER" -p="$RH_REGISTRY_TOKEN" registry.redhat.io
 
 #PRs shouldn't get the special treatment for history
 if [ $IS_PR = true ]; then
@@ -227,19 +220,24 @@ if [ $IS_PR = true ]; then
   docker  push "${IMAGE}:${IMAGE_TAG}"
   teardown_docker
 else
-  # Build and push the -single tagged image
-  # This image contains only the current build
-  docker  build --label "image-type=single" -t "${IMAGE}:${IMAGE_TAG}-single" $APP_ROOT -f $APP_ROOT/Dockerfile
-  docker  push "${IMAGE}:${IMAGE_TAG}-single"
 
-  # Get the the last 6 builds
-  getHistory
-
-  # Build and push the aggregated image
-  # This image is tagged with just the SHA for the current build
-  # as this is the one we want deployed
-  docker  build --label "image-type=aggregate" -t "${IMAGE}:${IMAGE_TAG}" $APP_ROOT -f $APP_ROOT/Dockerfile
-  docker  push "${IMAGE}:${IMAGE_TAG}"
+  if docker buildx ls | grep -q "multiarchbuilder"; then
+      docker buildx use multiarchbuilder
+      echo "Using multiarchbuilder for buildx"
+      # Multi-architecture build
+      docker buildx build --platform linux/amd64,linux/arm64 --label "image-type=single" --build-arg BASE_IMAGE="${BASE_IMG}" -t "${IMAGE}:${IMAGE_TAG}-single" --push "$APP_ROOT" -f "$APP_ROOT/Dockerfile"
+      # Get the the last 6 builds
+      getHistory
+      docker buildx build --platform linux/amd64,linux/arm64 --label "image-type=aggregate" --build-arg BASE_IMAGE="${BASE_IMG}" -t "${IMAGE}:${IMAGE_TAG}" --push "$APP_ROOT" -f "$APP_ROOT/Dockerfile"
+  else
+      echo "Falling back to standard build and push"
+      # Standard build and push
+      docker build --label "image-type=single" -t "${IMAGE}:${IMAGE_TAG}-single" "$APP_ROOT" -f "$APP_ROOT/Dockerfile"
+      docker push "${IMAGE}:${IMAGE_TAG}-single"
+      getHistory
+      docker build --label "image-type=aggregate" -t "${IMAGE}:${IMAGE_TAG}" "$APP_ROOT" -f "$APP_ROOT/Dockerfile"
+      docker push "${IMAGE}:${IMAGE_TAG}"
+  fi
 
   teardown_docker
 fi
