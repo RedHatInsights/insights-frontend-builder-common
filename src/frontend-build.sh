@@ -161,8 +161,31 @@ function build() {
   teardown_docker
 }
 
+function verify_build() {
+  # The files will be in $WORKSPACE/build
+  ls -l $WORKSPACE/build
+}
 
+# Function to check if image tag already exists on Quay
+function check_for_duplicate_tag() {
+    local image_name=$1
+    local tag=$2
+
+    # Attempt to pull the image with the specific tag quietly
+    # I did this rather than docker manifest inspect because that is still experimental AFAIK
+    # and I didn't want to attempt to talk to the registry directly
+    # frontend images are small, so this shouldn't bee too much of a hit.
+    if docker pull --quiet $image_name:$tag > /dev/null 2>&1; then
+        echo "You are attempting to build an image for a SHA that already has an image built and hosted on Quay. Please commit or merge in your repo to trigger a build with a new SHA."
+        # I know that exit 0 creates problems in sourced scripts but I think exit 1 works?
+        exit 1  
+    fi
+}
+
+
+check_for_duplicate_tag "$IMAGE" "$IMAGE_TAG"
 build  
+verify_build
 
 # Set the APP_ROOT
 cd $WORKSPACE/build/container_workspace/ && export APP_ROOT="$WORKSPACE/build/container_workspace/"
