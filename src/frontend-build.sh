@@ -161,11 +161,6 @@ function build() {
   teardown_docker
 }
 
-function verify_build() {
-  # The files will be in $WORKSPACE/build
-  ls -l $WORKSPACE/build
-}
-
 # Function to check if image tag already exists on Quay
 function check_for_duplicate_tag() {
     local image_name=$1
@@ -185,7 +180,6 @@ function check_for_duplicate_tag() {
 
 check_for_duplicate_tag "$IMAGE" "$IMAGE_TAG"
 build  
-verify_build
 
 # Set the APP_ROOT
 cd $WORKSPACE/build/container_workspace/ && export APP_ROOT="$WORKSPACE/build/container_workspace/"
