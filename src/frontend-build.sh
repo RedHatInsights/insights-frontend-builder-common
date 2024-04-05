@@ -161,8 +161,8 @@ function build() {
   teardown_docker
 }
 
-docker login -u="$QUAY_USER" -p="$QUAY_TOKEN" quay.io
-docker login -u="$RH_REGISTRY_USER" -p="$RH_REGISTRY_TOKEN" registry.redhat.io
+docker login -u="$QUAY_USER" --password-stdin quay.io <<< "$QUAY_TOKEN"
+docker login -u="$RH_REGISTRY_USER" --password-stdin registry.redhat.io <<< "$RH_REGISTRY_TOKEN"
 
 build  
 
