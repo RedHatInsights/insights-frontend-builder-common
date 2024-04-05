@@ -161,6 +161,8 @@ function build() {
   teardown_docker
 }
 
+docker login -u="$QUAY_USER" -p="$QUAY_TOKEN" quay.io
+docker login -u="$RH_REGISTRY_USER" -p="$RH_REGISTRY_TOKEN" registry.redhat.io
 
 build  
 
@@ -211,8 +213,6 @@ fi
   # get_chrome_config;
 #fi
 
-docker login -u="$QUAY_USER" -p="$QUAY_TOKEN" quay.io
-docker login -u="$RH_REGISTRY_USER" -p="$RH_REGISTRY_TOKEN" registry.redhat.io
 
 #PRs shouldn't get the special treatment for history
 if [ $IS_PR = true ]; then
