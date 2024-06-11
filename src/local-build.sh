@@ -20,7 +20,8 @@
 # Export vars for helper scripts to use
 # --------------------------------------------
 export WORKSPACE=$(pwd)
-export APP_NAME=$(node -e "console.log(require(\"${WORKSPACE:-.}${APP_DIR:-}/package.json\").insights.appname)")
+package_json_path="${WORKSPACE:-.}${APP_DIR:-}/package.json"
+export APP_NAME="$(jq -r '.insights.appname' < "$package_json_path")"
 export CONTAINER_NAME="$APP_NAME"
 # main IMAGE var is exported from the pr_check.sh parent file
 export IMAGE="quay.io/cloudservices/edge-frontend"

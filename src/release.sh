@@ -3,8 +3,9 @@ set -e
 set -x
 
 SRC_HASH=`git rev-parse --verify HEAD`
-APP_NAME=$(node -e "console.log(require(\"${WORKSPACE:-.}/package.json\").insights.appname)")
-NODE_VERSION=$(node -e "console.log(require(\"${WORKSPACE:-.}/package.json\")?.engines?.node || \"unknown\")")
+package_json_path="${WORKSPACE:-.}/package.json"
+APP_NAME="$(jq -r '.insights.appname' < "$package_json_path")"
+NODE_VERSION="$(jq -r '.engines.node // "unknown"' < "$package_json_path")"
 
 major_version=0
 # Get the major version of node

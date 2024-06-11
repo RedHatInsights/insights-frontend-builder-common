@@ -10,7 +10,8 @@ docker --version
 # --------------------------------------------
 # Export vars for helper scripts to use
 # --------------------------------------------
-export APP_NAME=$(node -e "console.log(require(\"${WORKSPACE:-.}${APP_DIR:-}/package.json\").insights.appname)")
+package_json_path="${WORKSPACE:-.}${APP_DIR:-}/package.json"
+export APP_NAME="$(jq -r '.insights.appname' < "$package_json_path")"
 
 # Caller can set a duration for the image life in quay otherwise it is defaulted to 3 days
 : ${QUAY_EXPIRE_TIME:="3d"}
