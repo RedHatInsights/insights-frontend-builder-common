@@ -1,4 +1,4 @@
-verify_dependencies() {
+verifyDependencies() {
   package_json=$(cat package.json)
   # Initialize an array to store error messages
   errors=()
