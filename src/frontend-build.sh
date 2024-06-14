@@ -92,6 +92,12 @@ function get_chrome_config() {
   return 0
 }
 
+function verifyDependencies() {
+  curl https://raw.githubusercontent.com/RedHatInsights/insights-frontend-builder-common/master/src/verify_frontend_dependencies.sh > verify_frontend_dependencies.sh
+  chmod +x verify_frontend_dependencies.sh
+  ./verify_frontend_dependencies.sh
+}
+
 
 function getHistory() {
   mkdir aggregated_history
@@ -217,6 +223,8 @@ fi
 
 #PRs shouldn't get the special treatment for history
 if [ $IS_PR = true ]; then
+  verifyDependencies
+
   docker  build -t "${IMAGE}:${IMAGE_TAG}" $APP_ROOT -f $APP_ROOT/Dockerfile
   docker  push "${IMAGE}:${IMAGE_TAG}"
   teardown_docker
