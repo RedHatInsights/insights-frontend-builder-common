@@ -4,8 +4,8 @@
 ENV_DUMP=`env`
 echo $ENV_DUMP
 
-which podman
-podman --version
+which docker
+docker --version
 
 # --------------------------------------------
 # Export vars for helper scripts to use
@@ -44,17 +44,17 @@ if [ -z "$YARN_BUILD_SCRIPT" ]; then
   export YARN_BUILD_SCRIPT="build:prod"
 fi
 
-function teardown_podman() {
-  podman rm -f $CONTAINER_NAME || true
+function teardown_docker() {
+  docker rm -f $CONTAINER_NAME || true
 }
 
-trap "teardown_podman" EXIT SIGINT SIGTERM
+trap "teardown_docker" EXIT SIGINT SIGTERM
 
 # Detect if the container is running
-if podman ps | grep $CONTAINER_NAME > /dev/null; then
+if docker ps | grep $CONTAINER_NAME > /dev/null; then
   # Delete it
   # We do this because an aborted run could leave the container around
-  teardown_podman
+  teardown_docker
 fi
 
 # Get the chrome config from cloud-services-config
@@ -131,7 +131,7 @@ function build() {
   # NOTE: Make sure this volume is mounted 'ro', otherwise Jenkins cannot clean up the
   # workspace due to file permission errors; the Z is used for SELinux workarounds
   # -e NODE_BUILD_VERSION can be used to specify a version other than 12
-  podman run -i --name $CONTAINER_NAME \
+  docker run -i --name $CONTAINER_NAME \
     -v $PWD:/workspace:ro,Z \
     -e QUAY_USER=$QUAY_USER \
     -e QUAY_TOKEN=$QUAY_TOKEN \
@@ -157,19 +157,19 @@ function build() {
 
   if [ $RESULT -ne 0 ]; then
     echo "Test failure observed; aborting"
-    teardown_podman
+    teardown_docker
     exit 1
   fi
 
   # Extract files needed to build contianer
   mkdir -p $WORKSPACE/build
-  podman cp $CONTAINER_NAME:/container_workspace/ $WORKSPACE/build
+  docker cp $CONTAINER_NAME:/container_workspace/ $WORKSPACE/build
 
-  teardown_podman
+  teardown_docker
 }
 
-podman login -u="$QUAY_USER" --password-stdin quay.io <<< "$QUAY_TOKEN"
-podman login -u="$RH_REGISTRY_USER" --password-stdin registry.redhat.io <<< "$RH_REGISTRY_TOKEN"
+docker login -u="$QUAY_USER" --password-stdin quay.io <<< "$QUAY_TOKEN"
+docker login -u="$RH_REGISTRY_USER" --password-stdin registry.redhat.io <<< "$RH_REGISTRY_TOKEN"
 
 build  
 
@@ -225,16 +225,16 @@ fi
 if [ $IS_PR = true ]; then
   verifyDependencies
 
-  podman  build -t "${IMAGE}:${IMAGE_TAG}" $APP_ROOT -f $APP_ROOT/Dockerfile
-  podman  push "${IMAGE}:${IMAGE_TAG}"
-  teardown_podman
+  docker  build -t "${IMAGE}:${IMAGE_TAG}" $APP_ROOT -f $APP_ROOT/Dockerfile
+  docker  push "${IMAGE}:${IMAGE_TAG}"
+  teardown_docker
 else
   # Standard build and push
-  podman build --label "image-type=single" -t "${IMAGE}:${IMAGE_TAG}-single" "$APP_ROOT" -f "$APP_ROOT/Dockerfile"
-  podman push "${IMAGE}:${IMAGE_TAG}-single"
+  docker build --label "image-type=single" -t "${IMAGE}:${IMAGE_TAG}-single" "$APP_ROOT" -f "$APP_ROOT/Dockerfile"
+  docker push "${IMAGE}:${IMAGE_TAG}-single"
   getHistory
-  podman build --label "image-type=aggregate" -t "${IMAGE}:${IMAGE_TAG}" "$APP_ROOT" -f "$APP_ROOT/Dockerfile"
-  podman push "${IMAGE}:${IMAGE_TAG}"
+  docker build --label "image-type=aggregate" -t "${IMAGE}:${IMAGE_TAG}" "$APP_ROOT" -f "$APP_ROOT/Dockerfile"
+  docker push "${IMAGE}:${IMAGE_TAG}"
 
-  teardown_podman
+  teardown_docker
 fi
