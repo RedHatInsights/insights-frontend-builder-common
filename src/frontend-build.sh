@@ -229,24 +229,12 @@ if [ $IS_PR = true ]; then
   docker  push "${IMAGE}:${IMAGE_TAG}"
   teardown_docker
 else
-
-  if docker buildx ls | grep -q "multiarchbuilder"; then
-      docker buildx use multiarchbuilder
-      echo "Using multiarchbuilder for buildx"
-      # Multi-architecture build
-      docker buildx build --platform linux/amd64,linux/arm64 --label "image-type=single" --build-arg BASE_IMAGE="${BASE_IMG}" -t "${IMAGE}:${IMAGE_TAG}-single" --push "$APP_ROOT" -f "$APP_ROOT/Dockerfile"
-      # Get the the last 6 builds
-      getHistory
-      docker buildx build --platform linux/amd64,linux/arm64 --label "image-type=aggregate" --build-arg BASE_IMAGE="${BASE_IMG}" -t "${IMAGE}:${IMAGE_TAG}" --push "$APP_ROOT" -f "$APP_ROOT/Dockerfile"
-  else
-      echo "Falling back to standard build and push"
-      # Standard build and push
-      docker build --label "image-type=single" -t "${IMAGE}:${IMAGE_TAG}-single" "$APP_ROOT" -f "$APP_ROOT/Dockerfile"
-      docker push "${IMAGE}:${IMAGE_TAG}-single"
-      getHistory
-      docker build --label "image-type=aggregate" -t "${IMAGE}:${IMAGE_TAG}" "$APP_ROOT" -f "$APP_ROOT/Dockerfile"
-      docker push "${IMAGE}:${IMAGE_TAG}"
-  fi
+  # Standard build and push
+  docker build --label "image-type=single" -t "${IMAGE}:${IMAGE_TAG}-single" "$APP_ROOT" -f "$APP_ROOT/Dockerfile"
+  docker push "${IMAGE}:${IMAGE_TAG}-single"
+  getHistory
+  docker build --label "image-type=aggregate" -t "${IMAGE}:${IMAGE_TAG}" "$APP_ROOT" -f "$APP_ROOT/Dockerfile"
+  docker push "${IMAGE}:${IMAGE_TAG}"
 
   teardown_docker
 fi
