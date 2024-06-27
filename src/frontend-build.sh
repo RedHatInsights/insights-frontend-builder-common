@@ -132,6 +132,7 @@ function build() {
   # workspace due to file permission errors; the Z is used for SELinux workarounds
   # -e NODE_BUILD_VERSION can be used to specify a version other than 12
   docker run -i --name $CONTAINER_NAME \
+    --pull=always \
     -v $PWD:/workspace:ro,Z \
     -e QUAY_USER=$QUAY_USER \
     -e QUAY_TOKEN=$QUAY_TOKEN \
