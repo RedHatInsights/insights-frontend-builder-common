@@ -136,6 +136,7 @@ function build() {
     -v $PWD:/workspace:ro,Z \
     -e QUAY_USER=$QUAY_USER \
     -e QUAY_TOKEN=$QUAY_TOKEN \
+    -e GLITCHTIP_TOKEN=$GLITCHTIP_TOKEN \
     -e APP_DIR=$APP_DIR \
     -e IS_PR=$IS_PR \
     -e CI_ROOT=$CI_ROOT \
@@ -172,7 +173,7 @@ function build() {
 docker login -u="$QUAY_USER" --password-stdin quay.io <<< "$QUAY_TOKEN"
 docker login -u="$RH_REGISTRY_USER" --password-stdin registry.redhat.io <<< "$RH_REGISTRY_TOKEN"
 
-build  
+build
 
 # Set the APP_ROOT
 cd $WORKSPACE/build/container_workspace/ && export APP_ROOT="$WORKSPACE/build/container_workspace/"
