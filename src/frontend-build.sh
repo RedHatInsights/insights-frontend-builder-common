@@ -16,8 +16,11 @@ export APP_NAME="$(jq -r '.insights.appname' < "$package_json_path")"
 # Caller can set a duration for the image life in quay otherwise it is defaulted to 3 days
 : ${QUAY_EXPIRE_TIME:="3d"}
 
-# main IMAGE var is exported from the pr_check.sh parent file
-if [[ ! -n "$IMAGE_TAG" ]]; then
+if [[ "$GIT_BRANCH" == *"security-compliance"* ]]; then
+    # if we're coming from security-compliance, override the IMAGE_TAG. Ignoring anything from the parent
+    export IMAGE_TAG="sc-$(date +%Y%m%d)-$(git rev-parse --short=7 HEAD)"
+elif [[ ! -n "$IMAGE_TAG" ]]; then
+    # otherwise, respect IMAGE_TAG coming from the parent pr_check.sh file
     export IMAGE_TAG=$(git rev-parse --short=7 HEAD)
 fi
 
@@ -202,7 +205,6 @@ export LC_ALL=en_US.utf-8
 export LANG=en_US.utf-8
 export APP_ROOT=${APP_ROOT:-pwd}
 export WORKSPACE=${WORKSPACE:-$APP_ROOT}  # if running in jenkins, use the build's workspace
-# export IMAGE_TAG=$(git rev-parse --short=7 HEAD)
 export GIT_COMMIT=$(git rev-parse HEAD)
 
 
