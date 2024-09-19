@@ -2,7 +2,7 @@
 
 #dump env
 ENV_DUMP=`env`
-echo $ENV_DUMP
+echo "$ENV_DUMP"
 
 which docker
 docker --version
@@ -14,7 +14,7 @@ package_json_path="${WORKSPACE:-.}${APP_DIR:-}/package.json"
 export APP_NAME="$(jq -r '.insights.appname' < "$package_json_path")"
 
 # Caller can set a duration for the image life in quay otherwise it is defaulted to 3 days
-: ${QUAY_EXPIRE_TIME:="3d"}
+: "${QUAY_EXPIRE_TIME:="3d"}"
 
 if [[ "$GIT_BRANCH" == *"security-compliance"* ]]; then
     # if we're coming from security-compliance, override the IMAGE_TAG. Ignoring anything from the parent
@@ -25,8 +25,20 @@ elif [[ ! -n "$IMAGE_TAG" ]]; then
 fi
 
 export IS_PR=false
-COMMON_BUILDER=https://raw.githubusercontent.com/RedHatInsights/insights-frontend-builder-common/master
-EPOCH=$(date +%s)
+COMMON_BUILDER_REPOSITORY_ORG="${COMMON_BUILDER_REPOSITORY_ORG:-RedHatInsights}"
+COMMON_BUILDER_REPOSITORY_NAME="${COMMON_BUILDER_REPOSITORY_NAME:-insights-frontend-builder-common}"
+
+running_in_ci() {
+
+    [[ "$CI" == "true" ]]
+}
+
+if running_in_ci; then
+  COMMON_BUILDER_BASE_URL="https://raw.githubusercontent.com/${COMMON_BUILDER_REPOSITORY_ORG}/${COMMON_BUILDER_REPOSITORY_NAME}/master/src"
+else
+  COMMON_BUILDER_BASE_URL="file://$(cd "$(dirname "$0")" && pwd)"
+fi
+
 # Get current git branch
 # The current branch is going to be the GIT_BRANCH env var but with origin/ stripped off
 if [[ $GIT_BRANCH == origin/* ]]; then
@@ -35,7 +47,7 @@ else
     BRANCH_NAME=$GIT_BRANCH
 fi
 # We want to be really, really, really sure we have a unique container name
-export CONTAINER_NAME="$APP_NAME-$BRANCH_NAME-$IMAGE_TAG-$EPOCH"
+export CONTAINER_NAME="$APP_NAME-$BRANCH_NAME-$IMAGE_TAG-$(date +%s)"
 
 #The BUILD_SCRIPT env var is used in the frontend build container
 #and is the script we run with NPM at build time
@@ -58,62 +70,40 @@ _container_exists() {
     docker ps -a --format "{{.Names}}" |  grep "$name" -q
 }
 
-trap "teardown_docker" EXIT
+_get_fbc_script() {
+  local name="$1"
 
-# Get the chrome config from cloud-services-config
-function get_chrome_config() {
-  # Create the directory we're gonna plop the config files in
-  if [ -d $APP_ROOT/chrome_config ]; then
-    rm -rf $APP_ROOT/chrome_config;
+  if ! curl -sLOf "${COMMON_BUILDER_BASE_URL}/${name}"; then
+    echo "couldn't download the script: '${name}'"
+    return 1
   fi
-  mkdir -p $APP_ROOT/chrome_config;
-
-  # If the env var is not set, we don't want to include the config
-  if [ -z ${INCLUDE_CHROME_CONFIG+x} ] ; then
-    return 0
-  fi
-  # If the env var is set to anything but true, we don't want to include the config
-  if [[ "${INCLUDE_CHROME_CONFIG}" != "true" ]]; then
-    return 0
-  fi
-  # If the branch isn't set in the env, we want to use the default
-  if [ -z ${CHROME_CONFIG_BRANCH+x} ] ; then
-    CHROME_CONFIG_BRANCH="ci-stable";
-  fi
-  # belt and braces mate, belt and braces
-  if [ -d $APP_ROOT/cloud-services-config ]; then
-    rm -rf $APP_ROOT/cloud-services-config;
-  fi
-
-  # Clone the config repo
-  git clone --branch $CHROME_CONFIG_BRANCH https://github.com/RedHatInsights/cloud-services-config.git;
-  # Copy the config files into the chrome_config dir
-  cp -r cloud-services-config/chrome/* $APP_ROOT/chrome_config/;
-  # clean up after ourselves? why not
-  rm -rf cloud-services-config;
-  # we're done here
-  return 0
 }
 
+trap "teardown_docker" EXIT
+
 function verifyDependencies() {
-  curl https://raw.githubusercontent.com/RedHatInsights/insights-frontend-builder-common/master/src/verify_frontend_dependencies.sh > verify_frontend_dependencies.sh
-  chmod +x verify_frontend_dependencies.sh
+  if ! _get_fbc_script 'verify_frontend_dependencies.sh'; then
+    return 1
+  fi
   ./verify_frontend_dependencies.sh
 }
 
-
 function getHistory() {
+  if ! _get_fbc_script 'frontend-build-history.sh'; then
+    return 1
+  fi
   mkdir aggregated_history
-  curl https://raw.githubusercontent.com/RedHatInsights/insights-frontend-builder-common/master/src/frontend-build-history.sh > frontend-build-history.sh
-  chmod +x frontend-build-history.sh
-  ./frontend-build-history.sh -q $IMAGE -o aggregated_history -c dist -p true -t $QUAY_TOKEN -u $QUAY_USER
+  ./frontend-build-history.sh -q "$IMAGE" -o aggregated_history -c dist -p true -t "$QUAY_TOKEN" -u "$QUAY_USER"
 }
 
+#FIXME this is not actually true in all cases
 # Job name will contain pr-check or build-master. $GIT_BRANCH is not populated on a
 # manually triggered build
-if echo $JOB_NAME | grep -w "pr-check" > /dev/null; then
+if grep -wq 'pr-check' <<< "$JOB_NAME"; then
   timestamp=$(date +%s)
 
+
+#FIXME Refactor
   if [ ! -z "$ghprbPullId" ]; then
     export IMAGE_TAG="pr-${ghprbPullId}-${IMAGE_TAG}"
     CONTAINER_NAME="${APP_NAME}-pr-check-${ghprbPullId}-${timestamp}"
@@ -129,7 +119,7 @@ fi
 
 set -ex
 
-function build() {
+build() {
   # NOTE: Make sure this volume is mounted 'ro', otherwise Jenkins cannot clean up the
   # workspace due to file permission errors; the Z is used for SELinux workarounds
   # -e NODE_BUILD_VERSION can be used to specify a version other than 12
@@ -170,7 +160,7 @@ function build() {
 }
 
 setup_docker_login() {
-    
+
     DOCKER_CONFIG=$(mktemp -d -p "$HOME" docker_config_XXXXX)
     export DOCKER_CONFIG
 
@@ -187,10 +177,6 @@ setup_docker_login() {
     docker login -u="$QUAY_USER" --password-stdin quay.io <<< "$QUAY_TOKEN"
     docker login -u="$RH_REGISTRY_USER" --password-stdin registry.redhat.io <<< "$RH_REGISTRY_TOKEN"
 
-}
-
-running_in_ci() {
-    [[ "$CI" == "true" ]]
 }
 
 if running_in_ci && ! setup_docker_login; then
@@ -215,6 +201,7 @@ if [ $IS_PR = true ]; then
   # instead of
   #   CMD npm run start:container
   #   LABEL quay.expires-after=3d
+  #FIXME this should not modify a project's Dockerfile, and be handled like a label when building
   echo "LABEL quay.expires-after=${QUAY_EXPIRE_TIME}" >> $APP_ROOT/Dockerfile # tag expires in 3 days
 else
   echo "Publishing to Quay without expiration"
@@ -226,15 +213,6 @@ export LANG=en_US.utf-8
 export APP_ROOT=${APP_ROOT:-pwd}
 export WORKSPACE=${WORKSPACE:-$APP_ROOT}  # if running in jenkins, use the build's workspace
 export GIT_COMMIT=$(git rev-parse HEAD)
-
-
-
-# Chrome isn't currently using our config, don't need this complexity for now
-# Not deleting, as we may need to re-enable later
-#if [ $APP_NAME == "chrome" ] ; then
-  # get_chrome_config;
-#fi
-
 
 #PRs shouldn't get the special treatment for history
 if [ $IS_PR = true ]; then

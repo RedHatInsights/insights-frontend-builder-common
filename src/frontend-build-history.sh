@@ -201,7 +201,6 @@ function getBuildImages() {
     fi
     #Decrement history depth
     HISTORY_DEPTH=$((HISTORY_DEPTH-1))
-    ITERATIONS=$((ITERATIONS+1))
   done
 }
 
@@ -243,8 +242,7 @@ function copyOutputDirectoryIntoCurrentBuild() {
 
 function deleteBuildContainer() {
   # Delete the build container
-  docker rm -f $HISTORY_CONTAINER_NAME >/dev/null 2>&1
-  if [ $? -ne 0 ]; then
+  if ! docker rm -f "$HISTORY_CONTAINER_NAME"; then
     printError "Failed to delete build container" $HISTORY_CONTAINER_NAME
     return
   fi
@@ -266,7 +264,10 @@ function main() {
     quayLogin
   fi
   getBuildImages
-  copyHistoryIntoOutputDir
+  if ! copyHistoryIntoOutputDir; then
+    printError "Error copying History into output dir!"
+    return 1
+  fi
   copyCurrentBuildIntoOutputDir
   copyOutputDirectoryIntoCurrentBuild
   printSuccess "History build complete" "Files available at $CURRENT_BUILD_DIR"
