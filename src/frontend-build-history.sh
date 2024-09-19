@@ -37,13 +37,18 @@ PUSH_SINGLE_IMAGES=false
 # Our default mode is to get images tagged -single
 GET_SINGLE_IMAGES=true
 
-#Quay Stuff
-DOCKER_CONF="$PWD/.docker"
 QUAY_TOKEN=""
 QUAY_USER=""
 
 function quayLogin() {
-  echo $QUAY_TOKEN | docker --config="$DOCKER_CONF" login -u="$QUAY_USER" --password-stdin quay.io
+
+  if [[ -z "$DOCKER_CONFIG" ]]; then
+
+    DOCKER_CONFIG=$(mktemp -d -p "$HOME" docker_config_XXXXX)
+    export DOCKER_CONFIG
+  fi
+
+  docker login -u="$QUAY_USER" --password-stdin quay.io <<< "$QUAY_TOKEN"
 }
 
 function debugMode() {
@@ -107,20 +112,14 @@ function getArgs() {
   done
 }
 
-function makeHistoryDirectories() {
+function remakeHistoryDirectories() {
   rm -rf .history
-  mkdir .history
-  # Make the history level directories
-  for i in {1..6}
-  do
-    mkdir .history/$i
-  done
+  mkdir -p .history/{1..6}
 }
 
 function getGitHistory() {
   # Get the git history
-  # tail is to omit the first line, which would correspond to the current commit
-  git log --first-parent --oneline --format='format:%h' --abbrev=7  | tail -n +2 > .history/git_history
+  git log HEAD~1 --first-parent --oneline --format='format:%h' > .history/git_history
 }
 
 function getBuildImages() {
@@ -253,14 +252,20 @@ function deleteBuildContainer() {
   printSuccess "Deleted build container" $HISTORY_CONTAINER_NAME
 }
 
+running_in_ci() {
+  [[ "$CI" == "true" ]]
+}
+
 function main() {
   getArgs $@
   validateArgs
   debugMode
   deleteBuildContainer
-  makeHistoryDirectories
+  remakeHistoryDirectories
   getGitHistory
-  quayLogin
+  if running_in_ci; then
+    quayLogin
+  fi
   getBuildImages
   copyHistoryIntoOutputDir
   copyCurrentBuildIntoOutputDir

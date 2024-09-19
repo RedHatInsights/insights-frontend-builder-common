@@ -47,18 +47,18 @@ if [ -z "$YARN_BUILD_SCRIPT" ]; then
   export YARN_BUILD_SCRIPT="build:prod"
 fi
 
-function teardown_docker() {
-  docker rm -f $CONTAINER_NAME || true
+teardown_docker() {
+  if _container_exists "$CONTAINER_NAME"; then
+    docker rm -f "$CONTAINER_NAME"
+  fi
 }
 
-trap "teardown_docker" EXIT SIGINT SIGTERM
+_container_exists() {
+    local name="$1"
+    docker ps -a --format "{{.Names}}" |  grep "$name" -q
+}
 
-# Detect if the container is running
-if docker ps | grep $CONTAINER_NAME > /dev/null; then
-  # Delete it
-  # We do this because an aborted run could leave the container around
-  teardown_docker
-fi
+trap "teardown_docker" EXIT
 
 # Get the chrome config from cloud-services-config
 function get_chrome_config() {
@@ -129,7 +129,6 @@ fi
 
 set -ex
 
-
 function build() {
   # NOTE: Make sure this volume is mounted 'ro', otherwise Jenkins cannot clean up the
   # workspace due to file permission errors; the Z is used for SELinux workarounds
@@ -162,19 +161,42 @@ function build() {
 
   if [ $RESULT -ne 0 ]; then
     echo "Test failure observed; aborting"
-    teardown_docker
     exit 1
   fi
 
-  # Extract files needed to build contianer
+  # Extract files needed to build container
   mkdir -p $WORKSPACE/build
   docker cp $CONTAINER_NAME:/container_workspace/ $WORKSPACE/build
-
-  teardown_docker
 }
 
-docker login -u="$QUAY_USER" --password-stdin quay.io <<< "$QUAY_TOKEN"
-docker login -u="$RH_REGISTRY_USER" --password-stdin registry.redhat.io <<< "$RH_REGISTRY_TOKEN"
+setup_docker_login() {
+    
+    DOCKER_CONFIG=$(mktemp -d -p "$HOME" docker_config_XXXXX)
+    export DOCKER_CONFIG
+
+    if [[ -z "$QUAY_USER" || -z "$QUAY_TOKEN" ]]; then
+        echo "QUAY_USER and QUAY_TOKEN must be set"
+        return 1
+    fi
+
+    if [[ -z "$RH_REGISTRY_USER" || -z "$RH_REGISTRY_TOKEN" ]]; then
+        echo "RH_REGISTRY_USER and RH_REGISTRY_TOKEN must be set"
+        return 1
+    fi
+
+    docker login -u="$QUAY_USER" --password-stdin quay.io <<< "$QUAY_TOKEN"
+    docker login -u="$RH_REGISTRY_USER" --password-stdin registry.redhat.io <<< "$RH_REGISTRY_TOKEN"
+
+}
+
+running_in_ci() {
+    [[ "$CI" == "true" ]]
+}
+
+if running_in_ci && ! setup_docker_login; then
+    echo "Error configuring Docker login"
+    exit 1
+fi
 
 build
 
@@ -198,8 +220,6 @@ else
   echo "Publishing to Quay without expiration"
 fi
 
-# source <(curl -sSL $COMMON_BUILDER/src/quay_push.sh | bash -s)
-
 # IMAGE, IMAGE_TAG, and Tokens are exported from upstream pr_check.sh
 export LC_ALL=en_US.utf-8
 export LANG=en_US.utf-8
@@ -208,15 +228,6 @@ export WORKSPACE=${WORKSPACE:-$APP_ROOT}  # if running in jenkins, use the build
 export GIT_COMMIT=$(git rev-parse HEAD)
 
 
-if [[ -z "$QUAY_USER" || -z "$QUAY_TOKEN" ]]; then
-    echo "QUAY_USER and QUAY_TOKEN must be set"
-    exit 1
-fi
-
-if [[ -z "$RH_REGISTRY_USER" || -z "$RH_REGISTRY_TOKEN" ]]; then
-    echo "RH_REGISTRY_USER and RH_REGISTRY_TOKEN must be set"
-    exit 1
-fi
 
 # Chrome isn't currently using our config, don't need this complexity for now
 # Not deleting, as we may need to re-enable later
@@ -230,15 +241,18 @@ if [ $IS_PR = true ]; then
   verifyDependencies
 
   docker  build -t "${IMAGE}:${IMAGE_TAG}" $APP_ROOT -f $APP_ROOT/Dockerfile
-  docker  push "${IMAGE}:${IMAGE_TAG}"
-  teardown_docker
+  if running_in_ci; then
+    docker push "${IMAGE}:${IMAGE_TAG}"
+  fi
 else
   # Standard build and push
   docker build --label "image-type=single" -t "${IMAGE}:${IMAGE_TAG}-single" "$APP_ROOT" -f "$APP_ROOT/Dockerfile"
-  docker push "${IMAGE}:${IMAGE_TAG}-single"
+  if running_in_ci; then
+    docker push "${IMAGE}:${IMAGE_TAG}-single"
+  fi
   getHistory
   docker build --label "image-type=aggregate" -t "${IMAGE}:${IMAGE_TAG}" "$APP_ROOT" -f "$APP_ROOT/Dockerfile"
-  docker push "${IMAGE}:${IMAGE_TAG}"
-
-  teardown_docker
+  if running_in_ci; then
+    docker push "${IMAGE}:${IMAGE_TAG}"
+  fi
 fi
