@@ -132,14 +132,12 @@ function getBuildImages() {
   local ITERATIONS=0
   local IMAGE_TEXT="Single-build"
   # Get the single build images
-  for REF in $(cat .history/git_history)
-  do
-    # If we've gone 12 iterations then bail
-    ITERATIONS=$((ITERATIONS+1))
+  for REF in $(cat .history/git_history); do
     if [ $ITERATIONS -eq 12 ]; then
       printError "Exiting image search after 12 iterations." ""
       break
     fi
+    ITERATIONS=$((ITERATIONS+1))
     # A "single image" is an images with its tag postpended with "-single"
     # these images contain only a single build of the frontend
     # example: quay.io/cloudservices/api-frontend:7b1b1b1-single
@@ -203,6 +201,7 @@ function getBuildImages() {
     fi
     #Decrement history depth
     HISTORY_DEPTH=$((HISTORY_DEPTH-1))
+    ITERATIONS=$((ITERATIONS+1))
   done
 }
 
