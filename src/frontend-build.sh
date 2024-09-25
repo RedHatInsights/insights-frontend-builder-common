@@ -1,11 +1,18 @@
 #!/bin/bash
 
+if [[ -z "$IMAGE" ]]; then
+  echo "IMAGE not defined!"
+  exit 1
+fi
+
 #dump env
 ENV_DUMP=`env`
 echo "$ENV_DUMP"
 
 which docker
 docker --version
+
+WORKSPACE=${WORKSPACE:-$(pwd)}
 
 # --------------------------------------------
 # Export vars for helper scripts to use
@@ -19,7 +26,7 @@ export APP_NAME="$(jq -r '.insights.appname' < "$package_json_path")"
 if [[ "$GIT_BRANCH" == *"security-compliance"* ]]; then
     # if we're coming from security-compliance, override the IMAGE_TAG. Ignoring anything from the parent
     export IMAGE_TAG="sc-$(date +%Y%m%d)-$(git rev-parse --short=7 HEAD)"
-elif [[ ! -n "$IMAGE_TAG" ]]; then
+elif [[ -z "$IMAGE_TAG" ]]; then
     # otherwise, respect IMAGE_TAG coming from the parent pr_check.sh file
     export IMAGE_TAG=$(git rev-parse --short=7 HEAD)
 fi
@@ -27,6 +34,7 @@ fi
 export IS_PR=false
 COMMON_BUILDER_REPOSITORY_ORG="${COMMON_BUILDER_REPOSITORY_ORG:-RedHatInsights}"
 COMMON_BUILDER_REPOSITORY_NAME="${COMMON_BUILDER_REPOSITORY_NAME:-insights-frontend-builder-common}"
+COMMON_BUILDER_REPOSITORY_BRANCH="${COMMON_BUILDER_REPOSITORY_BRANCH:-master}"
 
 running_in_ci() {
 
@@ -34,7 +42,7 @@ running_in_ci() {
 }
 
 if running_in_ci; then
-  COMMON_BUILDER_BASE_URL="https://raw.githubusercontent.com/${COMMON_BUILDER_REPOSITORY_ORG}/${COMMON_BUILDER_REPOSITORY_NAME}/master/src"
+  COMMON_BUILDER_BASE_URL="https://raw.githubusercontent.com/${COMMON_BUILDER_REPOSITORY_ORG}/${COMMON_BUILDER_REPOSITORY_NAME}/${COMMON_BUILDER_REPOSITORY_BRANCH}/src"
 else
   COMMON_BUILDER_BASE_URL="file://$(cd "$(dirname "$0")" && pwd)"
 fi
@@ -77,6 +85,10 @@ _get_fbc_script() {
     echo "couldn't download the script: '${name}'"
     return 1
   fi
+  if ! chmod +x "$name"; then
+    echo "could not set execution permissions for '${name}'"
+    return 1
+  fi
 }
 
 trap "teardown_docker" EXIT
@@ -92,6 +104,7 @@ function getHistory() {
   if ! _get_fbc_script 'frontend-build-history.sh'; then
     return 1
   fi
+
   mkdir aggregated_history
   ./frontend-build-history.sh -q "$IMAGE" -o aggregated_history -c dist -p true -t "$QUAY_TOKEN" -u "$QUAY_USER"
 }
@@ -119,6 +132,7 @@ fi
 
 set -ex
 
+##TODO check which env variables are required here ...
 build() {
   # NOTE: Make sure this volume is mounted 'ro', otherwise Jenkins cannot clean up the
   # workspace due to file permission errors; the Z is used for SELinux workarounds
@@ -154,6 +168,11 @@ build() {
     exit 1
   fi
 
+
+  if [[ -d "$WORKSPACE/build/container_workspace" ]]; then
+    rm -rf "$WORKSPACE/build/container_workspace"
+  fi
+
   # Extract files needed to build container
   mkdir -p $WORKSPACE/build
   docker cp $CONTAINER_NAME:/container_workspace/ $WORKSPACE/build
@@ -187,7 +206,10 @@ fi
 build
 
 # Set the APP_ROOT
-cd $WORKSPACE/build/container_workspace/ && export APP_ROOT="$WORKSPACE/build/container_workspace/"
+#cd $WORKSPACE/build/container_workspace && export APP_ROOT="$WORKSPACE/build/container_workspace"
+export APP_ROOT="$WORKSPACE/build/container_workspace"
+#FIXME avoid jumping around
+cd "$APP_ROOT"
 
 # ---------------------------
 # Build and Publish to Quay

@@ -204,18 +204,21 @@ function getBuildImages() {
   done
 }
 
-function copyHistoryIntoOutputDir() {
+directory_exists_and_not_empty() {
+  [[ -d "$1" ]] && [[ -n $(ls -A "$1") ]]
+}
+
+copyHistoryIntoOutputDir() {
   # Copy the files from the history level directories into the build directory
-  for i in {6..1}
-  do
-    if [ -d .history/$i ]; then
-      cp -rf .history/$i/* $OUTPUT_DIR
-      # if copy failed log an error
-      if [ $? -ne 0 ]; then
+  for i in {6..1}; do
+    if directory_exists_and_not_empty ".history/$i"; then
+      if ! cp -rf .history/$i/* $OUTPUT_DIR; then
         printError "Failed to copy files from history level: " $i
         return 1
       fi
       printSuccess "Copied files from history level: " $i
+    else
+      printError "No history files on level $i, skipping."
     fi
   done
 }
