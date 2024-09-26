@@ -5,6 +5,9 @@ if [[ -z "$IMAGE" ]]; then
   exit 1
 fi
 
+# Set to not empty to force using local path scripts (for testing in change request context)
+FORCE_LOCAL_SCRIPT_PATHS="${FORCE_LOCAL_SCRIPT_PATHS:-}"
+
 #dump env
 ENV_DUMP=`env`
 echo "$ENV_DUMP"
@@ -40,10 +43,10 @@ running_in_ci() {
     [[ "$CI" == "true" ]]
 }
 
-if running_in_ci; then
-  COMMON_BUILDER_BASE_URL="https://raw.githubusercontent.com/${COMMON_BUILDER_REPOSITORY_ORG}/${COMMON_BUILDER_REPOSITORY_NAME}/${COMMON_BUILDER_REPOSITORY_BRANCH}/src"
-else
+if ! running_in_ci || [[ -n "$FORCE_LOCAL_SCRIPT_PATHS" ]]; then
   COMMON_BUILDER_BASE_URL="file://$(cd "$(dirname "$0")" && pwd)"
+else
+  COMMON_BUILDER_BASE_URL="https://raw.githubusercontent.com/${COMMON_BUILDER_REPOSITORY_ORG}/${COMMON_BUILDER_REPOSITORY_NAME}/${COMMON_BUILDER_REPOSITORY_BRANCH}/src"
 fi
 
 # Get current git branch

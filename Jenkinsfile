@@ -22,6 +22,9 @@ pipeline {
     options {
         timestamps()
     }
+    environment {
+        FORCE_LOCAL_SCRIPT_PATHS = 'true'
+    }
     stages {
         stage('run tests') { 
             parallel {
