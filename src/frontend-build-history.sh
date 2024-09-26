@@ -37,13 +37,18 @@ PUSH_SINGLE_IMAGES=false
 # Our default mode is to get images tagged -single
 GET_SINGLE_IMAGES=true
 
-#Quay Stuff
-DOCKER_CONF="$PWD/.docker"
 QUAY_TOKEN=""
 QUAY_USER=""
 
 function quayLogin() {
-  echo $QUAY_TOKEN | docker --config="$DOCKER_CONF" login -u="$QUAY_USER" --password-stdin quay.io
+
+  if [[ -z "$DOCKER_CONFIG" ]]; then
+
+    DOCKER_CONFIG=$(mktemp -d -p "$HOME" docker_config_XXXXX)
+    export DOCKER_CONFIG
+  fi
+
+  docker login -u="$QUAY_USER" --password-stdin quay.io <<< "$QUAY_TOKEN"
 }
 
 function debugMode() {
@@ -107,20 +112,14 @@ function getArgs() {
   done
 }
 
-function makeHistoryDirectories() {
+function remakeHistoryDirectories() {
   rm -rf .history
-  mkdir .history
-  # Make the history level directories
-  for i in {1..6}
-  do
-    mkdir .history/$i
-  done
+  mkdir -p .history/{1..6}
 }
 
 function getGitHistory() {
   # Get the git history
-  # tail is to omit the first line, which would correspond to the current commit
-  git log --first-parent --oneline --format='format:%h' --abbrev=7  | tail -n +2 > .history/git_history
+  git log HEAD~1 --first-parent --oneline --format='format:%h' > .history/git_history
 }
 
 function getBuildImages() {
@@ -133,14 +132,12 @@ function getBuildImages() {
   local ITERATIONS=0
   local IMAGE_TEXT="Single-build"
   # Get the single build images
-  for REF in $(cat .history/git_history)
-  do
-    # If we've gone 12 iterations then bail
-    ITERATIONS=$((ITERATIONS+1))
+  for REF in $(cat .history/git_history); do
     if [ $ITERATIONS -eq 12 ]; then
       printError "Exiting image search after 12 iterations." ""
       break
     fi
+    ITERATIONS=$((ITERATIONS+1))
     # A "single image" is an images with its tag postpended with "-single"
     # these images contain only a single build of the frontend
     # example: quay.io/cloudservices/api-frontend:7b1b1b1-single
@@ -207,18 +204,21 @@ function getBuildImages() {
   done
 }
 
-function copyHistoryIntoOutputDir() {
+directory_exists_and_not_empty() {
+  [[ -d "$1" ]] && [[ -n $(ls -A "$1") ]]
+}
+
+copyHistoryIntoOutputDir() {
   # Copy the files from the history level directories into the build directory
-  for i in {6..1}
-  do
-    if [ -d .history/$i ]; then
-      cp -rf .history/$i/* $OUTPUT_DIR
-      # if copy failed log an error
-      if [ $? -ne 0 ]; then
+  for i in {6..1}; do
+    if directory_exists_and_not_empty ".history/$i"; then
+      if ! cp -rf .history/$i/* $OUTPUT_DIR; then
         printError "Failed to copy files from history level: " $i
         return 1
       fi
       printSuccess "Copied files from history level: " $i
+    else
+      printError "No history files on level $i, skipping."
     fi
   done
 }
@@ -245,12 +245,15 @@ function copyOutputDirectoryIntoCurrentBuild() {
 
 function deleteBuildContainer() {
   # Delete the build container
-  docker rm -f $HISTORY_CONTAINER_NAME >/dev/null 2>&1
-  if [ $? -ne 0 ]; then
+  if ! docker rm -f "$HISTORY_CONTAINER_NAME"; then
     printError "Failed to delete build container" $HISTORY_CONTAINER_NAME
     return
   fi
   printSuccess "Deleted build container" $HISTORY_CONTAINER_NAME
+}
+
+running_in_ci() {
+  [[ "$CI" == "true" ]]
 }
 
 function main() {
@@ -258,11 +261,16 @@ function main() {
   validateArgs
   debugMode
   deleteBuildContainer
-  makeHistoryDirectories
+  remakeHistoryDirectories
   getGitHistory
-  quayLogin
+  if running_in_ci; then
+    quayLogin
+  fi
   getBuildImages
-  copyHistoryIntoOutputDir
+  if ! copyHistoryIntoOutputDir; then
+    printError "Error copying History into output dir!"
+    return 1
+  fi
   copyCurrentBuildIntoOutputDir
   copyOutputDirectoryIntoCurrentBuild
   printSuccess "History build complete" "Files available at $CURRENT_BUILD_DIR"
