@@ -54,7 +54,7 @@ fi
 if [[ $GIT_BRANCH == origin/* ]]; then
     BRANCH_NAME=${GIT_BRANCH:7}
 else
-    BRANCH_NAME=$GIT_BRANCH
+    BRANCH_NAME=${GIT_BRANCH/\//-}
 fi
 # We want to be really, really, really sure we have a unique container name
 export CONTAINER_NAME="$APP_NAME-$BRANCH_NAME-$IMAGE_TAG-$(date +%s)"
