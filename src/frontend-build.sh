@@ -162,7 +162,7 @@ build() {
     -e YARN_BUILD_SCRIPT \
     --add-host stage.foo.redhat.com:127.0.0.1 \
     --add-host prod.foo.redhat.com:127.0.0.1 \
-    quay.io/cloudservices/frontend-build-container:7b5d398
+    quay.io/cloudservices/frontend-build-container:f1675ad
   RESULT=$?
 
   if [ $RESULT -ne 0 ]; then
