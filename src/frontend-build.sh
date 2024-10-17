@@ -160,6 +160,7 @@ build() {
     -e BRANCH_NAME \
     -e NPM_BUILD_SCRIPT \
     -e YARN_BUILD_SCRIPT \
+    -e RUN_VERIFY \
     --add-host stage.foo.redhat.com:127.0.0.1 \
     --add-host prod.foo.redhat.com:127.0.0.1 \
     quay.io/cloudservices/frontend-build-container:latest
@@ -204,6 +205,9 @@ if running_in_ci && ! setup_docker_login; then
     echo "Error configuring Docker login"
     exit 1
 fi
+
+# Caller might not want to run verification, just build the image. Set to the default value of $IS_PR
+export RUN_VERIFY=${RUN_VERIFY:-$IS_PR}
 
 build
 
