@@ -45,6 +45,7 @@ pipeline {
                         COMPONENT="frontend-common-test"
                         IMAGE="quay.io/cloudservices/$COMPONENT"
                         TEST_REPOSITORY='https://github.com/RedHatInsights/frontend-common-test.git'
+                        SKIP_VERIFY='yes'
                     }
                     steps {
                         withVault([configuration: configuration, vaultSecrets: secrets]) {
