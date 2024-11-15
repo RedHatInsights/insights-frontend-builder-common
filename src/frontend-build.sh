@@ -161,6 +161,10 @@ build() {
     -e NPM_BUILD_SCRIPT \
     -e YARN_BUILD_SCRIPT \
     -e SKIP_VERIFY \
+    -e SENTRY_DSN \
+    -e SENTRY_AUTH_TOKEN \
+    -e SENTRY_ORG \
+    -e SENTRY_PROJECT \
     --add-host stage.foo.redhat.com:127.0.0.1 \
     --add-host prod.foo.redhat.com:127.0.0.1 \
     quay.io/cloudservices/frontend-build-container:3bacc0b
