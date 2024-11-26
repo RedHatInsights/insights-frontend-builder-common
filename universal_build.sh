@@ -1,7 +1,8 @@
 #!/bin/bash
 
-# nvm is not a binary, but an alias that needs to be sourced.
-export DIST_FOLDER=${DIST_FOLDER:-dist}
+set -exv
+
+export OUTPUT_DIR=${OUTPUT_DIR:-dist}
 
 function install() {
   if [ $USES_NPM == true ]; then
@@ -61,9 +62,9 @@ function delete_node_modules() {
 
 function setNpmOrYarn() {
   # We can't assume npm or yarn, so we turn on the toggle depending on files in the root
-  if [[ -f $APP_ROOT/package-lock.json ]]; then
+  if [[ -f package-lock.json ]]; then
     USES_NPM=true
-  elif [[ -f $APP_ROOT/yarn.lock ]]; then
+  elif [[ -f yarn.lock ]]; then
     USES_YARN=true
   else
   # Normally we would not use exit in a source'd file, but this should fail the job
@@ -72,13 +73,19 @@ function setNpmOrYarn() {
   fi
 }
 
+get_appname_from_package() {
+  jq --raw-output '.insights.appname' < package.json
+}
 
 # Work around large package timeout; up default from 30s to 5m
 yarn config set network-timeout 300000
 
-export APP_NAME=$(node -e "console.log(require(\"${APP_ROOT}${APP_DIR:-}/package.json\").insights.appname)")
+if ! APP_NAME=$(get_appname_from_package); then
+  echo "could not read application name from package.json"
+  exit 1
+fi
 
-set -exv
+export APP_NAME
 
 setNpmOrYarn
 
@@ -86,5 +93,5 @@ install
 
 export BETA=false
 build
-source build_app_info.sh
-source server_config_gen.sh
+build_app_info.sh > "${OUTPUT_DIR}/app.info.json"
+server_config_gen.sh
