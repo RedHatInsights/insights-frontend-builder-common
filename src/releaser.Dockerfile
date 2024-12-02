@@ -1,4 +1,4 @@
-FROM quay.io/fedora/fedora:40-x86_64
+FROM quay.io/fedora/fedora:42-x86_64
 
 ENV GOPATH=/go
 
