@@ -1,4 +1,4 @@
-FROM quay.io/openshift/origin-jenkins-agent-base:4.9
+FROM quay.io/openshift/origin-jenkins-agent-base:4.16
 
 RUN mkdir -p /opt/bin/ /home/jenkins/.akamai-cli/src/cli-purge/bin/ && \
     curl -L https://github.com/akamai/cli/releases/download/1.3.0/akamai-1.3.0-linuxamd64 \
