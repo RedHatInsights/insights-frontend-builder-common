@@ -8,7 +8,7 @@ USER default
 
 RUN npm i -g yarn
 
-COPY universal_build.sh build_app_info.sh server_config_gen.sh /opt/app-root/bin/
+COPY build-tools/universal_build.sh build-tools/build_app_info.sh build-tools/server_config_gen.sh /opt/app-root/bin/
 COPY --chown=default . .
 
 RUN universal_build.sh
