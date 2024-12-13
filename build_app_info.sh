@@ -20,10 +20,8 @@
 
 get_package_value() {
   local key="$1"
-  # Execute Node.js code to retrieve the value from package.json, or return the default value if unsuccessful.
-  if ! node -e "console.log(require(\"package.json\")?.${key}" 2>/dev/null; then
-    echo -n "unknown"
-  fi
+
+  jq ".${key} // \"unknown\" " --raw-output < package.json
 }
 
 # handle_npm_list
@@ -57,7 +55,7 @@ handle_npm_list() {
 
 get_git_branch() {
   # Retrieve the current Git branch name or return "unknown" if unsuccessful.
-  if ! git symbolic-ref -q --short HEAD 2>/dev/null; then
+  if ! git branch --show-current 2>/dev/null; then
     echo "unknown"
   fi
 }
