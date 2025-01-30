@@ -21,6 +21,7 @@ generate_caddy_config() {
     servers {
       metrics
     }
+    header -Vary
 }
 
 :9000 {
