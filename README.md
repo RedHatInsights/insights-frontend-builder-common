@@ -1,4 +1,3 @@
-
 # Frontend Builder Common
 
 The repo responsible for building all of the frontends on cloud.redhat.com.
