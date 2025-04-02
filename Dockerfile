@@ -13,7 +13,7 @@ COPY --chown=default . .
 
 RUN universal_build.sh
 
-FROM quay.io/redhat-services-prod/hcm-eng-prod-tenant/caddy-ubi:0d6954b
+FROM quay.io/redhat-services-prod/hcm-eng-prod-tenant/caddy-ubi:latest
 
 COPY LICENSE /licenses/
 
