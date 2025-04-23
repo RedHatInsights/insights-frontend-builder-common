@@ -18,6 +18,9 @@ FROM quay.io/redhat-services-prod/hcm-eng-prod-tenant/caddy-ubi:latest
 COPY LICENSE /licenses/
 
 ENV CADDY_TLS_MODE http_port 8000
+# fallback value to the env public path env variable
+# Caddy must have a default value for the public path or it will not start
+ENV ENV_PUBLIC_PATH "/default"
 
 COPY --from=builder /opt/app-root/src/Caddyfile /etc/caddy/Caddyfile
 COPY --from=builder /opt/app-root/src/dist dist
