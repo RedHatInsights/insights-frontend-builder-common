@@ -13,41 +13,38 @@ generate_caddy_config() {
 
   local ROUTE_PATH=${ROUTE_PATH:-"/apps/${APP_NAME}"}
 
-  # The spacing on the bash format here makes the closing bracket
-  # look odd, but it's fine.
   echo "{
-    {\$CADDY_TLS_MODE}
-    auto_https disable_redirects
-    servers {
-      metrics
-    }
+	{\$CADDY_TLS_MODE}
+	auto_https disable_redirects
+	servers {
+		metrics
+	}
 }
 
 :9000 {
-    metrics /metrics
-  }
-
-  :8000 {
-    {\$CADDY_TLS_CERT}
-    log
-
-    # Handle main app route
-    @app_match {
-        path ${ROUTE_PATH}*
-    }
-    handle @app_match {
-        uri strip_prefix ${ROUTE_PATH}
-        file_server * {
-            root /srv/${OUTPUT_DIR}
-            browse
-        }
-    }
-
-    handle / {
-        redir /apps/chrome/index.html permanent
-    }
+	metrics /metrics
 }
-    "
+
+:8000 {
+	{\$CADDY_TLS_CERT}
+	log
+
+	# Handle main app route
+	@app_match {
+		path ${ROUTE_PATH}*
+	}
+	handle @app_match {
+		uri strip_prefix ${ROUTE_PATH}
+		file_server * {
+			root /srv/${OUTPUT_DIR}
+			browse
+		}
+	}
+
+	handle / {
+		redir /apps/chrome/index.html permanent
+	}
+}"
 }
 
 generate_docker_ignore() {
