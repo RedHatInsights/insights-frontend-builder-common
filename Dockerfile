@@ -11,6 +11,7 @@ RUN npm i -g yarn
 COPY build-tools/universal_build.sh build-tools/build_app_info.sh build-tools/server_config_gen.sh /opt/app-root/bin/
 COPY --chown=default . .
 
+ARG NPM_BUILD_SCRIPT=""
 RUN universal_build.sh
 
 FROM quay.io/redhat-services-prod/hcm-eng-prod-tenant/caddy-ubi:latest
