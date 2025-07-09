@@ -24,7 +24,7 @@ spec:
   - name: output-image
     value: quay.io/redhat-user-workloads/hcm-eng-prod-tenant/frontend-builder-common/frontend-builder-common:{{revision}}
   - name: dockerfile
-    value: Dockerfile
+    value: application.Dockerfile
   - name: path-context
     value: .
   pipelineRef:
