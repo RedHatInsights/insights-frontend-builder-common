@@ -3,6 +3,8 @@ FROM registry.access.redhat.com/ubi9/nodejs-22:9.5-1746062376 as builder
 USER root
 
 RUN dnf install jq -y
+# Needed by Cypress
+RUN dnf install xorg-x11-server-Xvfb -y
 
 USER default
 
