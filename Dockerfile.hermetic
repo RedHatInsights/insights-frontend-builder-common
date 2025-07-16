@@ -1,6 +1,6 @@
 # Multi-stage build for hermetic frontend build
 # Stage 1: Build stage
-FROM registry.access.redhat.com/ubi9/nodejs-22:9.5-1746535891 AS builder
+FROM registry.access.redhat.com/ubi9/nodejs-22:9.6-1752540070 AS builder
 
 # Copy package files first for better caching
 COPY package*.json ./
