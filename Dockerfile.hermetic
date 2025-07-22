@@ -52,8 +52,15 @@ LABEL com.redhat.component="landing-page-frontend-hermetic" \
       maintainer="Red Hat Console Team <console@redhat.com>" \
       summary="Red Hat Console Landing Page Frontend"
 
-# Create hermetic-build directory and copy built files from builder stage
-RUN mkdir -p /hermetic-build
-COPY --from=builder /opt/app-root/src/dist /hermetic-build/dist 
-COPY --from=builder /opt/app-root/src/package.json /hermetic-build/package.json 
-COPY --from=builder /opt/app-root/src/package-lock.json /hermetic-build/package-lock.json 
+# Create licenses directory and copy licenses
+RUN mkdir -p /licenses
+COPY --from=builder /opt/app-root/LICENSE /licenses/
+
+# Create srv directory and copy built files from builder stage
+RUN mkdir -p /srv
+COPY --from=builder /opt/app-root/src/dist /srv/dist 
+COPY --from=builder /opt/app-root/src/package.json /srv/package.json 
+COPY --from=builder /opt/app-root/src/package-lock.json /srv/package-lock.json 
+
+# Set to non-root user
+USER 1001

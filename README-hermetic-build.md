@@ -4,7 +4,7 @@ Based on our experience setting up hermetic builds for the landing-page-frontend
 
 ## **Overview**
 
-A hermetic build ensures your frontend application builds in a completely isolated environment without external network access, using only pre-fetched dependencies. This guide uses a shared Dockerfile provided through the `insights-frontend-builder-common` repository. The resulting container will include the build artifacts, package.json, and package-lock.json files organized under a `/hermetic-build` directory.
+A hermetic build ensures your frontend application builds in a completely isolated environment without external network access, using only pre-fetched dependencies. This guide uses a shared Dockerfile provided through the `insights-frontend-builder-common` repository. The resulting container will include the build artifacts, package.json, and package-lock.json files organized under a `/srv` directory.
 
 ## **Prerequisites**
 
