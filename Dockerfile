@@ -23,6 +23,9 @@ ENV CADDY_TLS_MODE http_port 8000
 # Caddy must have a default value for the public path or it will not start
 ENV ENV_PUBLIC_PATH "/default"
 
+# Copy the valpop binary from the valpop image
+COPY --from=quay.io/redhat-services-prod/hcc-platex-services-tenant/valpop:latest /usr/local/bin/valpop /usr/local/bin/valpop
+
 COPY --from=builder /opt/app-root/src/Caddyfile /etc/caddy/Caddyfile
 COPY --from=builder /opt/app-root/src/dist dist
 COPY package.json .
