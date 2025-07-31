@@ -8,6 +8,14 @@ USER default
 
 RUN npm i -g yarn
 
+# ────────── SENTRY BUILD ARGS ──────────
+ARG ENABLE_SENTRY=false
+ARG SENTRY_AUTH_TOKEN
+ARG SENTRY_RELEASE
+ENV ENABLE_SENTRY=${ENABLE_SENTRY} \
+    SENTRY_AUTH_TOKEN=${SENTRY_AUTH_TOKEN} \
+    SENTRY_RELEASE=${SENTRY_RELEASE}
+
 COPY build-tools/universal_build.sh build-tools/build_app_info.sh build-tools/server_config_gen.sh /opt/app-root/bin/
 COPY --chown=default . .
 
