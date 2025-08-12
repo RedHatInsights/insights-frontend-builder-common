@@ -37,7 +37,7 @@ RUN npm run lint
 # - https://konflux.pages.redhat.com/docs/users/installing/enabling-builds.html
 # - https://konflux.pages.redhat.com/docs/users/mintmaker/user.html
 
-FROM registry.access.redhat.com/ubi9/ubi-micro:latest
+FROM scratch
 
 # Required Red Hat labels for container compliance
 LABEL com.redhat.component="landing-page-frontend-hermetic" \
@@ -52,15 +52,7 @@ LABEL com.redhat.component="landing-page-frontend-hermetic" \
       maintainer="Red Hat Console Team <console@redhat.com>" \
       summary="Red Hat Console Landing Page Frontend"
 
-# Create licenses directory and copy licenses
-RUN mkdir -p /licenses
 COPY --from=builder /opt/app-root/LICENSE /licenses/
-
-# Create srv directory and copy built files from builder stage
-RUN mkdir -p /srv
 COPY --from=builder /opt/app-root/src/dist /srv/dist 
 COPY --from=builder /opt/app-root/src/package.json /srv/package.json 
 COPY --from=builder /opt/app-root/src/package-lock.json /srv/package-lock.json 
-
-# Set to non-root user
-USER 1001
