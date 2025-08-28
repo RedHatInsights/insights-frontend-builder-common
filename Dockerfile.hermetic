@@ -52,8 +52,7 @@ LABEL com.redhat.component="landing-page-frontend-hermetic" \
       summary="Red Hat Console Landing Page Frontend"
 
 # Create licenses directory and copy licenses
-RUN mkdir -p /licenses
-COPY --from=builder /opt/app-root/LICENSE /licenses/
+COPY --from=builder /opt/app-root/src/LICENSE /licenses/
 
 # Create srv directory and copy built files from builder stage
 RUN mkdir -p /srv
