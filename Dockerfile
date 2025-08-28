@@ -13,14 +13,26 @@ ARG ENABLE_SENTRY=false
 ARG SENTRY_AUTH_TOKEN
 ARG SENTRY_RELEASE
 ENV ENABLE_SENTRY=${ENABLE_SENTRY} \
-    SENTRY_AUTH_TOKEN=${SENTRY_AUTH_TOKEN} \
-    SENTRY_RELEASE=${SENTRY_RELEASE}
+  SENTRY_AUTH_TOKEN=${SENTRY_AUTH_TOKEN} \
+  SENTRY_RELEASE=${SENTRY_RELEASE}
 
 COPY build-tools/universal_build.sh build-tools/build_app_info.sh build-tools/server_config_gen.sh /opt/app-root/bin/
 COPY --chown=default . .
 
+# 👉 Mount one secret with many keys; export token only if key exists
+RUN --mount=type=secret,id=sentry-auth \
+  set -euo pipefail; \
+  APP_NAME="$(jq -r '.insights.appname' < package.json)"; \
+  TOKEN_FILE="/run/secrets/sentry-auth/${APP_NAME}"; \
+  if [ -f "${TOKEN_FILE}" ]; then \
+  export SENTRY_AUTH_TOKEN="$(tr -d '\r' < "${TOKEN_FILE}" | tr -d '\n')"; \
+  echo "Sentry: token found for ${APP_NAME} – enabling sourcemap upload."; \
+  else \
+  echo "Sentry: no token for ${APP_NAME} – using any pre-set token (if provided) or skipping upload."; \
+  fi; \
+  universal_build.sh
+
 ARG NPM_BUILD_SCRIPT=""
-RUN universal_build.sh
 
 FROM quay.io/redhat-services-prod/hcm-eng-prod-tenant/caddy-ubi:latest
 
