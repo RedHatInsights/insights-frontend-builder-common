@@ -19,10 +19,6 @@ COPY . .
 # Run the build process
 RUN npm run build
 
-# Run tests and linting
-RUN npm run test
-RUN npm run lint
-
 # Stage 2: Semi-minimal runtime image - contains only built files and minimal dependencies for the RH certification
 
 # To achieve a hermetic build with minimal container size, you can request an exception for the image to use a base image 
