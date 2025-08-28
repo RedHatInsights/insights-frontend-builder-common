@@ -2,13 +2,16 @@
 # Stage 1: Build stage
 FROM registry.access.redhat.com/ubi9/nodejs-22:9.5-1746535891 AS builder
 
+# Additional arguments to be appended for `npm ci`, e.g. "--legacy-peer-deps"
+ARG NPM_CI_ARGS=
+
 # Copy package files first for better caching
 COPY package*.json ./
 
 # Install dependencies - detect airgapped environment and use appropriate npm ci flags
 # Skip Cypress binary download in hermetic environment
 
-RUN CYPRESS_INSTALL_BINARY=0 npm ci --offline --no-audit --no-fund
+RUN CYPRESS_INSTALL_BINARY=0 npm ci --offline --no-audit --no-fund $NPM_CI_ARGS
 
 # Copy source code
 COPY . .
