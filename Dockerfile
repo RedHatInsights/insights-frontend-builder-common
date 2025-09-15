@@ -9,6 +9,13 @@ USER default
 RUN npm i -g yarn
 
 # ────────── SENTRY BUILD ARGS ──────────
+# NOTE:
+# Tekton/Konflux passes values like --build-arg ENABLE_SENTRY=true and
+# --build-arg SENTRY_RELEASE=<commit SHA> during the build.
+# ARG makes them available only at build-time.
+# The ENV line copies them into the final container so they persist at runtime,
+# letting Node (process.env.ENABLE_SENTRY, process.env.SENTRY_RELEASE, etc.)
+# and other tools read them.
 ARG ENABLE_SENTRY=false
 ARG SENTRY_AUTH_TOKEN
 ARG SENTRY_RELEASE
