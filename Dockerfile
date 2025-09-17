@@ -27,7 +27,7 @@ COPY build-tools/universal_build.sh build-tools/build_app_info.sh build-tools/se
 COPY --chown=default . .
 
 # 👉 Mount one secret with many keys; export token only if key exists
-RUN --mount=type=secret,id=sentry-auth,required=false \
+RUN --mount=type=secret,id=sentry-auth/${APP_NAME},required=false \
   set -euo pipefail; \
   APP_NAME="$(jq -r '.insights.appname' < package.json)"; \
   TOKEN_FILE="/run/secrets/sentry-auth/${APP_NAME}"; \
