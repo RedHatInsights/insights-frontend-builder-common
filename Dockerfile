@@ -26,10 +26,16 @@ ARG NPM_BUILD_SCRIPT=""
 COPY build-tools/universal_build.sh build-tools/build_app_info.sh build-tools/server_config_gen.sh /opt/app-root/bin/
 COPY --chown=default . .
 
+# Extract app name from package.json once and bake it into ENV
+RUN set -euo pipefail; \
+  APP_NAME="$(jq -r '.insights.appname' < package.json)"; \
+  echo "Building app: ${APP_NAME}"; \
+  echo "APP_NAME=${APP_NAME}" >> /etc/environment
+ENV APP_NAME=${APP_NAME}
+
 # 👉 Mount one secret with many keys; export token only if key exists
 RUN --mount=type=secret,id=sentry-auth/${APP_NAME},required=false \
   set -euo pipefail; \
-  APP_NAME="$(jq -r '.insights.appname' < package.json)"; \
   TOKEN_FILE="/run/secrets/sentry-auth/${APP_NAME}"; \
   if [ -f "${TOKEN_FILE}" ]; then \
   export ENABLE_SENTRY=true; \
