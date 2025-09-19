@@ -23,6 +23,13 @@ ENV ENABLE_SENTRY=${ENABLE_SENTRY} \
   SENTRY_AUTH_TOKEN=${SENTRY_AUTH_TOKEN} \
   SENTRY_RELEASE=${SENTRY_RELEASE}
 ARG NPM_BUILD_SCRIPT=""
+
+# Persist yarn build script at runtime.
+ARG YARN_BUILD_SCRIPT=""
+ARG USES_YARN=false
+ENV YARN_BUILD_SCRIPT=${YARN_BUILD_SCRIPT} \
+  USES_YARN=${USES_YARN}
+
 COPY build-tools/universal_build.sh build-tools/build_app_info.sh build-tools/server_config_gen.sh /opt/app-root/bin/
 COPY --chown=default . .
 
