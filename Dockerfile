@@ -33,14 +33,18 @@ ENV YARN_BUILD_SCRIPT=${YARN_BUILD_SCRIPT} \
 COPY build-tools/universal_build.sh build-tools/build_app_info.sh build-tools/server_config_gen.sh /opt/app-root/bin/
 COPY --chown=default . .
 
+RUN chmod +x parse-secrets.sh
+
 # 👉 Mount one secret with many keys; export token only if key exists
-RUN --mount=type=secret,id=sentry-auth/${APP_NAME},required=false \
+RUN --mount=type=secret,id=build-container-additional-secret/secrets,required=false \
   set -euo pipefail; \
+  ./parse-secrets.sh; \
+  # Get the app name and define the secrets variable name within the same RUN layer
   APP_NAME="$(jq -r '.insights.appname' < package.json)"; \
-  TOKEN_FILE="/run/secrets/sentry-auth/${APP_NAME}"; \
-  if [ -f "${TOKEN_FILE}" ]; then \
+  SECRET_VAR_NAME="${APP_NAME}_SECRET"; \
+  if [ -n "${!SECRET_VAR_NAME}" ]; then \
   export ENABLE_SENTRY=true; \
-  export SENTRY_AUTH_TOKEN="$(tr -d '\r' < "${TOKEN_FILE}" | tr -d '\n')"; \
+  export SENTRY_AUTH_TOKEN="${!SECRET_VAR_NAME}"; \
   echo "Sentry: token found for ${APP_NAME} – enabling sourcemap upload."; \
   else \
   echo "Sentry: no token for ${APP_NAME} – using any pre-set token (if provided) or skipping upload."; \
