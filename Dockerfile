@@ -33,7 +33,7 @@ ENV YARN_BUILD_SCRIPT=${YARN_BUILD_SCRIPT} \
 COPY build-tools/universal_build.sh build-tools/build_app_info.sh build-tools/server_config_gen.sh /opt/app-root/bin/
 COPY --chown=default . .
 
-RUN chmod +x parse-secrets.sh
+RUN chmod +x build-tools/parse-secrets.sh
 
 # 👉 Mount one secret with many keys; export token only if key exists
 RUN --mount=type=secret,id=build-container-additional-secret/secrets,required=false \
