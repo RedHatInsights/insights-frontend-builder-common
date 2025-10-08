@@ -38,7 +38,7 @@ RUN chmod +x build-tools/parse-secrets.sh
 # 👉 Mount one secret with many keys; export token only if key exists
 RUN --mount=type=secret,id=build-container-additional-secret/secrets,required=false \
   set -euo pipefail; \
-  ./parse-secrets.sh; \
+  ./build-tools/parse-secrets.sh; \
   # Get the app name and define the secrets variable name within the same RUN layer
   APP_NAME="$(jq -r '.insights.appname' < package.json)"; \
   SECRET_VAR_NAME="${APP_NAME}_SECRET"; \
