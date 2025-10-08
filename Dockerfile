@@ -42,7 +42,7 @@ RUN --mount=type=secret,id=build-container-additional-secret/secrets,required=fa
   # Get the app name and define the secrets variable name within the same RUN layer
   APP_NAME="$(jq -r '.insights.appname' < package.json | tr '[:lower:]-' '[:upper:]_')"; \
   SECRET_VAR_NAME="${APP_NAME}_SECRET"; \
-  if [ -n "${!SECRET_VAR_NAME}" ]; then \
+  if [ -n "${!SECRET_VAR_NAME:-}" ]; then \
   export ENABLE_SENTRY=true; \
   export SENTRY_AUTH_TOKEN="${!SECRET_VAR_NAME}"; \
   echo "Sentry: token found for ${APP_NAME} – enabling sourcemap upload."; \
