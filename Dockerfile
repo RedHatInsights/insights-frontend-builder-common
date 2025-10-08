@@ -40,7 +40,7 @@ RUN --mount=type=secret,id=build-container-additional-secret/secrets,required=fa
   set -euo pipefail; \
   ./build-tools/parse-secrets.sh; \
   # Get the app name and define the secrets variable name within the same RUN layer
-  APP_NAME="$(jq -r '.insights.appname' < package.json)"; \
+  APP_NAME="$(jq -r '.insights.appname' < package.json | tr '[:lower:]-' '[:upper:]_')"; \
   SECRET_VAR_NAME="${APP_NAME}_SECRET"; \
   if [ -n "${!SECRET_VAR_NAME}" ]; then \
   export ENABLE_SENTRY=true; \
