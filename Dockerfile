@@ -36,6 +36,7 @@ COPY --chown=default . .
 RUN chmod +x build-tools/parse-secrets.sh
 
 # 👉 Mount one secret with many keys; export token only if key exists
+USER root
 RUN --mount=type=secret,id=build-container-additional-secret/secrets,required=false \
   set -euo pipefail; \
   ./build-tools/parse-secrets.sh; \
@@ -50,6 +51,7 @@ RUN --mount=type=secret,id=build-container-additional-secret/secrets,required=fa
   echo "Sentry: no token for ${APP_NAME} – using any pre-set token (if provided) or skipping upload."; \
   fi; \
   universal_build.sh
+USER default
 
 
 FROM quay.io/redhat-services-prod/hcm-eng-prod-tenant/caddy-ubi:latest
