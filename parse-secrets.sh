@@ -12,6 +12,14 @@ if [ ! -f "$SECRETS_FILE" ]; then
     exit 0
 fi
 
+if [ ! -r "$SECRETS_FILE" ]; then
+    echo "parse-secrets.sh: Warning: Cannot read secrets file at $SECRETS_FILE (permission denied)"
+    echo "Current file permissions: $(ls -la "$SECRETS_FILE" 2>/dev/null || echo 'unable to check')"
+    echo "parse-secrets.sh: Continuing without parsing secrets..."
+    exit 0
+fi
+
+
 # Parse .env file and export environment variables
 while IFS= read -r line || [[ -n "$line" ]]; do
     # Skip empty lines and comments
