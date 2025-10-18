@@ -39,7 +39,7 @@ RUN chmod +x build-tools/parse-secrets.sh
 USER root
 RUN --mount=type=secret,id=build-container-additional-secret/secrets,required=false \
   set -euo pipefail; \
-  ./build-tools/parse-secrets.sh; \
+  source ./build-tools/parse-secrets.sh; \
   # Get the app name and define the secrets variable name within the same RUN layer
   APP_NAME="$(jq -r '.insights.appname' < package.json | tr '[:lower:]-' '[:upper:]_')"; \
   SECRET_VAR_NAME="${APP_NAME}_SECRET"; \
