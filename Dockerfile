@@ -50,6 +50,8 @@ RUN --mount=type=secret,id=build-container-additional-secret/secrets,required=fa
   else \
   echo "Sentry: no token for ${APP_NAME} – using any pre-set token (if provided) or skipping upload."; \
   fi; \
+  # Telling git this path is safe
+  git config --global --add safe.directory /opt/app-root/src; \
   universal_build.sh
 USER default
 
