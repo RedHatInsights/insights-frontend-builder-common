@@ -30,6 +30,7 @@ ARG USES_YARN=false
 ENV YARN_BUILD_SCRIPT=${YARN_BUILD_SCRIPT} \
   USES_YARN=${USES_YARN}
 ARG OUTPUT_DIR=dist
+ARG PACKAGE_JSON_PATH=package.json
 
 COPY build-tools/universal_build.sh build-tools/build_app_info.sh build-tools/server_config_gen.sh /opt/app-root/bin/
 COPY --chown=default . .
@@ -42,7 +43,7 @@ RUN --mount=type=secret,id=build-container-additional-secret/secrets,required=fa
   set -euo pipefail; \
   source ./build-tools/parse-secrets.sh; \
   # Get the app name and define the secrets variable name within the same RUN layer
-  APP_NAME="$(jq -r '.insights.appname' < package.json | tr '[:lower:]-' '[:upper:]_')"; \
+  APP_NAME="$(jq -r '.insights.appname' < $PACKAGE_JSON_PATH | tr '[:lower:]-' '[:upper:]_')"; \
   SECRET_VAR_NAME="${APP_NAME}_SECRET"; \
   if [ -n "${!SECRET_VAR_NAME:-}" ]; then \
   export ENABLE_SENTRY=true; \
@@ -67,10 +68,11 @@ ENV CADDY_TLS_MODE http_port 8000
 ENV ENV_PUBLIC_PATH "/default"
 
 ARG OUTPUT_DIR=dist
+ARG PACKAGE_JSON_PATH=package.json
 
 # Copy the valpop binary from the valpop image
 COPY --from=quay.io/redhat-services-prod/hcc-platex-services-tenant/valpop:latest /usr/local/bin/valpop /usr/local/bin/valpop
 
 COPY --from=builder /opt/app-root/src/Caddyfile /etc/caddy/Caddyfile
 COPY --from=builder /opt/app-root/src/${OUTPUT_DIR} dist
-COPY package.json .
+COPY ${PACKAGE_JSON_PATH} .
