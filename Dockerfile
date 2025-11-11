@@ -29,7 +29,7 @@ ARG YARN_BUILD_SCRIPT=""
 ARG USES_YARN=false
 ENV YARN_BUILD_SCRIPT=${YARN_BUILD_SCRIPT} \
   USES_YARN=${USES_YARN}
-ARG OUTPUT_DIR=dist
+ARG APP_BUILD_DIR=dist
 ARG PACKAGE_JSON_PATH=package.json
 
 COPY build-tools/universal_build.sh build-tools/build_app_info.sh build-tools/server_config_gen.sh /opt/app-root/bin/
@@ -67,12 +67,12 @@ ENV CADDY_TLS_MODE http_port 8000
 # Caddy must have a default value for the public path or it will not start
 ENV ENV_PUBLIC_PATH "/default"
 
-ARG OUTPUT_DIR=dist
+ARG APP_BUILD_DIR=dist
 ARG PACKAGE_JSON_PATH=package.json
 
 # Copy the valpop binary from the valpop image
 COPY --from=quay.io/redhat-services-prod/hcc-platex-services-tenant/valpop:latest /usr/local/bin/valpop /usr/local/bin/valpop
 
 COPY --from=builder /opt/app-root/src/Caddyfile /etc/caddy/Caddyfile
-COPY --from=builder /opt/app-root/src/${OUTPUT_DIR} dist
+COPY --from=builder /opt/app-root/src/${APP_BUILD_DIR} dist
 COPY ${PACKAGE_JSON_PATH} .

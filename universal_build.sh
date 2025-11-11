@@ -2,6 +2,7 @@
 
 set -exv
 
+export APP_BUILD_DIR=${APP_BUILD_DIR:-dist}
 export OUTPUT_DIR=${OUTPUT_DIR:-dist}
 
 function install() {
@@ -74,7 +75,7 @@ function setNpmOrYarn() {
 }
 
 get_appname_from_package() {
-  jq --raw-output '.insights.appname' < package.json
+  jq --raw-output '.insights.appname' < $PACKAGE_JSON_PATH
 }
 
 # Work around large package timeout; up default from 30s to 5m
@@ -93,5 +94,5 @@ install
 
 export BETA=false
 build
-build_app_info.sh > "${OUTPUT_DIR}/app.info.json"
+build_app_info.sh > "${APP_BUILD_DIR}/app.info.json"
 server_config_gen.sh
