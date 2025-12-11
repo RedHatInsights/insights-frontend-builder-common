@@ -49,24 +49,35 @@ test/
 
 1. **Podman** (or Docker) installed and running
 2. **Python 3.8+**
-3. **Node.js** (for the build process inside the container)
+3. **uv** - Fast Python package installer ([installation instructions](https://github.com/astral-sh/uv))
+4. **Node.js** (for the build process inside the container)
 
 ## Installation
 
-Install Python test dependencies:
+### Install uv (if not already installed)
+
+```bash
+# macOS/Linux
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Or with pip
+pip install uv
+```
+
+### Install Python test dependencies
 
 ```bash
 cd test
-pip install -r requirements.txt
+uv pip install --system -r requirements.txt
 ```
 
 Or using a virtual environment (recommended):
 
 ```bash
 cd test
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-pip install -r requirements.txt
+uv venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+uv pip install -r requirements.txt
 ```
 
 ## Running Tests
@@ -106,7 +117,7 @@ pytest test_dockerfile_env_vars.py -v -s
 ### Run with coverage (if pytest-cov is installed)
 
 ```bash
-pip install pytest-cov
+uv pip install pytest-cov
 pytest test_dockerfile_caddy.py --cov --cov-report=html
 ```
 
@@ -243,7 +254,7 @@ The tests use `podman` by default. To use Docker instead, you can either:
 
 ### Import errors
 - Make sure you're in the `test/` directory
-- Verify requirements are installed: `pip list | grep pytest`
+- Verify requirements are installed: `uv pip list | grep pytest`
 
 ## CI/CD Integration
 
@@ -255,8 +266,8 @@ This repository includes a GitHub Actions workflow that automatically runs all D
 ### Workflow File
 
 The workflow is defined in `.github/workflows/test-dockerfile.yml` and:
-1. Sets up Python 3.11 with pip caching
-2. Installs test dependencies from `requirements.txt`
+1. Sets up Python 3.11 and installs uv with caching
+2. Installs test dependencies from `requirements.txt` using uv
 3. Installs Podman for container operations
 4. Runs all three test suites separately:
    - Caddy server tests

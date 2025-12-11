@@ -2,7 +2,7 @@
 
 help:
 	@echo "Available targets:"
-	@echo "  install       - Install Python dependencies"
+	@echo "  install       - Install Python dependencies using uv"
 	@echo "  test          - Run all tests"
 	@echo "  test-caddy    - Run only Caddy server tests"
 	@echo "  test-env      - Run only environment variable tests"
@@ -11,7 +11,7 @@ help:
 	@echo "  clean         - Remove test artifacts and containers"
 
 install:
-	pip install -r requirements.txt
+	uv pip install --system -r requirements.txt
 
 test:
 	pytest -v
