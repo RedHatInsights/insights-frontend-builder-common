@@ -23,6 +23,41 @@ class TestDockerfileFilesystem:
     APP_NAME = "test-app"
 
     @classmethod
+    def setup_class(cls):
+        """Build the Docker image once before running all tests."""
+        print("\n=== Building Docker image for filesystem tests ===")
+
+        # Get paths
+        test_script_dir = os.path.dirname(__file__)
+        repo_root = os.path.abspath(os.path.join(test_script_dir, ".."))
+        cls.test_dir = os.path.join(test_script_dir, "test-fixtures", "fake-app")
+
+        # Prepare environment
+        cls._prepare_test_env(cls.test_dir, repo_root)
+
+        # Build with default settings
+        print("Building image with default settings (will be reused by most tests)")
+        cls._build_image(cls.test_dir)
+
+        print(f"✓ Image {cls.IMAGE_NAME} built successfully and ready for tests")
+
+    @classmethod
+    def teardown_class(cls):
+        """Clean up: remove the Docker image and copied files."""
+        print("\n=== Cleaning up filesystem tests ===")
+
+        # Remove the Docker image
+        subprocess.run(
+            ["podman", "rmi", "-f", cls.IMAGE_NAME],
+            capture_output=True
+        )
+        print(f"✓ Image {cls.IMAGE_NAME} removed")
+
+        # Remove copied build-tools directory
+        cls._cleanup_test_env(cls.test_dir)
+        print(f"✓ Removed copied build-tools directory")
+
+    @classmethod
     def _prepare_test_env(cls, test_dir, repo_root):
         """Prepare test environment by copying build tools."""
         build_tools_dest = os.path.join(test_dir, "build-tools")
@@ -161,250 +196,187 @@ class TestDockerfileFilesystem:
         """Test that LICENSE file is copied to /licenses/."""
         print("\n=== Testing LICENSE file location ===")
 
-        test_script_dir = os.path.dirname(__file__)
-        repo_root = os.path.abspath(os.path.join(test_script_dir, ".."))
-        test_dir = os.path.join(test_script_dir, "test-fixtures", "fake-app")
+        # Check if LICENSE exists at /licenses/LICENSE
+        license_exists = self._file_exists_in_image("/licenses/LICENSE")
+        assert license_exists, "LICENSE file not found at /licenses/LICENSE"
 
-        try:
-            self._prepare_test_env(test_dir, repo_root)
-            self._build_image(test_dir)
+        # Verify it has content
+        license_content = self._read_file_from_image("/licenses/LICENSE")
+        assert license_content is not None, "LICENSE file is empty"
+        assert "MIT License" in license_content or "LICENSE" in license_content.upper(), \
+            "LICENSE file doesn't contain expected content"
 
-            # Check if LICENSE exists at /licenses/LICENSE
-            license_exists = self._file_exists_in_image("/licenses/LICENSE")
-            assert license_exists, "LICENSE file not found at /licenses/LICENSE"
-
-            # Verify it has content
-            license_content = self._read_file_from_image("/licenses/LICENSE")
-            assert license_content is not None, "LICENSE file is empty"
-            assert "MIT License" in license_content or "LICENSE" in license_content.upper(), \
-                "LICENSE file doesn't contain expected content"
-
-            print("✓ LICENSE file exists at /licenses/LICENSE with content")
-
-        finally:
-            self._cleanup_container_and_image()
-            self._cleanup_test_env(test_dir)
+        print("✓ LICENSE file exists at /licenses/LICENSE with content")
 
     def test_caddyfile_exists(self):
         """Test that Caddyfile is copied to /etc/caddy/Caddyfile."""
         print("\n=== Testing Caddyfile location ===")
 
-        test_script_dir = os.path.dirname(__file__)
-        repo_root = os.path.abspath(os.path.join(test_script_dir, ".."))
-        test_dir = os.path.join(test_script_dir, "test-fixtures", "fake-app")
+        # Check if Caddyfile exists
+        caddyfile_exists = self._file_exists_in_image("/etc/caddy/Caddyfile")
+        assert caddyfile_exists, "Caddyfile not found at /etc/caddy/Caddyfile"
 
-        try:
-            self._prepare_test_env(test_dir, repo_root)
-            self._build_image(test_dir)
+        # Verify it has content
+        caddyfile_content = self._read_file_from_image("/etc/caddy/Caddyfile")
+        assert caddyfile_content is not None, "Caddyfile is empty"
+        assert ":8000" in caddyfile_content, "Caddyfile doesn't contain port 8000"
+        assert "/apps/" in caddyfile_content or "test-app" in caddyfile_content, \
+            "Caddyfile doesn't contain app route configuration"
 
-            # Check if Caddyfile exists
-            caddyfile_exists = self._file_exists_in_image("/etc/caddy/Caddyfile")
-            assert caddyfile_exists, "Caddyfile not found at /etc/caddy/Caddyfile"
-
-            # Verify it has content
-            caddyfile_content = self._read_file_from_image("/etc/caddy/Caddyfile")
-            assert caddyfile_content is not None, "Caddyfile is empty"
-            assert ":8000" in caddyfile_content, "Caddyfile doesn't contain port 8000"
-            assert "/apps/" in caddyfile_content or "test-app" in caddyfile_content, \
-                "Caddyfile doesn't contain app route configuration"
-
-            print("✓ Caddyfile exists at /etc/caddy/Caddyfile with valid configuration")
-
-        finally:
-            self._cleanup_container_and_image()
-            self._cleanup_test_env(test_dir)
+        print("✓ Caddyfile exists at /etc/caddy/Caddyfile with valid configuration")
 
     def test_package_json_exists(self):
         """Test that package.json is copied to the working directory."""
         print("\n=== Testing package.json location ===")
 
-        test_script_dir = os.path.dirname(__file__)
-        repo_root = os.path.abspath(os.path.join(test_script_dir, ".."))
-        test_dir = os.path.join(test_script_dir, "test-fixtures", "fake-app")
+        # Check if package.json exists in working directory
+        package_json_paths = ["/srv/package.json", "./package.json", "package.json"]
 
-        try:
-            self._prepare_test_env(test_dir, repo_root)
-            self._build_image(test_dir)
+        package_json_found = False
+        for path in package_json_paths:
+            if self._file_exists_in_image(path):
+                package_json_content = self._read_file_from_image(path)
+                if package_json_content:
+                    try:
+                        data = json.loads(package_json_content)
+                        assert data.get("insights", {}).get("appname") == "test-app", \
+                            f"package.json doesn't contain expected appname"
+                        print(f"✓ package.json found at {path} with correct content")
+                        package_json_found = True
+                        break
+                    except json.JSONDecodeError:
+                        pass
 
-            # Check if package.json exists in working directory
-            # Try both /srv/package.json and ./package.json
-            package_json_paths = ["/srv/package.json", "./package.json", "package.json"]
-
-            package_json_found = False
-            for path in package_json_paths:
-                if self._file_exists_in_image(path):
-                    package_json_content = self._read_file_from_image(path)
-                    if package_json_content:
-                        try:
-                            data = json.loads(package_json_content)
-                            assert data.get("insights", {}).get("appname") == "test-app", \
-                                f"package.json doesn't contain expected appname"
-                            print(f"✓ package.json found at {path} with correct content")
-                            package_json_found = True
-                            break
-                        except json.JSONDecodeError:
-                            pass
-
-            assert package_json_found, f"package.json not found at any of: {package_json_paths}"
-
-        finally:
-            self._cleanup_container_and_image()
-            self._cleanup_test_env(test_dir)
+        assert package_json_found, f"package.json not found at any of: {package_json_paths}"
 
     def test_dist_directory_structure(self):
         """Test that dist directory contains expected build artifacts."""
         print("\n=== Testing dist directory structure ===")
 
-        test_script_dir = os.path.dirname(__file__)
-        repo_root = os.path.abspath(os.path.join(test_script_dir, ".."))
-        test_dir = os.path.join(test_script_dir, "test-fixtures", "fake-app")
+        # Try different possible locations for dist
+        dist_paths = ["/srv/dist", "./dist", "dist"]
 
-        try:
-            self._prepare_test_env(test_dir, repo_root)
-            self._build_image(test_dir)
+        dist_found = False
+        for dist_path in dist_paths:
+            dist_listing = self._list_directory_in_image(dist_path)
+            if dist_listing:
+                print(f"Found dist directory at {dist_path}")
+                print(f"Contents:\n{dist_listing}")
 
-            # Try different possible locations for dist
-            dist_paths = ["/srv/dist", "./dist", "dist"]
+                # Check for expected files
+                expected_files = ["index.html", "app.info.json", "manifest.json"]
+                for expected_file in expected_files:
+                    file_path = f"{dist_path}/{expected_file}"
+                    file_exists = self._file_exists_in_image(file_path)
+                    assert file_exists, f"{expected_file} not found at {file_path}"
+                    print(f"  ✓ {expected_file} exists")
 
-            dist_found = False
-            for dist_path in dist_paths:
-                dist_listing = self._list_directory_in_image(dist_path)
-                if dist_listing:
-                    print(f"Found dist directory at {dist_path}")
-                    print(f"Contents:\n{dist_listing}")
+                # Check subdirectories
+                css_exists = self._file_exists_in_image(f"{dist_path}/css/app.css")
+                js_exists = self._file_exists_in_image(f"{dist_path}/js/app.js")
 
-                    # Check for expected files
-                    expected_files = ["index.html", "app.info.json", "manifest.json"]
-                    for expected_file in expected_files:
-                        file_path = f"{dist_path}/{expected_file}"
-                        file_exists = self._file_exists_in_image(file_path)
-                        assert file_exists, f"{expected_file} not found at {file_path}"
-                        print(f"  ✓ {expected_file} exists")
+                assert css_exists, f"css/app.css not found in {dist_path}"
+                assert js_exists, f"js/app.js not found in {dist_path}"
 
-                    # Check subdirectories
-                    css_exists = self._file_exists_in_image(f"{dist_path}/css/app.css")
-                    js_exists = self._file_exists_in_image(f"{dist_path}/js/app.js")
+                print(f"  ✓ css/app.css exists")
+                print(f"  ✓ js/app.js exists")
 
-                    assert css_exists, f"css/app.css not found in {dist_path}"
-                    assert js_exists, f"js/app.js not found in {dist_path}"
+                dist_found = True
+                break
 
-                    print(f"  ✓ css/app.css exists")
-                    print(f"  ✓ js/app.js exists")
-
-                    dist_found = True
-                    break
-
-            assert dist_found, f"dist directory not found at any of: {dist_paths}"
-            print(f"✓ dist directory contains all expected build artifacts")
-
-        finally:
-            self._cleanup_container_and_image()
-            self._cleanup_test_env(test_dir)
+        assert dist_found, f"dist directory not found at any of: {dist_paths}"
+        print(f"✓ dist directory contains all expected build artifacts")
 
     def test_app_info_json_content(self):
         """Test that app.info.json is generated with correct content."""
         print("\n=== Testing app.info.json content ===")
 
-        test_script_dir = os.path.dirname(__file__)
-        repo_root = os.path.abspath(os.path.join(test_script_dir, ".."))
-        test_dir = os.path.join(test_script_dir, "test-fixtures", "fake-app")
+        # Try different possible locations
+        app_info_paths = [
+            "/srv/dist/app.info.json",
+            "dist/app.info.json",
+            "./dist/app.info.json"
+        ]
 
-        try:
-            self._prepare_test_env(test_dir, repo_root)
-            self._build_image(test_dir)
+        app_info_found = False
+        for path in app_info_paths:
+            content = self._read_file_from_image(path)
+            if content:
+                try:
+                    data = json.loads(content)
 
-            # Try different possible locations
-            app_info_paths = [
-                "/srv/dist/app.info.json",
-                "dist/app.info.json",
-                "./dist/app.info.json"
-            ]
+                    # Check required fields
+                    assert "app_name" in data, "app.info.json missing app_name field"
+                    assert "src_hash" in data, "app.info.json missing src_hash field"
+                    assert "src_branch" in data, "app.info.json missing src_branch field"
 
-            app_info_found = False
-            for path in app_info_paths:
-                content = self._read_file_from_image(path)
-                if content:
-                    try:
-                        data = json.loads(content)
+                    # Verify app_name is correct
+                    assert data["app_name"] == "test-app", \
+                        f"Expected app_name 'test-app', got '{data['app_name']}'"
 
-                        # Check required fields
-                        assert "app_name" in data, "app.info.json missing app_name field"
-                        assert "src_hash" in data, "app.info.json missing src_hash field"
-                        assert "src_branch" in data, "app.info.json missing src_branch field"
+                    print(f"✓ app.info.json found at {path}")
+                    print(f"  app_name: {data['app_name']}")
+                    print(f"  src_hash: {data['src_hash']}")
+                    print(f"  src_branch: {data['src_branch']}")
 
-                        # Verify app_name is correct
-                        assert data["app_name"] == "test-app", \
-                            f"Expected app_name 'test-app', got '{data['app_name']}'"
+                    app_info_found = True
+                    break
+                except json.JSONDecodeError as e:
+                    pytest.fail(f"app.info.json at {path} is not valid JSON: {e}")
 
-                        print(f"✓ app.info.json found at {path}")
-                        print(f"  app_name: {data['app_name']}")
-                        print(f"  src_hash: {data['src_hash']}")
-                        print(f"  src_branch: {data['src_branch']}")
-
-                        app_info_found = True
-                        break
-                    except json.JSONDecodeError as e:
-                        pytest.fail(f"app.info.json at {path} is not valid JSON: {e}")
-
-            assert app_info_found, f"app.info.json not found at any of: {app_info_paths}"
-
-        finally:
-            self._cleanup_container_and_image()
-            self._cleanup_test_env(test_dir)
+        assert app_info_found, f"app.info.json not found at any of: {app_info_paths}"
 
     def test_valpop_binary_exists(self):
         """Test that valpop binary is copied to /usr/local/bin/valpop."""
         print("\n=== Testing valpop binary location ===")
 
-        test_script_dir = os.path.dirname(__file__)
-        repo_root = os.path.abspath(os.path.join(test_script_dir, ".."))
-        test_dir = os.path.join(test_script_dir, "test-fixtures", "fake-app")
+        # Check if valpop exists
+        valpop_exists = self._file_exists_in_image("/usr/local/bin/valpop")
+        assert valpop_exists, "valpop binary not found at /usr/local/bin/valpop"
 
-        try:
-            self._prepare_test_env(test_dir, repo_root)
-            self._build_image(test_dir)
+        # Check if it's executable
+        result = subprocess.run(
+            ["podman", "run", "--rm", self.IMAGE_NAME, "test", "-x", "/usr/local/bin/valpop"],
+            capture_output=True
+        )
+        assert result.returncode == 0, "valpop binary is not executable"
 
-            # Check if valpop exists
-            valpop_exists = self._file_exists_in_image("/usr/local/bin/valpop")
-            assert valpop_exists, "valpop binary not found at /usr/local/bin/valpop"
-
-            # Check if it's executable
-            result = subprocess.run(
-                ["podman", "run", "--rm", self.IMAGE_NAME, "test", "-x", "/usr/local/bin/valpop"],
-                capture_output=True
-            )
-            assert result.returncode == 0, "valpop binary is not executable"
-
-            print("✓ valpop binary exists at /usr/local/bin/valpop and is executable")
-
-        finally:
-            self._cleanup_container_and_image()
-            self._cleanup_test_env(test_dir)
+        print("✓ valpop binary exists at /usr/local/bin/valpop and is executable")
 
     def test_custom_build_dir_location(self):
-        """Test that custom APP_BUILD_DIR is respected in final image."""
-        print("\n=== Testing custom APP_BUILD_DIR location ===")
+        """Test that custom APP_BUILD_DIR is respected in final image.
 
-        test_script_dir = os.path.dirname(__file__)
-        repo_root = os.path.abspath(os.path.join(test_script_dir, ".."))
-        test_dir = os.path.join(test_script_dir, "test-fixtures", "fake-app")
+        NOTE: This test builds its own image with custom build args,
+        separate from the shared image used by other tests.
+        """
+        print("\n=== Testing custom APP_BUILD_DIR location ===")
+        print("Note: Building separate image with custom APP_BUILD_DIR...")
+
+        # Use a different image name to avoid conflicts
+        custom_image_name = "test-frontend-builder-fs-custom:test"
 
         try:
-            self._prepare_test_env(test_dir, repo_root)
-
             # Build with custom build directory
             custom_dir = "custom-output"
             build_args = {"APP_BUILD_DIR": custom_dir}
-            self._build_image(test_dir, build_args)
+
+            # Temporarily use custom image name for this build
+            original_name = self.__class__.IMAGE_NAME
+            self.__class__.IMAGE_NAME = custom_image_name
+            self._build_image(self.test_dir, build_args)
 
             # The Dockerfile copies ${APP_BUILD_DIR} to "dist" in the final image
             # So regardless of APP_BUILD_DIR name, it should end up as "dist" in final image
-            # Let's verify the files are there
             dist_paths = ["/srv/dist", "dist", "./dist"]
 
             files_found = False
             for dist_path in dist_paths:
-                if self._file_exists_in_image(f"{dist_path}/index.html"):
+                # Check using custom image name
+                result = subprocess.run(
+                    ["podman", "run", "--rm", custom_image_name, "test", "-e", f"{dist_path}/index.html"],
+                    capture_output=True
+                )
+                if result.returncode == 0:
                     print(f"✓ Build artifacts from custom build dir found at {dist_path}")
                     files_found = True
                     break
@@ -413,8 +385,14 @@ class TestDockerfileFilesystem:
                 "Build artifacts not found - custom APP_BUILD_DIR may not have been processed correctly"
 
         finally:
-            self._cleanup_container_and_image()
-            self._cleanup_test_env(test_dir)
+            # Clean up the custom image
+            subprocess.run(
+                ["podman", "rmi", "-f", custom_image_name],
+                capture_output=True
+            )
+            # Restore original image name
+            self.__class__.IMAGE_NAME = original_name
+            print(f"✓ Cleaned up custom image {custom_image_name}")
 
 
 if __name__ == "__main__":
