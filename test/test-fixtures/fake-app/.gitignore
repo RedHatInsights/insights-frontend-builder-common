@@ -1,0 +1,9 @@
+# Ignore git repository created during tests
+.git/
+
+# Ignore build-tools copied during tests
+build-tools/
+
+# Ignore build output created during tests
+dist/
+node_modules/
