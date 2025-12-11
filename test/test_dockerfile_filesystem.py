@@ -86,6 +86,15 @@ class TestDockerfileFilesystem:
             dest = os.path.join(build_tools_dest, script)
             subprocess.run(["cp", src, dest], check=True)
 
+        # Initialize git repository if it doesn't exist (required by build scripts)
+        git_dir = os.path.join(test_dir, ".git")
+        if not os.path.exists(git_dir):
+            subprocess.run(["git", "init"], cwd=test_dir, check=True)
+            subprocess.run(["git", "config", "user.email", "test@test.com"], cwd=test_dir, check=True)
+            subprocess.run(["git", "config", "user.name", "Test User"], cwd=test_dir, check=True)
+            subprocess.run(["git", "add", "."], cwd=test_dir, check=True)
+            subprocess.run(["git", "commit", "-m", "Initial commit"], cwd=test_dir, check=True)
+
     @classmethod
     def _cleanup_test_env(cls, test_dir):
         """Clean up test environment."""

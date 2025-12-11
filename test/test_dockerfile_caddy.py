@@ -62,6 +62,17 @@ class TestDockerfileCaddy:
             subprocess.run(["cp", src, dest], check=True)
         print(f"✓ Copied build scripts to build-tools/")
 
+        # Initialize git repository if it doesn't exist (required by build scripts)
+        git_dir = os.path.join(test_dir, ".git")
+        if not os.path.exists(git_dir):
+            print("Initializing git repository for build scripts...")
+            subprocess.run(["git", "init"], cwd=test_dir, check=True)
+            subprocess.run(["git", "config", "user.email", "test@test.com"], cwd=test_dir, check=True)
+            subprocess.run(["git", "config", "user.name", "Test User"], cwd=test_dir, check=True)
+            subprocess.run(["git", "add", "."], cwd=test_dir, check=True)
+            subprocess.run(["git", "commit", "-m", "Initial commit"], cwd=test_dir, check=True)
+            print("✓ Git repository initialized")
+
         print("\n=== Building Docker image ===")
 
         # Build the image using podman from the fake-app directory (top level)
