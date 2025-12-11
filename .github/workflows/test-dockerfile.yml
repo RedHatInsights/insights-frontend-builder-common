@@ -4,7 +4,6 @@ on:
   pull_request:
     branches:
       - master
-      - main
     paths:
       - 'Dockerfile'
       - '*.sh'
@@ -13,7 +12,6 @@ on:
   push:
     branches:
       - master
-      - main
     paths:
       - 'Dockerfile'
       - '*.sh'
