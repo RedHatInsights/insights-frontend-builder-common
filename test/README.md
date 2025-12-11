@@ -26,7 +26,8 @@ This ensures tests always use the current version of your Dockerfile and build s
 
 ```
 test/
-├── test_dockerfile_caddy.py      # Main test suite
+├── test_dockerfile_caddy.py      # Caddy server functionality tests
+├── test_dockerfile_env_vars.py   # Environment variable tests
 ├── conftest.py                   # Pytest configuration
 ├── requirements.txt              # Python dependencies
 ├── Makefile                      # Convenient test commands
@@ -72,19 +73,29 @@ pip install -r requirements.txt
 ### Run all tests
 
 ```bash
+# Run all tests
+pytest -v
+
+# Or run specific test files
 pytest test_dockerfile_caddy.py -v
+pytest test_dockerfile_env_vars.py -v
 ```
 
 ### Run a specific test
 
 ```bash
+# Caddy tests
 pytest test_dockerfile_caddy.py::TestDockerfileCaddy::test_app_route_serves_index_html -v
+
+# Environment variable tests
+pytest test_dockerfile_env_vars.py::TestDockerfileEnvVars::test_custom_app_build_dir -v
 ```
 
 ### Run with detailed output
 
 ```bash
 pytest test_dockerfile_caddy.py -v -s
+pytest test_dockerfile_env_vars.py -v -s
 ```
 
 ### Run with coverage (if pytest-cov is installed)
@@ -126,7 +137,7 @@ After all tests complete:
 
 ## Test Coverage
 
-The test suite covers:
+### Caddy Server Tests (`test_dockerfile_caddy.py`)
 
 - ✓ Root redirect to `/apps/chrome/index.html`
 - ✓ Main app route (`/apps/test-app/`) serves files
@@ -137,6 +148,22 @@ The test suite covers:
 - ✓ 404 responses for nonexistent files
 - ✓ Paths work with and without trailing slashes
 - ✓ Metrics endpoint configuration
+
+### Environment Variable Tests (`test_dockerfile_env_vars.py`)
+
+**Build-time ARG variables:**
+- ✓ `APP_BUILD_DIR` - Custom output directory for build artifacts
+- ✓ `ENABLE_SENTRY` - Sentry configuration during build
+- ✓ `SENTRY_RELEASE` - Sentry release version
+- ✓ `USES_YARN` - Build system selection (npm vs yarn)
+
+**Runtime ENV variables:**
+- ✓ `ENV_PUBLIC_PATH` - Custom Caddy route for serving app
+- ✓ `CADDY_TLS_MODE` - TLS configuration for Caddy
+- ✓ Runtime variable override of defaults
+- ✓ Default values are correctly set
+
+**Note:** Due to the multi-stage Docker build, variables set in the builder stage (like `ENABLE_SENTRY`, `USES_YARN`, `YARN_BUILD_SCRIPT`) are only available during build and not at runtime in the final Caddy container. Only variables set in the final stage (`ENV_PUBLIC_PATH`, `CADDY_TLS_MODE`) are available at runtime.
 
 ## Customization
 

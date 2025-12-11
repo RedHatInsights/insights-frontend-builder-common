@@ -15,6 +15,10 @@ def pytest_configure(config):
         "markers",
         "caddy: marks tests related to Caddy functionality"
     )
+    config.addinivalue_line(
+        "markers",
+        "envvars: marks tests related to environment variables"
+    )
 
 
 def pytest_collection_modifyitems(config, items):
@@ -23,3 +27,6 @@ def pytest_collection_modifyitems(config, items):
         # Mark all tests in TestDockerfileCaddy as caddy tests
         if "TestDockerfileCaddy" in item.nodeid:
             item.add_marker(pytest.mark.caddy)
+        # Mark all tests in TestDockerfileEnvVars as envvars tests
+        if "TestDockerfileEnvVars" in item.nodeid:
+            item.add_marker(pytest.mark.envvars)
