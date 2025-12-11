@@ -247,30 +247,48 @@ The tests use `podman` by default. To use Docker instead, you can either:
 
 ## CI/CD Integration
 
-Example GitHub Actions workflow:
+This repository includes a GitHub Actions workflow that automatically runs all Dockerfile tests on:
+- **Pull Requests** to `master` or `main` branches
+- **Push to `master`/`main`** (after merge)
+- **Manual trigger** via workflow_dispatch
 
-```yaml
-name: Test Dockerfile
+### Workflow File
 
-on: [push, pull_request]
+The workflow is defined in `.github/workflows/test-dockerfile.yml` and:
+1. Sets up Python 3.11 with pip caching
+2. Installs test dependencies from `requirements.txt`
+3. Installs Podman for container operations
+4. Runs all three test suites separately:
+   - Caddy server tests
+   - Environment variable tests
+   - Filesystem structure tests
+5. Cleans up test artifacts
+6. Uploads test results as artifacts (retained for 7 days)
 
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-      - name: Install dependencies
-        run: |
-          cd test
-          pip install -r requirements.txt
-      - name: Run tests
-        run: |
-          cd test
-          pytest test_dockerfile_caddy.py -v
+### Triggering Conditions
+
+Tests run when changes are made to:
+- `Dockerfile`
+- Any `.sh` build scripts
+- Files in the `test/` directory
+- The workflow file itself
+
+### Viewing Test Results
+
+1. **In Pull Requests**: Check the "Checks" tab to see test status
+2. **On GitHub Actions page**: Navigate to Actions → Dockerfile Tests
+3. **Test artifacts**: Download test results from the workflow run page
+
+### Local Testing Before PR
+
+Before opening a pull request, run tests locally to catch issues early:
+
+```bash
+cd test
+make test
 ```
+
+This ensures your changes pass CI checks before pushing.
 
 ## Contributing
 
