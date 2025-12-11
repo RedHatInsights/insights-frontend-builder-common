@@ -26,22 +26,23 @@ This ensures tests always use the current version of your Dockerfile and build s
 
 ```
 test/
-├── test_dockerfile_caddy.py      # Caddy server functionality tests
-├── test_dockerfile_env_vars.py   # Environment variable tests
-├── conftest.py                   # Pytest configuration
-├── requirements.txt              # Python dependencies
-├── Makefile                      # Convenient test commands
-├── README.md                     # This file
+├── test_dockerfile_caddy.py       # Caddy server functionality tests
+├── test_dockerfile_env_vars.py    # Environment variable tests
+├── test_dockerfile_filesystem.py  # Filesystem structure tests
+├── conftest.py                    # Pytest configuration
+├── requirements.txt               # Python dependencies
+├── Makefile                       # Convenient test commands
+├── README.md                      # This file
 └── test-fixtures/
-    └── fake-app/                 # Minimal test application
-        ├── package.json          # With insights.appname field
-        ├── package-lock.json     # NPM lock file
-        ├── build.js              # Simple build script that creates dist/
-        ├── LICENSE               # Required by Dockerfile
-        ├── .gitignore            # Ignores build-tools/ and dist/
-        └── build-tools/          # (Created dynamically during tests)
-            ├── Dockerfile        # (Copied from repo root)
-            └── *.sh              # (Build scripts copied from repo root)
+    └── fake-app/                  # Minimal test application
+        ├── package.json           # With insights.appname field
+        ├── package-lock.json      # NPM lock file
+        ├── build.js               # Simple build script that creates dist/
+        ├── LICENSE                # Required by Dockerfile
+        ├── .gitignore             # Ignores build-tools/ and dist/
+        └── build-tools/           # (Created dynamically during tests)
+            ├── Dockerfile         # (Copied from repo root)
+            └── *.sh               # (Build scripts copied from repo root)
 ```
 
 ## Prerequisites
@@ -79,6 +80,7 @@ pytest -v
 # Or run specific test files
 pytest test_dockerfile_caddy.py -v
 pytest test_dockerfile_env_vars.py -v
+pytest test_dockerfile_filesystem.py -v
 ```
 
 ### Run a specific test
@@ -89,6 +91,9 @@ pytest test_dockerfile_caddy.py::TestDockerfileCaddy::test_app_route_serves_inde
 
 # Environment variable tests
 pytest test_dockerfile_env_vars.py::TestDockerfileEnvVars::test_custom_app_build_dir -v
+
+# Filesystem tests
+pytest test_dockerfile_filesystem.py::TestDockerfileFilesystem::test_dist_directory_structure -v
 ```
 
 ### Run with detailed output
@@ -164,6 +169,25 @@ After all tests complete:
 - ✓ Default values are correctly set
 
 **Note:** Due to the multi-stage Docker build, variables set in the builder stage (like `ENABLE_SENTRY`, `USES_YARN`, `YARN_BUILD_SCRIPT`) are only available during build and not at runtime in the final Caddy container. Only variables set in the final stage (`ENV_PUBLIC_PATH`, `CADDY_TLS_MODE`) are available at runtime.
+
+### Filesystem Structure Tests (`test_dockerfile_filesystem.py`)
+
+**File Locations:**
+- ✓ `/licenses/LICENSE` - License file is copied correctly
+- ✓ `/etc/caddy/Caddyfile` - Caddy configuration file with correct port and routes
+- ✓ `/srv/dist/` - Build artifacts directory
+- ✓ `/srv/dist/index.html` - Main HTML file
+- ✓ `/srv/dist/css/app.css` - CSS files in subdirectory
+- ✓ `/srv/dist/js/app.js` - JavaScript files in subdirectory
+- ✓ `/srv/dist/manifest.json` - Application manifest
+- ✓ `/srv/dist/app.info.json` - Generated build metadata with correct fields
+- ✓ `/srv/package.json` - Package.json copied to working directory
+- ✓ `/usr/local/bin/valpop` - Valpop binary is executable
+
+**Build Artifact Tests:**
+- ✓ Custom `APP_BUILD_DIR` is respected
+- ✓ Complete directory structure with subdirectories
+- ✓ app.info.json contains required fields (app_name, src_hash, src_branch)
 
 ## Customization
 

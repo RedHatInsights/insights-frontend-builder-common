@@ -19,6 +19,10 @@ def pytest_configure(config):
         "markers",
         "envvars: marks tests related to environment variables"
     )
+    config.addinivalue_line(
+        "markers",
+        "filesystem: marks tests related to filesystem structure"
+    )
 
 
 def pytest_collection_modifyitems(config, items):
@@ -30,3 +34,6 @@ def pytest_collection_modifyitems(config, items):
         # Mark all tests in TestDockerfileEnvVars as envvars tests
         if "TestDockerfileEnvVars" in item.nodeid:
             item.add_marker(pytest.mark.envvars)
+        # Mark all tests in TestDockerfileFilesystem as filesystem tests
+        if "TestDockerfileFilesystem" in item.nodeid:
+            item.add_marker(pytest.mark.filesystem)

@@ -1,4 +1,4 @@
-.PHONY: help install test test-caddy test-env test-verbose clean
+.PHONY: help install test test-caddy test-env test-fs test-verbose clean
 
 help:
 	@echo "Available targets:"
@@ -6,6 +6,7 @@ help:
 	@echo "  test          - Run all tests"
 	@echo "  test-caddy    - Run only Caddy server tests"
 	@echo "  test-env      - Run only environment variable tests"
+	@echo "  test-fs       - Run only filesystem structure tests"
 	@echo "  test-verbose  - Run tests with verbose output"
 	@echo "  clean         - Remove test artifacts and containers"
 
@@ -21,12 +22,15 @@ test-caddy:
 test-env:
 	pytest test_dockerfile_env_vars.py -v
 
+test-fs:
+	pytest test_dockerfile_filesystem.py -v
+
 test-verbose:
 	pytest -v -s
 
 clean:
-	-podman rm -f test-frontend-container test-envs-container
-	-podman rmi -f test-frontend-builder:test test-frontend-builder-envs:test
+	-podman rm -f test-frontend-container test-envs-container test-fs-container
+	-podman rmi -f test-frontend-builder:test test-frontend-builder-envs:test test-frontend-builder-fs:test
 	-rm -rf test-fixtures/fake-app/build-tools
 	-rm -rf test-fixtures/fake-app/dist
 	find . -type d -name __pycache__ -exec rm -rf {} +
