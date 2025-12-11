@@ -33,5 +33,5 @@ clean:
 	-podman rmi -f test-frontend-builder:test test-frontend-builder-envs:test test-frontend-builder-fs:test
 	-rm -rf test-fixtures/fake-app/build-tools
 	-rm -rf test-fixtures/fake-app/dist
-	find . -type d -name __pycache__ -exec rm -rf {} +
-	find . -type d -name .pytest_cache -exec rm -rf {} +
+	-find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
+	-find . -type d -name .pytest_cache -exec rm -rf {} + 2>/dev/null || true

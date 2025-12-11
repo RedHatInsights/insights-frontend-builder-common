@@ -175,6 +175,7 @@ class TestDockerfileCaddy:
         """Test that root path redirects to /apps/chrome/index.html."""
         response = requests.get(
             f"http://localhost:{self.HOST_PORT}/",
+            timeout=5,
             allow_redirects=False
         )
 
@@ -194,7 +195,8 @@ class TestDockerfileCaddy:
     def test_app_route_serves_index_html(self):
         """Test that /apps/test-app/ serves the index.html file."""
         response = requests.get(
-            f"http://localhost:{self.HOST_PORT}/apps/{self.APP_NAME}/"
+            f"http://localhost:{self.HOST_PORT}/apps/{self.APP_NAME}/",
+            timeout=5
         )
 
         assert response.status_code == 200, \
@@ -209,7 +211,8 @@ class TestDockerfileCaddy:
     def test_app_route_serves_css_files(self):
         """Test that CSS files are served correctly."""
         response = requests.get(
-            f"http://localhost:{self.HOST_PORT}/apps/{self.APP_NAME}/css/app.css"
+            f"http://localhost:{self.HOST_PORT}/apps/{self.APP_NAME}/css/app.css",
+            timeout=5
         )
 
         assert response.status_code == 200, \
@@ -226,7 +229,8 @@ class TestDockerfileCaddy:
     def test_app_route_serves_js_files(self):
         """Test that JavaScript files are served correctly."""
         response = requests.get(
-            f"http://localhost:{self.HOST_PORT}/apps/{self.APP_NAME}/js/app.js"
+            f"http://localhost:{self.HOST_PORT}/apps/{self.APP_NAME}/js/app.js",
+            timeout=5
         )
 
         assert response.status_code == 200, \
@@ -238,7 +242,8 @@ class TestDockerfileCaddy:
     def test_app_route_serves_json_files(self):
         """Test that JSON files are served correctly."""
         response = requests.get(
-            f"http://localhost:{self.HOST_PORT}/apps/{self.APP_NAME}/manifest.json"
+            f"http://localhost:{self.HOST_PORT}/apps/{self.APP_NAME}/manifest.json",
+            timeout=5
         )
 
         assert response.status_code == 200, \
@@ -264,7 +269,8 @@ class TestDockerfileCaddy:
     def test_app_info_json_exists(self):
         """Test that app.info.json is generated and served."""
         response = requests.get(
-            f"http://localhost:{self.HOST_PORT}/apps/{self.APP_NAME}/app.info.json"
+            f"http://localhost:{self.HOST_PORT}/apps/{self.APP_NAME}/app.info.json",
+            timeout=5
         )
 
         assert response.status_code == 200, \
@@ -283,7 +289,8 @@ class TestDockerfileCaddy:
     def test_nonexistent_file_returns_404(self):
         """Test that nonexistent files return 404."""
         response = requests.get(
-            f"http://localhost:{self.HOST_PORT}/apps/{self.APP_NAME}/nonexistent.html"
+            f"http://localhost:{self.HOST_PORT}/apps/{self.APP_NAME}/nonexistent.html",
+            timeout=5
         )
 
         assert response.status_code == 404, \
@@ -293,12 +300,14 @@ class TestDockerfileCaddy:
         """Test that paths work with and without trailing slash."""
         # With trailing slash
         response_with_slash = requests.get(
-            f"http://localhost:{self.HOST_PORT}/apps/{self.APP_NAME}/"
+            f"http://localhost:{self.HOST_PORT}/apps/{self.APP_NAME}/",
+            timeout=5
         )
 
         # Without trailing slash
         response_without_slash = requests.get(
-            f"http://localhost:{self.HOST_PORT}/apps/{self.APP_NAME}"
+            f"http://localhost:{self.HOST_PORT}/apps/{self.APP_NAME}",
+            timeout=5
         )
 
         # Both should succeed (200 or redirect to 200)

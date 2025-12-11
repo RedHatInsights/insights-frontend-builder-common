@@ -32,8 +32,8 @@ def pytest_collection_modifyitems(config, items):
         if "TestDockerfileCaddy" in item.nodeid:
             item.add_marker(pytest.mark.caddy)
         # Mark all tests in TestDockerfileEnvVars as envvars tests
-        if "TestDockerfileEnvVars" in item.nodeid:
+        elif "TestDockerfileEnvVars" in item.nodeid:
             item.add_marker(pytest.mark.envvars)
         # Mark all tests in TestDockerfileFilesystem as filesystem tests
-        if "TestDockerfileFilesystem" in item.nodeid:
+        elif "TestDockerfileFilesystem" in item.nodeid:
             item.add_marker(pytest.mark.filesystem)

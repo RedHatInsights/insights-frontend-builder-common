@@ -15,7 +15,6 @@ import time
 import requests
 import pytest
 import os
-import json
 import shutil
 
 
@@ -34,7 +33,7 @@ class TestDockerfileEnvVars:
 
         # Clean up any previous test artifacts
         if os.path.exists(build_tools_dest):
-            subprocess.run(["rm", "-rf", build_tools_dest], check=True)
+            shutil.rmtree(build_tools_dest)
 
         # Create build-tools directory
         os.makedirs(build_tools_dest, exist_ok=True)
@@ -42,7 +41,7 @@ class TestDockerfileEnvVars:
         # Copy Dockerfile
         dockerfile_src = os.path.join(repo_root, "Dockerfile")
         dockerfile_dest = os.path.join(build_tools_dest, "Dockerfile")
-        subprocess.run(["cp", dockerfile_src, dockerfile_dest], check=True)
+        shutil.copy(dockerfile_src, dockerfile_dest)
 
         # Copy build scripts
         scripts = [
@@ -54,7 +53,7 @@ class TestDockerfileEnvVars:
         for script in scripts:
             src = os.path.join(repo_root, script)
             dest = os.path.join(build_tools_dest, script)
-            subprocess.run(["cp", src, dest], check=True)
+            shutil.copy(src, dest)
 
         # Initialize git repository if it doesn't exist (required by build scripts)
         git_dir = os.path.join(test_dir, ".git")
@@ -70,7 +69,7 @@ class TestDockerfileEnvVars:
         """Clean up test environment."""
         build_tools_dest = os.path.join(test_dir, "build-tools")
         if os.path.exists(build_tools_dest):
-            subprocess.run(["rm", "-rf", build_tools_dest], check=True)
+            shutil.rmtree(build_tools_dest)
 
     @classmethod
     def _build_image(cls, test_dir, build_args=None):
@@ -248,7 +247,7 @@ class TestDockerfileEnvVars:
             assert env_value == custom_path, \
                 f"Expected ENV_PUBLIC_PATH={custom_path}, got {env_value}"
 
-            print(f"✓ ENV_PUBLIC_PATH is correctly set in container")
+            print("✓ ENV_PUBLIC_PATH is correctly set in container")
 
         finally:
             self._cleanup_container_and_image()
