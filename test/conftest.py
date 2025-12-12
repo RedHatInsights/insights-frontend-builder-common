@@ -23,6 +23,10 @@ def pytest_configure(config):
         "markers",
         "filesystem: marks tests related to filesystem structure"
     )
+    config.addinivalue_line(
+        "markers",
+        "hermetic: marks tests related to hermetic Dockerfile"
+    )
 
 
 def pytest_collection_modifyitems(config, items):
@@ -37,3 +41,6 @@ def pytest_collection_modifyitems(config, items):
         # Mark all tests in TestDockerfileFilesystem as filesystem tests
         elif "TestDockerfileFilesystem" in item.nodeid:
             item.add_marker(pytest.mark.filesystem)
+        # Mark all tests in TestDockerfileHermetic as hermetic tests
+        elif "TestDockerfileHermetic" in item.nodeid:
+            item.add_marker(pytest.mark.hermetic)

@@ -1,0 +1,480 @@
+"""
+Tests for Dockerfile.hermetic filesystem structure and build process.
+
+This test suite verifies that:
+1. Files are copied to the correct locations in the hermetic image
+2. Build artifacts are in the expected directories (/srv/dist)
+3. Required files (package.json, LICENSE) are properly placed
+4. Directory structure matches hermetic build expectations
+5. Image metadata and labels are correct
+6. Container runs as non-root user (1001)
+7. Offline build process works correctly
+8. Minimal image contains only necessary components (no Caddy)
+"""
+
+import subprocess
+import pytest
+import os
+import json
+
+
+class TestDockerfileHermetic:
+    """Test suite for Dockerfile.hermetic structure and build."""
+
+    IMAGE_NAME = "test-frontend-builder-hermetic:test"
+    CONTAINER_NAME = "test-hermetic-container"
+    APP_NAME = "test-app"
+
+    @classmethod
+    def setup_class(cls):
+        """Build the Docker image once before running all tests."""
+        print("\n=== Building Hermetic Docker image for tests ===")
+
+        # Get paths
+        test_script_dir = os.path.dirname(__file__)
+        repo_root = os.path.abspath(os.path.join(test_script_dir, ".."))
+        cls.test_dir = os.path.join(test_script_dir, "test-fixtures", "fake-app")
+
+        # Prepare environment
+        cls._prepare_test_env(cls.test_dir, repo_root)
+
+        # Build hermetic image
+        print("Building hermetic image (offline build)")
+        cls._build_image(cls.test_dir)
+
+        print(f"✓ Hermetic image {cls.IMAGE_NAME} built successfully and ready for tests")
+
+    @classmethod
+    def teardown_class(cls):
+        """Clean up: remove the Docker image and copied files."""
+        print("\n=== Cleaning up hermetic tests ===")
+
+        # Remove the Docker image
+        subprocess.run(
+            ["podman", "rmi", "-f", cls.IMAGE_NAME],
+            capture_output=True
+        )
+        print(f"✓ Image {cls.IMAGE_NAME} removed")
+
+        # Remove copied Dockerfile
+        cls._cleanup_test_env(cls.test_dir)
+        print(f"✓ Removed copied Dockerfile.hermetic")
+
+    @classmethod
+    def _prepare_test_env(cls, test_dir, repo_root):
+        """Prepare test environment by copying Dockerfile.hermetic."""
+        # Copy Dockerfile.hermetic to test directory
+        dockerfile_src = os.path.join(repo_root, "Dockerfile.hermetic")
+        dockerfile_dest = os.path.join(test_dir, "Dockerfile.hermetic")
+        subprocess.run(["cp", dockerfile_src, dockerfile_dest], check=True)
+
+        # Initialize git repository if it doesn't exist (required by npm build)
+        git_dir = os.path.join(test_dir, ".git")
+        if not os.path.exists(git_dir):
+            subprocess.run(["git", "init"], cwd=test_dir, check=True)
+            subprocess.run(["git", "config", "user.email", "test@test.com"], cwd=test_dir, check=True)
+            subprocess.run(["git", "config", "user.name", "Test User"], cwd=test_dir, check=True)
+            subprocess.run(["git", "add", "."], cwd=test_dir, check=True)
+            subprocess.run(["git", "commit", "-m", "Initial commit"], cwd=test_dir, check=True)
+
+    @classmethod
+    def _cleanup_test_env(cls, test_dir):
+        """Clean up test environment."""
+        dockerfile_dest = os.path.join(test_dir, "Dockerfile.hermetic")
+        if os.path.exists(dockerfile_dest):
+            subprocess.run(["rm", "-f", dockerfile_dest], check=True)
+
+    @classmethod
+    def _build_image(cls, test_dir, build_args=None):
+        """Build Docker image with optional build args."""
+        build_cmd = [
+            "podman", "build",
+            "-t", cls.IMAGE_NAME,
+            "-f", "Dockerfile.hermetic"
+        ]
+
+        # Add build args if provided
+        if build_args:
+            for key, value in build_args.items():
+                build_cmd.extend(["--build-arg", f"{key}={value}"])
+
+        build_cmd.append(".")
+
+        result = subprocess.run(
+            build_cmd,
+            cwd=test_dir,
+            capture_output=True,
+            text=True
+        )
+
+        if result.returncode != 0:
+            print("STDOUT:", result.stdout)
+            print("STDERR:", result.stderr)
+            pytest.fail(f"Failed to build hermetic Docker image: {result.stderr}")
+
+        return result
+
+    def _file_exists_in_image(self, file_path):
+        """Check if a file exists in the image."""
+        result = subprocess.run(
+            ["podman", "run", "--rm", self.IMAGE_NAME, "test", "-e", file_path],
+            capture_output=True
+        )
+        return result.returncode == 0
+
+    def _read_file_from_image(self, file_path):
+        """Read a file from the image."""
+        result = subprocess.run(
+            ["podman", "run", "--rm", self.IMAGE_NAME, "cat", file_path],
+            capture_output=True,
+            text=True
+        )
+        if result.returncode != 0:
+            return None
+        return result.stdout
+
+    def _list_directory_in_image(self, dir_path):
+        """List files in a directory in the image."""
+        result = subprocess.run(
+            ["podman", "run", "--rm", self.IMAGE_NAME, "ls", "-la", dir_path],
+            capture_output=True,
+            text=True
+        )
+        if result.returncode != 0:
+            return None
+        return result.stdout
+
+    def _get_image_labels(self):
+        """Get labels from the Docker image."""
+        result = subprocess.run(
+            ["podman", "inspect", self.IMAGE_NAME],
+            capture_output=True,
+            text=True
+        )
+        if result.returncode != 0:
+            return {}
+
+        try:
+            data = json.loads(result.stdout)
+            if data and len(data) > 0:
+                return data[0].get("Labels", {})
+        except (json.JSONDecodeError, KeyError, IndexError):
+            return {}
+        return {}
+
+    def _get_image_user(self):
+        """Get the user the container runs as."""
+        result = subprocess.run(
+            ["podman", "inspect", self.IMAGE_NAME],
+            capture_output=True,
+            text=True
+        )
+        if result.returncode != 0:
+            return None
+
+        try:
+            data = json.loads(result.stdout)
+            if data and len(data) > 0:
+                config = data[0].get("Config", {})
+                return config.get("User", "")
+        except (json.JSONDecodeError, KeyError, IndexError):
+            return None
+        return None
+
+    # ============= Filesystem Structure Tests =============
+
+    def test_license_file_exists(self):
+        """Test that LICENSE file is copied to /licenses/."""
+        print("\n=== Testing LICENSE file location in hermetic image ===")
+
+        # Check if LICENSE exists at /licenses/LICENSE
+        license_exists = self._file_exists_in_image("/licenses/LICENSE")
+        assert license_exists, "LICENSE file not found at /licenses/LICENSE"
+
+        # Verify it has content
+        license_content = self._read_file_from_image("/licenses/LICENSE")
+        assert license_content is not None, "LICENSE file is empty"
+        assert "MIT License" in license_content or "LICENSE" in license_content.upper(), \
+            "LICENSE file doesn't contain expected content"
+
+        print("✓ LICENSE file exists at /licenses/LICENSE with content")
+
+    def test_srv_directory_exists(self):
+        """Test that /srv directory exists and contains expected files."""
+        print("\n=== Testing /srv directory structure ===")
+
+        srv_listing = self._list_directory_in_image("/srv")
+        assert srv_listing is not None, "/srv directory not found"
+
+        print(f"Contents of /srv:\n{srv_listing}")
+        print("✓ /srv directory exists")
+
+    def test_dist_directory_structure(self):
+        """Test that /srv/dist directory contains expected build artifacts."""
+        print("\n=== Testing /srv/dist directory structure ===")
+
+        dist_listing = self._list_directory_in_image("/srv/dist")
+        assert dist_listing is not None, "/srv/dist directory not found"
+
+        print(f"Contents of /srv/dist:\n{dist_listing}")
+
+        # Check for expected files
+        # Note: app.info.json is not generated in hermetic builds (only in normal builds with build_app_info.sh)
+        expected_files = ["index.html", "manifest.json"]
+        for expected_file in expected_files:
+            file_path = f"/srv/dist/{expected_file}"
+            file_exists = self._file_exists_in_image(file_path)
+            assert file_exists, f"{expected_file} not found at {file_path}"
+            print(f"  ✓ {expected_file} exists")
+
+        # Check subdirectories
+        css_exists = self._file_exists_in_image("/srv/dist/css/app.css")
+        js_exists = self._file_exists_in_image("/srv/dist/js/app.js")
+
+        assert css_exists, "css/app.css not found in /srv/dist"
+        assert js_exists, "js/app.js not found in /srv/dist"
+
+        print(f"  ✓ css/app.css exists")
+        print(f"  ✓ js/app.js exists")
+        print(f"✓ /srv/dist directory contains all expected build artifacts")
+
+    def test_package_json_exists(self):
+        """Test that package.json is copied to /srv."""
+        print("\n=== Testing package.json location ===")
+
+        package_json_path = "/srv/package.json"
+        package_json_exists = self._file_exists_in_image(package_json_path)
+        assert package_json_exists, f"package.json not found at {package_json_path}"
+
+        # Verify content
+        package_json_content = self._read_file_from_image(package_json_path)
+        assert package_json_content is not None, "package.json is empty"
+
+        try:
+            data = json.loads(package_json_content)
+            assert data.get("insights", {}).get("appname") == "test-app", \
+                f"package.json doesn't contain expected appname"
+            print(f"✓ package.json found at {package_json_path} with correct content")
+        except json.JSONDecodeError:
+            pytest.fail("package.json is not valid JSON")
+
+    def test_package_lock_json_exists(self):
+        """Test that package-lock.json is copied to /srv."""
+        print("\n=== Testing package-lock.json location ===")
+
+        package_lock_path = "/srv/package-lock.json"
+        package_lock_exists = self._file_exists_in_image(package_lock_path)
+        assert package_lock_exists, f"package-lock.json not found at {package_lock_path}"
+
+        # Verify it has content
+        package_lock_content = self._read_file_from_image(package_lock_path)
+        assert package_lock_content is not None, "package-lock.json is empty"
+
+        print(f"✓ package-lock.json found at {package_lock_path}")
+
+    def test_no_app_info_json(self):
+        """Test that app.info.json is NOT generated in hermetic builds.
+
+        Note: app.info.json is only generated by build_app_info.sh in the normal
+        Dockerfile build. Hermetic builds just run 'npm run build' directly.
+        """
+        print("\n=== Testing that app.info.json is not generated ===")
+
+        app_info_path = "/srv/dist/app.info.json"
+        content = self._read_file_from_image(app_info_path)
+        assert content is None, \
+            "app.info.json should not exist in hermetic builds (it's only in normal builds)"
+
+        print("✓ app.info.json correctly absent (hermetic builds don't use build_app_info.sh)")
+
+    # ============= Negative Tests (Things that should NOT exist) =============
+
+    def test_no_caddy_files(self):
+        """Test that Caddy-related files do NOT exist in hermetic image."""
+        print("\n=== Testing that Caddy files are absent ===")
+
+        # Caddyfile should not exist
+        caddyfile_exists = self._file_exists_in_image("/etc/caddy/Caddyfile")
+        assert not caddyfile_exists, "Caddyfile should not exist in hermetic image"
+
+        print("✓ Caddyfile correctly absent from hermetic image")
+
+
+    def test_no_nodejs_in_final_image(self):
+        """Test that Node.js is NOT present in final hermetic image."""
+        print("\n=== Testing that Node.js is absent from final image ===")
+
+        # Try to run node command - should fail
+        result = subprocess.run(
+            ["podman", "run", "--rm", self.IMAGE_NAME, "which", "node"],
+            capture_output=True
+        )
+        assert result.returncode != 0, "Node.js should not be present in final hermetic image"
+
+        print("✓ Node.js correctly absent from final hermetic image")
+
+    # ============= Image Metadata Tests =============
+
+    def test_red_hat_labels_present(self):
+        """Test that required Red Hat labels are present in the image."""
+        print("\n=== Testing Red Hat compliance labels ===")
+
+        labels = self._get_image_labels()
+        assert labels, "No labels found in image"
+
+        # Required Red Hat labels
+        required_labels = [
+            "com.redhat.component",
+            "description",
+            "distribution-scope",
+            "io.k8s.description",
+            "name",
+            "release",
+            "url",
+            "vendor",
+            "version",
+            "maintainer",
+            "summary"
+        ]
+
+        for label in required_labels:
+            assert label in labels, f"Required label '{label}' not found in image"
+            assert labels[label], f"Label '{label}' is empty"
+            print(f"  ✓ {label}: {labels[label][:50]}{'...' if len(labels[label]) > 50 else ''}")
+
+        print("✓ All required Red Hat labels are present")
+
+    def test_runs_as_non_root_user(self):
+        """Test that container runs as non-root user (1001)."""
+        print("\n=== Testing container user ===")
+
+        user = self._get_image_user()
+        assert user is not None, "Could not determine container user"
+        assert user == "1001", f"Expected user 1001, got {user}"
+
+        print(f"✓ Container runs as non-root user: {user}")
+
+    def test_image_user_id_at_runtime(self):
+        """Test that the container actually runs with UID 1001 at runtime."""
+        print("\n=== Testing runtime user ID ===")
+
+        result = subprocess.run(
+            ["podman", "run", "--rm", self.IMAGE_NAME, "id", "-u"],
+            capture_output=True,
+            text=True
+        )
+
+        assert result.returncode == 0, "Failed to get user ID from container"
+        uid = result.stdout.strip()
+        assert uid == "1001", f"Expected UID 1001, got {uid}"
+
+        print(f"✓ Container runs with UID: {uid}")
+
+    # ============= Build Process Tests =============
+
+    def test_offline_build_succeeds(self):
+        """Test that the hermetic build uses --offline flag successfully.
+
+        This is verified by the successful build in setup_class, which uses
+        npm ci --offline. This test just confirms the image was built.
+        """
+        print("\n=== Testing offline build ===")
+
+        # If we got here, the image was built successfully in setup_class
+        # using npm ci --offline, so the test passes
+        result = subprocess.run(
+            ["podman", "image", "exists", self.IMAGE_NAME],
+            capture_output=True
+        )
+
+        assert result.returncode == 0, "Hermetic image does not exist"
+        print("✓ Hermetic image built successfully with offline build")
+
+    def test_npm_ci_args_build_arg(self):
+        """Test that NPM_CI_ARGS build argument can be used.
+
+        NOTE: This test builds its own image with custom build args,
+        separate from the shared image used by other tests.
+        """
+        print("\n=== Testing NPM_CI_ARGS build argument ===")
+        print("Note: Building separate image with custom NPM_CI_ARGS...")
+
+        custom_image_name = "test-frontend-builder-hermetic-custom:test"
+
+        try:
+            # Build with custom NPM_CI_ARGS
+            build_args = {"NPM_CI_ARGS": "--legacy-peer-deps"}
+
+            # Temporarily use custom image name
+            original_name = self.__class__.IMAGE_NAME
+            self.__class__.IMAGE_NAME = custom_image_name
+            self._build_image(self.test_dir, build_args)
+
+            # Verify the image was built
+            result = subprocess.run(
+                ["podman", "image", "exists", custom_image_name],
+                capture_output=True
+            )
+            assert result.returncode == 0, "Custom hermetic image was not built"
+
+            print("✓ NPM_CI_ARGS build argument works correctly")
+
+        finally:
+            # Clean up the custom image
+            subprocess.run(
+                ["podman", "rmi", "-f", custom_image_name],
+                capture_output=True
+            )
+            # Restore original image name
+            self.__class__.IMAGE_NAME = original_name
+            print(f"✓ Cleaned up custom image {custom_image_name}")
+
+    # ============= Security Tests =============
+
+    def test_minimal_image_size(self):
+        """Test that hermetic image is reasonably small (using ubi-micro base)."""
+        print("\n=== Testing image size ===")
+
+        result = subprocess.run(
+            ["podman", "image", "inspect", self.IMAGE_NAME, "--format", "{{.Size}}"],
+            capture_output=True,
+            text=True
+        )
+
+        assert result.returncode == 0, "Failed to get image size"
+
+        # Size is in bytes
+        size_bytes = int(result.stdout.strip())
+        size_mb = size_bytes / (1024 * 1024)
+
+        print(f"Image size: {size_mb:.2f} MB")
+
+        # Hermetic images should be significantly smaller than the full Caddy image
+        # ubi-micro is very minimal, so even with node_modules and build artifacts,
+        # it should be under 500MB (this is a sanity check, not a hard limit)
+        assert size_mb < 500, f"Hermetic image seems too large: {size_mb:.2f} MB"
+
+        print(f"✓ Image size is reasonable: {size_mb:.2f} MB")
+
+    def test_read_only_filesystem_compatible(self):
+        """Test that the hermetic image can run with a read-only filesystem.
+
+        Since it's just static files, it should work with --read-only flag.
+        """
+        print("\n=== Testing read-only filesystem compatibility ===")
+
+        # Try to run container with read-only filesystem
+        result = subprocess.run(
+            ["podman", "run", "--rm", "--read-only", self.IMAGE_NAME, "ls", "/srv/dist"],
+            capture_output=True,
+            text=True
+        )
+
+        assert result.returncode == 0, "Container failed to run with read-only filesystem"
+        assert "index.html" in result.stdout, "Build artifacts not accessible with read-only FS"
+
+        print("✓ Container can run with read-only filesystem")
+
+
+if __name__ == "__main__":
+    pytest.main([__file__, "-v", "-s"])
