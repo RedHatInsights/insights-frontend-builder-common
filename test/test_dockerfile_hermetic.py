@@ -58,7 +58,7 @@ class TestDockerfileHermetic:
 
         # Remove copied Dockerfile
         cls._cleanup_test_env(cls.test_dir)
-        print(f"✓ Removed copied Dockerfile.hermetic")
+        print("✓ Removed copied Dockerfile.hermetic")
 
     @classmethod
     def _prepare_test_env(cls, test_dir, repo_root):
@@ -234,9 +234,9 @@ class TestDockerfileHermetic:
         assert css_exists, "css/app.css not found in /srv/dist"
         assert js_exists, "js/app.js not found in /srv/dist"
 
-        print(f"  ✓ css/app.css exists")
-        print(f"  ✓ js/app.js exists")
-        print(f"✓ /srv/dist directory contains all expected build artifacts")
+        print("  ✓ css/app.css exists")
+        print("  ✓ js/app.js exists")
+        print("✓ /srv/dist directory contains all expected build artifacts")
 
     def test_package_json_exists(self):
         """Test that package.json is copied to /srv."""
