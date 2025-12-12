@@ -103,11 +103,18 @@ class TestDockerfileFilesystem:
             subprocess.run(["rm", "-rf", build_tools_dest], check=True)
 
     @classmethod
-    def _build_image(cls, test_dir, build_args=None):
-        """Build Docker image with optional build args."""
+    def _build_image(cls, test_dir, build_args=None, image_name=None):
+        """Build Docker image with optional build args.
+
+        Args:
+            test_dir: Directory containing the Dockerfile
+            build_args: Optional dict of build arguments
+            image_name: Optional custom image name (defaults to cls.IMAGE_NAME)
+        """
+        target_image_name = image_name or cls.IMAGE_NAME
         build_cmd = [
             "podman", "build",
-            "-t", cls.IMAGE_NAME,
+            "-t", target_image_name,
             "-f", "build-tools/Dockerfile"
         ]
 
@@ -171,18 +178,30 @@ class TestDockerfileFilesystem:
         )
         return result.returncode == 0
 
-    def _file_exists_in_image(self, file_path):
-        """Check if a file exists in the container (using create instead of run)."""
+    def _file_exists_in_image(self, file_path, image_name=None):
+        """Check if a file exists in the container (using create instead of run).
+
+        Args:
+            file_path: Path to check in the image
+            image_name: Optional custom image name (defaults to self.IMAGE_NAME)
+        """
+        target_image_name = image_name or self.IMAGE_NAME
         result = subprocess.run(
-            ["podman", "run", "--rm", self.IMAGE_NAME, "test", "-e", file_path],
+            ["podman", "run", "--rm", target_image_name, "test", "-e", file_path],
             capture_output=True
         )
         return result.returncode == 0
 
-    def _read_file_from_image(self, file_path):
-        """Read a file from the image."""
+    def _read_file_from_image(self, file_path, image_name=None):
+        """Read a file from the image.
+
+        Args:
+            file_path: Path to read in the image
+            image_name: Optional custom image name (defaults to self.IMAGE_NAME)
+        """
+        target_image_name = image_name or self.IMAGE_NAME
         result = subprocess.run(
-            ["podman", "run", "--rm", self.IMAGE_NAME, "cat", file_path],
+            ["podman", "run", "--rm", target_image_name, "cat", file_path],
             capture_output=True,
             text=True
         )
@@ -190,10 +209,16 @@ class TestDockerfileFilesystem:
             return None
         return result.stdout
 
-    def _list_directory_in_image(self, dir_path):
-        """List files in a directory in the image."""
+    def _list_directory_in_image(self, dir_path, image_name=None):
+        """List files in a directory in the image.
+
+        Args:
+            dir_path: Directory path to list in the image
+            image_name: Optional custom image name (defaults to self.IMAGE_NAME)
+        """
+        target_image_name = image_name or self.IMAGE_NAME
         result = subprocess.run(
-            ["podman", "run", "--rm", self.IMAGE_NAME, "ls", "-la", dir_path],
+            ["podman", "run", "--rm", target_image_name, "ls", "-la", dir_path],
             capture_output=True,
             text=True
         )
@@ -369,10 +394,8 @@ class TestDockerfileFilesystem:
             custom_dir = "custom-output"
             build_args = {"APP_BUILD_DIR": custom_dir}
 
-            # Temporarily use custom image name for this build
-            original_name = self.__class__.IMAGE_NAME
-            self.__class__.IMAGE_NAME = custom_image_name
-            self._build_image(self.test_dir, build_args)
+            # Build with custom image name (no class mutation!)
+            self._build_image(self.test_dir, build_args, image_name=custom_image_name)
 
             # The Dockerfile copies ${APP_BUILD_DIR} to "dist" in the final image
             # So regardless of APP_BUILD_DIR name, it should end up as "dist" in final image
@@ -399,8 +422,6 @@ class TestDockerfileFilesystem:
                 ["podman", "rmi", "-f", custom_image_name],
                 capture_output=True
             )
-            # Restore original image name
-            self.__class__.IMAGE_NAME = original_name
             print(f"✓ Cleaned up custom image {custom_image_name}")
 
 

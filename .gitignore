@@ -157,4 +157,6 @@ tags
 __pycache__
 .pytest_cache
 
+.DS_Store
+
 # End of https://www.toptal.com/developers/gitignore/api/vim,visualstudiocode,jetbrains

@@ -85,12 +85,23 @@ class TestDockerfileHermetic:
             subprocess.run(["rm", "-f", dockerfile_dest], check=True)
 
     @classmethod
-    def _build_image(cls, test_dir, build_args=None):
-        """Build Docker image with optional build args."""
+    def _build_image(cls, test_dir, build_args=None, image_name=None):
+        """Build Docker image with optional build args.
+
+        Enforces offline/hermetic build by disabling network access during build.
+
+        Args:
+            test_dir: Directory containing the Dockerfile
+            build_args: Optional dict of build arguments
+            image_name: Optional custom image name (defaults to cls.IMAGE_NAME)
+        """
+        target_image_name = image_name or cls.IMAGE_NAME
+
         build_cmd = [
             "podman", "build",
-            "-t", cls.IMAGE_NAME,
-            "-f", "Dockerfile.hermetic"
+            "-t", target_image_name,
+            "-f", "Dockerfile.hermetic",
+            "--network=none"  # Enforce offline/hermetic build
         ]
 
         # Add build args if provided
@@ -100,12 +111,24 @@ class TestDockerfileHermetic:
 
         build_cmd.append(".")
 
-        result = subprocess.run(
-            build_cmd,
-            cwd=test_dir,
-            capture_output=True,
-            text=True
-        )
+        try:
+            result = subprocess.run(
+                build_cmd,
+                cwd=test_dir,
+                capture_output=True,
+                text=True,
+                timeout=300  # 5 minute timeout for build
+            )
+        except subprocess.TimeoutExpired as e:
+            # Provide clear error message with available output
+            stdout = e.stdout.decode() if e.stdout else "No stdout"
+            stderr = e.stderr.decode() if e.stderr else "No stderr"
+            pytest.fail(
+                "Hermetic Docker build exceeded 5 minute timeout.\n"
+                "This may indicate the build is hanging or trying to access network.\n"
+                f"STDOUT:\n{stdout}\n\n"
+                f"STDERR:\n{stderr}"
+            )
 
         if result.returncode != 0:
             print("STDOUT:", result.stdout)
@@ -114,18 +137,30 @@ class TestDockerfileHermetic:
 
         return result
 
-    def _file_exists_in_image(self, file_path):
-        """Check if a file exists in the image."""
+    def _file_exists_in_image(self, file_path, image_name=None):
+        """Check if a file exists in the image.
+
+        Args:
+            file_path: Path to check in the image
+            image_name: Optional custom image name (defaults to self.IMAGE_NAME)
+        """
+        target_image_name = image_name or self.IMAGE_NAME
         result = subprocess.run(
-            ["podman", "run", "--rm", self.IMAGE_NAME, "test", "-e", file_path],
+            ["podman", "run", "--rm", target_image_name, "test", "-e", file_path],
             capture_output=True
         )
         return result.returncode == 0
 
-    def _read_file_from_image(self, file_path):
-        """Read a file from the image."""
+    def _read_file_from_image(self, file_path, image_name=None):
+        """Read a file from the image.
+
+        Args:
+            file_path: Path to read in the image
+            image_name: Optional custom image name (defaults to self.IMAGE_NAME)
+        """
+        target_image_name = image_name or self.IMAGE_NAME
         result = subprocess.run(
-            ["podman", "run", "--rm", self.IMAGE_NAME, "cat", file_path],
+            ["podman", "run", "--rm", target_image_name, "cat", file_path],
             capture_output=True,
             text=True
         )
@@ -133,10 +168,16 @@ class TestDockerfileHermetic:
             return None
         return result.stdout
 
-    def _list_directory_in_image(self, dir_path):
-        """List files in a directory in the image."""
+    def _list_directory_in_image(self, dir_path, image_name=None):
+        """List files in a directory in the image.
+
+        Args:
+            dir_path: Directory path to list in the image
+            image_name: Optional custom image name (defaults to self.IMAGE_NAME)
+        """
+        target_image_name = image_name or self.IMAGE_NAME
         result = subprocess.run(
-            ["podman", "run", "--rm", self.IMAGE_NAME, "ls", "-la", dir_path],
+            ["podman", "run", "--rm", target_image_name, "ls", "-la", dir_path],
             capture_output=True,
             text=True
         )
@@ -144,10 +185,20 @@ class TestDockerfileHermetic:
             return None
         return result.stdout
 
-    def _get_image_labels(self):
-        """Get labels from the Docker image."""
+    def _get_image_labels(self, image_name=None):
+        """Get labels from the Docker image.
+
+        Labels can be stored in different locations depending on Podman/Docker version
+        and whether inspecting an image or container:
+        - data[0]["Labels"] (older format or containers)
+        - data[0]["Config"]["Labels"] (newer format for images)
+
+        Args:
+            image_name: Optional custom image name (defaults to self.IMAGE_NAME)
+        """
+        target_image_name = image_name or self.IMAGE_NAME
         result = subprocess.run(
-            ["podman", "inspect", self.IMAGE_NAME],
+            ["podman", "inspect", target_image_name],
             capture_output=True,
             text=True
         )
@@ -156,16 +207,31 @@ class TestDockerfileHermetic:
 
         try:
             data = json.loads(result.stdout)
-            if data and len(data) > 0:
-                return data[0].get("Labels", {})
+            if not data or len(data) == 0:
+                return {}
+
+            # Try root-level Labels first (containers, older format)
+            if "Labels" in data[0] and data[0]["Labels"]:
+                return data[0]["Labels"]
+
+            # Fall back to Config.Labels (images, newer format)
+            return data[0].get("Config", {}).get("Labels", {})
+
         except (json.JSONDecodeError, KeyError, IndexError):
             return {}
-        return {}
+        except Exception:
+            # Catch any other unexpected errors
+            return {}
 
-    def _get_image_user(self):
-        """Get the user the container runs as."""
+    def _get_image_user(self, image_name=None):
+        """Get the user the container runs as.
+
+        Args:
+            image_name: Optional custom image name (defaults to self.IMAGE_NAME)
+        """
+        target_image_name = image_name or self.IMAGE_NAME
         result = subprocess.run(
-            ["podman", "inspect", self.IMAGE_NAME],
+            ["podman", "inspect", target_image_name],
             capture_output=True,
             text=True
         )
@@ -304,10 +370,12 @@ class TestDockerfileHermetic:
         """Test that Node.js is NOT present in final hermetic image."""
         print("\n=== Testing that Node.js is absent from final image ===")
 
-        # Try to run node command - should fail
+        # Try to run node command directly - should fail if node is absent
+        # Note: ubi-micro doesn't have 'which', so we try to execute node directly
         result = subprocess.run(
-            ["podman", "run", "--rm", self.IMAGE_NAME, "which", "node"],
-            capture_output=True
+            ["podman", "run", "--rm", self.IMAGE_NAME, "node", "--version"],
+            capture_output=True,
+            text=True
         )
         assert result.returncode != 0, "Node.js should not be present in final hermetic image"
 
@@ -405,10 +473,8 @@ class TestDockerfileHermetic:
             # Build with custom NPM_CI_ARGS
             build_args = {"NPM_CI_ARGS": "--legacy-peer-deps"}
 
-            # Temporarily use custom image name
-            original_name = self.__class__.IMAGE_NAME
-            self.__class__.IMAGE_NAME = custom_image_name
-            self._build_image(self.test_dir, build_args)
+            # Build with custom image name (no class mutation!)
+            self._build_image(self.test_dir, build_args, image_name=custom_image_name)
 
             # Verify the image was built
             result = subprocess.run(
@@ -425,8 +491,6 @@ class TestDockerfileHermetic:
                 ["podman", "rmi", "-f", custom_image_name],
                 capture_output=True
             )
-            # Restore original image name
-            self.__class__.IMAGE_NAME = original_name
             print(f"✓ Cleaned up custom image {custom_image_name}")
 
     # ============= Security Tests =============
@@ -460,20 +524,23 @@ class TestDockerfileHermetic:
         """Test that the hermetic image can run with a read-only filesystem.
 
         Since it's just static files, it should work with --read-only flag.
+        Tests that files are actually readable, not just listable.
         """
         print("\n=== Testing read-only filesystem compatibility ===")
 
-        # Try to run container with read-only filesystem
+        # Try to read a file with read-only filesystem (stronger test than just ls)
         result = subprocess.run(
-            ["podman", "run", "--rm", "--read-only", self.IMAGE_NAME, "ls", "/srv/dist"],
+            ["podman", "run", "--rm", "--read-only", self.IMAGE_NAME, "cat", "/srv/dist/index.html"],
             capture_output=True,
             text=True
         )
 
         assert result.returncode == 0, "Container failed to run with read-only filesystem"
-        assert "index.html" in result.stdout, "Build artifacts not accessible with read-only FS"
+        assert "<!DOCTYPE" in result.stdout or "<html" in result.stdout.lower(), \
+            "Build artifacts not readable with read-only FS - expected HTML content"
 
         print("✓ Container can run with read-only filesystem")
+        print("✓ Files are readable (not just listable) in read-only mode")
 
 
 if __name__ == "__main__":
