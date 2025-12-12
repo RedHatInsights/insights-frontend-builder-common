@@ -253,13 +253,15 @@ class TestDockerfileEnvVars:
             self._cleanup_container_and_image()
             self._cleanup_test_env(test_dir)
 
-    def test_sentry_build_args_affect_build(self):
-        """Test that Sentry-related build args are used during build.
+    def test_build_args_accepted(self):
+        """Test that various build-time arguments are accepted and don't break the build.
 
-        Note: Sentry variables are only available in the builder stage,
+        Tests multiple build args: ENABLE_SENTRY, SENTRY_RELEASE, and USES_YARN.
+
+        Note: These variables are only available in the builder stage,
         not in the final runtime container due to multi-stage build.
         """
-        print("\n=== Testing Sentry build arguments ===")
+        print("\n=== Testing build-time arguments ===")
 
         test_script_dir = os.path.dirname(__file__)
         repo_root = os.path.abspath(os.path.join(test_script_dir, ".."))
@@ -269,55 +271,25 @@ class TestDockerfileEnvVars:
             # Prepare environment
             self._prepare_test_env(test_dir, repo_root)
 
-            # Build with Sentry variables
+            # Build with multiple build args: Sentry + USES_YARN
             build_args = {
                 "ENABLE_SENTRY": "true",
-                "SENTRY_RELEASE": "test-release-123"
+                "SENTRY_RELEASE": "test-release-123",
+                "USES_YARN": "false"
             }
 
-            print("Building with Sentry build args")
+            print("Building with multiple build args: ENABLE_SENTRY, SENTRY_RELEASE, USES_YARN")
             result = self._build_image(test_dir, build_args)
 
             # Verify the build completed successfully
-            # (Sentry variables would affect the build process if used)
-            assert "test-frontend-builder-envs:test" in result.stdout or \
-                   result.returncode == 0, \
-                "Build failed with Sentry arguments"
+            assert result.returncode == 0, \
+                "Build failed with build arguments"
 
-            print("✓ Build completed successfully with Sentry build args")
-            print("  (Note: Sentry vars are build-time only, not available at runtime)")
-
-        finally:
-            self._cleanup_container_and_image()
-            self._cleanup_test_env(test_dir)
-
-    def test_uses_yarn_build_arg(self):
-        """Test that USES_YARN build arg affects the build process.
-
-        Note: USES_YARN is only available in the builder stage,
-        not in the final runtime container due to multi-stage build.
-        """
-        print("\n=== Testing USES_YARN build argument ===")
-
-        test_script_dir = os.path.dirname(__file__)
-        repo_root = os.path.abspath(os.path.join(test_script_dir, ".."))
-        test_dir = os.path.join(test_script_dir, "test-fixtures", "fake-app")
-
-        try:
-            # Prepare environment
-            self._prepare_test_env(test_dir, repo_root)
-
-            # Build with USES_YARN=false (using npm, which is the default for fake-app)
-            build_args = {"USES_YARN": "false"}
-
-            print("Building with USES_YARN=false")
-            result = self._build_image(test_dir, build_args)
-
-            # Verify build completed
-            assert result.returncode == 0, "Build failed with USES_YARN argument"
-
-            print("✓ Build completed successfully with USES_YARN build arg")
-            print("  (Note: USES_YARN is build-time only, not available at runtime)")
+            print("✓ Build completed successfully with all build args")
+            print("  - ENABLE_SENTRY=true")
+            print("  - SENTRY_RELEASE=test-release-123")
+            print("  - USES_YARN=false")
+            print("  (Note: Build-time vars are not available at runtime)")
 
         finally:
             self._cleanup_container_and_image()
