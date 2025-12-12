@@ -6,6 +6,7 @@ on:
       - master
     paths:
       - 'Dockerfile'
+      - 'Dockerfile.hermetic'
       - '*.sh'
       - 'test/**'
       - '.github/workflows/test-dockerfile.yml'
@@ -14,6 +15,7 @@ on:
       - master
     paths:
       - 'Dockerfile'
+      - 'Dockerfile.hermetic'
       - '*.sh'
       - 'test/**'
       - '.github/workflows/test-dockerfile.yml'
@@ -74,6 +76,12 @@ jobs:
         run: |
           cd test
           pytest test_dockerfile_filesystem.py -v --tb=short
+        timeout-minutes: 15
+
+      - name: Run Hermetic Dockerfile Tests
+        run: |
+          cd test
+          pytest test_dockerfile_hermetic.py -v --tb=short
         timeout-minutes: 15
 
       - name: Cleanup test artifacts
