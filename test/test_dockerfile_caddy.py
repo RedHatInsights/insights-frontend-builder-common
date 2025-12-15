@@ -8,12 +8,13 @@ This test suite verifies that:
 4. The proper file structure is maintained
 """
 
+import json
+import os
 import subprocess
 import time
-import requests
+
 import pytest
-import os
-import json
+import requests
 
 
 class TestDockerfileCaddy:
@@ -47,7 +48,7 @@ class TestDockerfileCaddy:
         dockerfile_src = os.path.join(repo_root, "Dockerfile")
         dockerfile_dest = os.path.join(build_tools_dest, "Dockerfile")
         subprocess.run(["cp", dockerfile_src, dockerfile_dest], check=True)
-        print(f"✓ Copied Dockerfile to build-tools/")
+        print("✓ Copied Dockerfile to build-tools/")
 
         # Copy all build scripts to build-tools/
         scripts = [
@@ -60,7 +61,7 @@ class TestDockerfileCaddy:
             src = os.path.join(repo_root, script)
             dest = os.path.join(build_tools_dest, script)
             subprocess.run(["cp", src, dest], check=True)
-        print(f"✓ Copied build scripts to build-tools/")
+        print("✓ Copied build scripts to build-tools/")
 
         # Initialize git repository if it doesn't exist (required by build scripts)
         git_dir = os.path.join(test_dir, ".git")
@@ -84,12 +85,21 @@ class TestDockerfileCaddy:
             "."
         ]
 
-        result = subprocess.run(
-            build_cmd,
-            cwd=test_dir,
-            capture_output=True,
-            text=True
-        )
+        try:
+            result = subprocess.run(
+                build_cmd,
+                cwd=test_dir,
+                capture_output=True,
+                text=True,
+                timeout=300
+            )
+        except subprocess.TimeoutExpired as e:
+            # Since text=True, stdout/stderr are already strings, not bytes
+            stdout = e.stdout if e.stdout else ""
+            stderr = e.stderr if e.stderr else ""
+            print("STDOUT:", stdout)
+            print("STDERR:", stderr)
+            pytest.fail(f"Docker build timed out after 300 seconds.\nSTDOUT: {stdout}\nSTDERR: {stderr}")
 
         if result.returncode != 0:
             print("STDOUT:", result.stdout)
@@ -117,7 +127,7 @@ class TestDockerfileCaddy:
 
         if os.path.exists(build_tools_dest):
             subprocess.run(["rm", "-rf", build_tools_dest], check=True)
-            print(f"✓ Removed copied build-tools directory")
+            print("✓ Removed copied build-tools directory")
 
     def setup_method(self):
         """Start the container before each test."""

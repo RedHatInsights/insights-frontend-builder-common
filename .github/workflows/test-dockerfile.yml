@@ -60,6 +60,11 @@ jobs:
           git config --global user.email "ci@github.actions"
           git config --global user.name "GitHub Actions CI"
 
+      - name: Run ruff check
+        run: |
+          cd test
+          ruff check .
+
       - name: Run Caddy Server Tests
         run: |
           cd test

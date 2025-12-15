@@ -12,10 +12,11 @@ This test suite verifies that:
 8. Minimal image contains only necessary components (no Caddy)
 """
 
-import subprocess
-import pytest
-import os
 import json
+import os
+import subprocess
+
+import pytest
 
 
 class TestDockerfileHermetic:
@@ -121,8 +122,9 @@ class TestDockerfileHermetic:
             )
         except subprocess.TimeoutExpired as e:
             # Provide clear error message with available output
-            stdout = e.stdout.decode() if e.stdout else "No stdout"
-            stderr = e.stderr.decode() if e.stderr else "No stderr"
+            # Since text=True, stdout/stderr are already strings, not bytes
+            stdout = e.stdout if e.stdout else "No stdout"
+            stderr = e.stderr if e.stderr else "No stderr"
             pytest.fail(
                 "Hermetic Docker build exceeded 5 minute timeout.\n"
                 "This may indicate the build is hanging or trying to access network.\n"
@@ -319,7 +321,7 @@ class TestDockerfileHermetic:
         try:
             data = json.loads(package_json_content)
             assert data.get("insights", {}).get("appname") == "test-app", \
-                f"package.json doesn't contain expected appname"
+                "package.json doesn't contain expected appname"
             print(f"✓ package.json found at {package_json_path} with correct content")
         except json.JSONDecodeError:
             pytest.fail("package.json is not valid JSON")

@@ -9,10 +9,11 @@ This test suite verifies that:
 5. Directory structure matches expectations
 """
 
-import subprocess
-import pytest
-import os
 import json
+import os
+import subprocess
+
+import pytest
 
 
 class TestDockerfileFilesystem:
@@ -55,7 +56,7 @@ class TestDockerfileFilesystem:
 
         # Remove copied build-tools directory
         cls._cleanup_test_env(cls.test_dir)
-        print(f"✓ Removed copied build-tools directory")
+        print("✓ Removed copied build-tools directory")
 
     @classmethod
     def _prepare_test_env(cls, test_dir, repo_root):
@@ -125,12 +126,21 @@ class TestDockerfileFilesystem:
 
         build_cmd.append(".")
 
-        result = subprocess.run(
-            build_cmd,
-            cwd=test_dir,
-            capture_output=True,
-            text=True
-        )
+        try:
+            result = subprocess.run(
+                build_cmd,
+                cwd=test_dir,
+                capture_output=True,
+                text=True,
+                timeout=300
+            )
+        except subprocess.TimeoutExpired as e:
+            # Since text=True, stdout/stderr are already strings, not bytes
+            stdout = e.stdout if e.stdout else ""
+            stderr = e.stderr if e.stderr else ""
+            print("STDOUT:", stdout)
+            print("STDERR:", stderr)
+            pytest.fail(f"Docker build timed out after 300 seconds.\nSTDOUT: {stdout}\nSTDERR: {stderr}")
 
         if result.returncode != 0:
             print("STDOUT:", result.stdout)
@@ -274,7 +284,7 @@ class TestDockerfileFilesystem:
                     try:
                         data = json.loads(package_json_content)
                         assert data.get("insights", {}).get("appname") == "test-app", \
-                            f"package.json doesn't contain expected appname"
+                            "package.json doesn't contain expected appname"
                         print(f"✓ package.json found at {path} with correct content")
                         package_json_found = True
                         break
@@ -312,14 +322,14 @@ class TestDockerfileFilesystem:
                 assert css_exists, f"css/app.css not found in {dist_path}"
                 assert js_exists, f"js/app.js not found in {dist_path}"
 
-                print(f"  ✓ css/app.css exists")
-                print(f"  ✓ js/app.js exists")
+                print("  ✓ css/app.css exists")
+                print("  ✓ js/app.js exists")
 
                 dist_found = True
                 break
 
         assert dist_found, f"dist directory not found at any of: {dist_paths}"
-        print(f"✓ dist directory contains all expected build artifacts")
+        print("✓ dist directory contains all expected build artifacts")
 
     def test_app_info_json_content(self):
         """Test that app.info.json is generated with correct content."""

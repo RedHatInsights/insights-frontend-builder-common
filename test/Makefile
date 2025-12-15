@@ -1,4 +1,4 @@
-.PHONY: help install test test-caddy test-env test-fs test-verbose clean
+.PHONY: help install test test-caddy test-env test-fs test-verbose lint clean
 
 help:
 	@echo "Available targets:"
@@ -8,6 +8,7 @@ help:
 	@echo "  test-env      - Run only environment variable tests"
 	@echo "  test-fs       - Run only filesystem structure tests"
 	@echo "  test-verbose  - Run tests with verbose output"
+	@echo "  lint          - Run ruff check on test code"
 	@echo "  clean         - Remove test artifacts and containers"
 
 install:
@@ -27,6 +28,9 @@ test-fs:
 
 test-verbose:
 	pytest -v -s
+
+lint:
+	ruff check .
 
 clean:
 	-podman rm -f test-frontend-container test-envs-container test-fs-container

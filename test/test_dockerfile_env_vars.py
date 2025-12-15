@@ -10,12 +10,13 @@ This test suite verifies that:
 6. ENV_PUBLIC_PATH affects Caddy routing correctly
 """
 
-import subprocess
-import time
-import requests
-import pytest
 import os
 import shutil
+import subprocess
+import time
+
+import pytest
+import requests
 
 
 class TestDockerfileEnvVars:
@@ -87,12 +88,21 @@ class TestDockerfileEnvVars:
 
         build_cmd.append(".")
 
-        result = subprocess.run(
-            build_cmd,
-            cwd=test_dir,
-            capture_output=True,
-            text=True
-        )
+        try:
+            result = subprocess.run(
+                build_cmd,
+                cwd=test_dir,
+                capture_output=True,
+                text=True,
+                timeout=300
+            )
+        except subprocess.TimeoutExpired as e:
+            # Since text=True, stdout/stderr are already strings, not bytes
+            stdout = e.stdout if e.stdout else ""
+            stderr = e.stderr if e.stderr else ""
+            print("STDOUT:", stdout)
+            print("STDERR:", stderr)
+            pytest.fail(f"Docker build timed out after 300 seconds.\nSTDOUT: {stdout}\nSTDERR: {stderr}")
 
         if result.returncode != 0:
             print("STDOUT:", result.stdout)
@@ -238,7 +248,7 @@ class TestDockerfileEnvVars:
 
             # Should either serve files or redirect, but not 404
             assert response.status_code != 404, \
-                f"Custom ENV_PUBLIC_PATH route returned 404"
+                "Custom ENV_PUBLIC_PATH route returned 404"
 
             print(f"✓ ENV_PUBLIC_PATH={custom_path} is accessible")
 
@@ -322,8 +332,10 @@ class TestDockerfileEnvVars:
 
             assert env_public_path == "/default", \
                 f"Expected default ENV_PUBLIC_PATH=/default, got {env_public_path}"
-            assert "http_port" in caddy_tls_mode and "8000" in caddy_tls_mode, \
-                f"Expected CADDY_TLS_MODE to contain 'http_port 8000', got {caddy_tls_mode}"
+            assert "http_port" in caddy_tls_mode, \
+                f"Expected CADDY_TLS_MODE to contain 'http_port', got {caddy_tls_mode}"
+            assert "8000" in caddy_tls_mode, \
+                f"Expected CADDY_TLS_MODE to contain '8000', got {caddy_tls_mode}"
 
             print("✓ All default runtime environment variables are correctly set")
 
