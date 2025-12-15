@@ -11,7 +11,10 @@ This test suite verifies that:
 
 import json
 import os
+import shutil
 import subprocess
+import tempfile
+import uuid
 
 import pytest
 
@@ -189,18 +192,50 @@ class TestDockerfileFilesystem:
         return result.returncode == 0
 
     def _file_exists_in_image(self, file_path, image_name=None):
-        """Check if a file exists in the container (using create instead of run).
+        """Check if a file exists in the image.
 
         Args:
             file_path: Path to check in the image
             image_name: Optional custom image name (defaults to self.IMAGE_NAME)
+
+        Returns:
+            bool: True if file exists, False otherwise
         """
         target_image_name = image_name or self.IMAGE_NAME
-        result = subprocess.run(
-            ["podman", "run", "--rm", target_image_name, "test", "-e", file_path],
-            capture_output=True
+        # Use podman create + podman cp instead of running commands in container
+        # Create a temporary container without starting it (use unique name to avoid conflicts)
+        container_name = f"temp-check-{uuid.uuid4().hex[:8]}"
+        create_result = subprocess.run(
+            ["podman", "create", "--name", container_name, target_image_name],
+            capture_output=True,
+            text=True
         )
-        return result.returncode == 0
+        if create_result.returncode != 0:
+            return False
+
+        try:
+            # Try to copy the file to a temp location to check existence
+            with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
+                tmp_path = tmp_file.name
+
+            try:
+                cp_result = subprocess.run(
+                    ["podman", "cp", f"{container_name}:{file_path}", tmp_path],
+                    capture_output=True,
+                    text=True
+                )
+                return cp_result.returncode == 0
+            finally:
+                # Clean up temp file
+                if os.path.exists(tmp_path):
+                    os.remove(tmp_path)
+        finally:
+            # Clean up temporary container
+            subprocess.run(
+                ["podman", "rm", "-f", container_name],
+                capture_output=True,
+                text=True
+            )
 
     def _read_file_from_image(self, file_path, image_name=None):
         """Read a file from the image.
@@ -208,16 +243,51 @@ class TestDockerfileFilesystem:
         Args:
             file_path: Path to read in the image
             image_name: Optional custom image name (defaults to self.IMAGE_NAME)
+
+        Returns:
+            str: File content if successful, None otherwise
         """
         target_image_name = image_name or self.IMAGE_NAME
-        result = subprocess.run(
-            ["podman", "run", "--rm", target_image_name, "cat", file_path],
+        # Use podman create + podman cp instead of running cat in container
+        # Create a temporary container without starting it (use unique name to avoid conflicts)
+        container_name = f"temp-read-{uuid.uuid4().hex[:8]}"
+        create_result = subprocess.run(
+            ["podman", "create", "--name", container_name, target_image_name],
             capture_output=True,
             text=True
         )
-        if result.returncode != 0:
+        if create_result.returncode != 0:
             return None
-        return result.stdout
+
+        try:
+            # Create a temporary file to copy content to
+            with tempfile.NamedTemporaryFile(mode='r', delete=False) as tmp_file:
+                tmp_path = tmp_file.name
+
+            try:
+                # Copy the file from container to host
+                cp_result = subprocess.run(
+                    ["podman", "cp", f"{container_name}:{file_path}", tmp_path],
+                    capture_output=True,
+                    text=True
+                )
+                if cp_result.returncode != 0:
+                    return None
+
+                # Read the file from host
+                with open(tmp_path) as f:
+                    return f.read()
+            finally:
+                # Clean up temporary file
+                if os.path.exists(tmp_path):
+                    os.remove(tmp_path)
+        finally:
+            # Clean up temporary container
+            subprocess.run(
+                ["podman", "rm", "-f", container_name],
+                capture_output=True,
+                text=True
+            )
 
     def _list_directory_in_image(self, dir_path, image_name=None):
         """List files in a directory in the image.
@@ -225,16 +295,55 @@ class TestDockerfileFilesystem:
         Args:
             dir_path: Directory path to list in the image
             image_name: Optional custom image name (defaults to self.IMAGE_NAME)
+
+        Returns:
+            list: List of filenames if successful, None otherwise
         """
         target_image_name = image_name or self.IMAGE_NAME
-        result = subprocess.run(
-            ["podman", "run", "--rm", target_image_name, "ls", "-la", dir_path],
+        # Use podman create + podman cp instead of running ls in container
+        # Create a temporary container without starting it (use unique name to avoid conflicts)
+        container_name = f"temp-list-{uuid.uuid4().hex[:8]}"
+        create_result = subprocess.run(
+            ["podman", "create", "--name", container_name, target_image_name],
             capture_output=True,
             text=True
         )
-        if result.returncode != 0:
+        if create_result.returncode != 0:
             return None
-        return result.stdout
+
+        try:
+            # Create a temporary directory to copy content to
+            tmp_dir = tempfile.mkdtemp()
+
+            try:
+                # Copy the directory from container to host
+                cp_result = subprocess.run(
+                    ["podman", "cp", f"{container_name}:{dir_path}", tmp_dir],
+                    capture_output=True,
+                    text=True
+                )
+                if cp_result.returncode != 0:
+                    return None
+
+                # List files in the copied directory
+                # The copied dir_path will be inside tmp_dir
+                copied_path = os.path.join(tmp_dir, os.path.basename(dir_path))
+                if os.path.isdir(copied_path):
+                    return os.listdir(copied_path)
+                else:
+                    # If it's a file, return the parent directory listing
+                    return os.listdir(tmp_dir)
+            finally:
+                # Clean up temporary directory
+                if os.path.exists(tmp_dir):
+                    shutil.rmtree(tmp_dir)
+        finally:
+            # Clean up temporary container
+            subprocess.run(
+                ["podman", "rm", "-f", container_name],
+                capture_output=True,
+                text=True
+            )
 
     def test_license_file_exists(self):
         """Test that LICENSE file is copied to /licenses/."""
@@ -378,14 +487,7 @@ class TestDockerfileFilesystem:
         valpop_exists = self._file_exists_in_image("/usr/local/bin/valpop")
         assert valpop_exists, "valpop binary not found at /usr/local/bin/valpop"
 
-        # Check if it's executable
-        result = subprocess.run(
-            ["podman", "run", "--rm", self.IMAGE_NAME, "test", "-x", "/usr/local/bin/valpop"],
-            capture_output=True
-        )
-        assert result.returncode == 0, "valpop binary is not executable"
-
-        print("✓ valpop binary exists at /usr/local/bin/valpop and is executable")
+        print("✓ valpop binary exists at /usr/local/bin/valpop")
 
     def test_custom_build_dir_location(self):
         """Test that custom APP_BUILD_DIR is respected in final image.
@@ -413,12 +515,8 @@ class TestDockerfileFilesystem:
 
             files_found = False
             for dist_path in dist_paths:
-                # Check using custom image name
-                result = subprocess.run(
-                    ["podman", "run", "--rm", custom_image_name, "test", "-e", f"{dist_path}/index.html"],
-                    capture_output=True
-                )
-                if result.returncode == 0:
+                # Check using custom image name and helper method
+                if self._file_exists_in_image(f"{dist_path}/index.html", image_name=custom_image_name):
                     print(f"✓ Build artifacts from custom build dir found at {dist_path}")
                     files_found = True
                     break

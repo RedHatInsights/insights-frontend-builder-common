@@ -14,7 +14,10 @@ This test suite verifies that:
 
 import json
 import os
+import shutil
 import subprocess
+import tempfile
+import uuid
 
 import pytest
 
@@ -145,13 +148,45 @@ class TestDockerfileHermetic:
         Args:
             file_path: Path to check in the image
             image_name: Optional custom image name (defaults to self.IMAGE_NAME)
+
+        Returns:
+            bool: True if file exists, False otherwise
         """
         target_image_name = image_name or self.IMAGE_NAME
-        result = subprocess.run(
-            ["podman", "run", "--rm", target_image_name, "test", "-e", file_path],
-            capture_output=True
+        # Use podman create + podman cp instead of running commands in minimal image
+        # Create a temporary container without starting it (use unique name to avoid conflicts)
+        container_name = f"temp-check-{uuid.uuid4().hex[:8]}"
+        create_result = subprocess.run(
+            ["podman", "create", "--name", container_name, target_image_name],
+            capture_output=True,
+            text=True
         )
-        return result.returncode == 0
+        if create_result.returncode != 0:
+            return False
+
+        try:
+            # Try to copy the file to a temp location to check existence
+            with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
+                tmp_path = tmp_file.name
+
+            try:
+                cp_result = subprocess.run(
+                    ["podman", "cp", f"{container_name}:{file_path}", tmp_path],
+                    capture_output=True,
+                    text=True
+                )
+                return cp_result.returncode == 0
+            finally:
+                # Clean up temp file
+                if os.path.exists(tmp_path):
+                    os.remove(tmp_path)
+        finally:
+            # Clean up temporary container
+            subprocess.run(
+                ["podman", "rm", "-f", container_name],
+                capture_output=True,
+                text=True
+            )
 
     def _read_file_from_image(self, file_path, image_name=None):
         """Read a file from the image.
@@ -159,16 +194,51 @@ class TestDockerfileHermetic:
         Args:
             file_path: Path to read in the image
             image_name: Optional custom image name (defaults to self.IMAGE_NAME)
+
+        Returns:
+            str: File content if successful, None otherwise
         """
         target_image_name = image_name or self.IMAGE_NAME
-        result = subprocess.run(
-            ["podman", "run", "--rm", target_image_name, "cat", file_path],
+        # Use podman create + podman cp instead of running cat in minimal image
+        # Create a temporary container without starting it (use unique name to avoid conflicts)
+        container_name = f"temp-read-{uuid.uuid4().hex[:8]}"
+        create_result = subprocess.run(
+            ["podman", "create", "--name", container_name, target_image_name],
             capture_output=True,
             text=True
         )
-        if result.returncode != 0:
+        if create_result.returncode != 0:
             return None
-        return result.stdout
+
+        try:
+            # Create a temporary file to copy content to
+            with tempfile.NamedTemporaryFile(mode='r', delete=False) as tmp_file:
+                tmp_path = tmp_file.name
+
+            try:
+                # Copy the file from container to host
+                cp_result = subprocess.run(
+                    ["podman", "cp", f"{container_name}:{file_path}", tmp_path],
+                    capture_output=True,
+                    text=True
+                )
+                if cp_result.returncode != 0:
+                    return None
+
+                # Read the file from host
+                with open(tmp_path) as f:
+                    return f.read()
+            finally:
+                # Clean up temporary file
+                if os.path.exists(tmp_path):
+                    os.remove(tmp_path)
+        finally:
+            # Clean up temporary container
+            subprocess.run(
+                ["podman", "rm", "-f", container_name],
+                capture_output=True,
+                text=True
+            )
 
     def _list_directory_in_image(self, dir_path, image_name=None):
         """List files in a directory in the image.
@@ -176,16 +246,55 @@ class TestDockerfileHermetic:
         Args:
             dir_path: Directory path to list in the image
             image_name: Optional custom image name (defaults to self.IMAGE_NAME)
+
+        Returns:
+            list: List of filenames if successful, None otherwise
         """
         target_image_name = image_name or self.IMAGE_NAME
-        result = subprocess.run(
-            ["podman", "run", "--rm", target_image_name, "ls", "-la", dir_path],
+        # Use podman create + podman cp instead of running ls in minimal image
+        # Create a temporary container without starting it (use unique name to avoid conflicts)
+        container_name = f"temp-list-{uuid.uuid4().hex[:8]}"
+        create_result = subprocess.run(
+            ["podman", "create", "--name", container_name, target_image_name],
             capture_output=True,
             text=True
         )
-        if result.returncode != 0:
+        if create_result.returncode != 0:
             return None
-        return result.stdout
+
+        try:
+            # Create a temporary directory to copy content to
+            tmp_dir = tempfile.mkdtemp()
+
+            try:
+                # Copy the directory from container to host
+                cp_result = subprocess.run(
+                    ["podman", "cp", f"{container_name}:{dir_path}", tmp_dir],
+                    capture_output=True,
+                    text=True
+                )
+                if cp_result.returncode != 0:
+                    return None
+
+                # List files in the copied directory
+                # The copied dir_path will be inside tmp_dir
+                copied_path = os.path.join(tmp_dir, os.path.basename(dir_path))
+                if os.path.isdir(copied_path):
+                    return os.listdir(copied_path)
+                else:
+                    # If it's a file, return the parent directory listing
+                    return os.listdir(tmp_dir)
+            finally:
+                # Clean up temporary directory
+                if os.path.exists(tmp_dir):
+                    shutil.rmtree(tmp_dir)
+        finally:
+            # Clean up temporary container
+            subprocess.run(
+                ["podman", "rm", "-f", container_name],
+                capture_output=True,
+                text=True
+            )
 
     def _get_image_labels(self, image_name=None):
         """Get labels from the Docker image.
