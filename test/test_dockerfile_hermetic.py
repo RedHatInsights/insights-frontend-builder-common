@@ -70,7 +70,7 @@ class TestDockerfileHermetic:
         # Copy Dockerfile.hermetic to test directory
         dockerfile_src = os.path.join(repo_root, "Dockerfile.hermetic")
         dockerfile_dest = os.path.join(test_dir, "Dockerfile.hermetic")
-        subprocess.run(["cp", dockerfile_src, dockerfile_dest], check=True)
+        shutil.copy(dockerfile_src, dockerfile_dest)
 
         # Initialize git repository if it doesn't exist (required by npm build)
         git_dir = os.path.join(test_dir, ".git")
@@ -86,7 +86,7 @@ class TestDockerfileHermetic:
         """Clean up test environment."""
         dockerfile_dest = os.path.join(test_dir, "Dockerfile.hermetic")
         if os.path.exists(dockerfile_dest):
-            subprocess.run(["rm", "-f", dockerfile_dest], check=True)
+            os.remove(dockerfile_dest)
 
     @classmethod
     def _build_image(cls, test_dir, build_args=None, image_name=None):

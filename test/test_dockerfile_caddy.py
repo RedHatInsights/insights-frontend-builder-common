@@ -10,6 +10,7 @@ This test suite verifies that:
 
 import json
 import os
+import shutil
 import subprocess
 import time
 
@@ -39,7 +40,7 @@ class TestDockerfileCaddy:
 
         # Clean up any previous test artifacts
         if os.path.exists(build_tools_dest):
-            subprocess.run(["rm", "-rf", build_tools_dest], check=True)
+            shutil.rmtree(build_tools_dest)
 
         # Create build-tools directory in test fixture
         os.makedirs(build_tools_dest, exist_ok=True)
@@ -47,7 +48,7 @@ class TestDockerfileCaddy:
         # Copy Dockerfile to build-tools/
         dockerfile_src = os.path.join(repo_root, "Dockerfile")
         dockerfile_dest = os.path.join(build_tools_dest, "Dockerfile")
-        subprocess.run(["cp", dockerfile_src, dockerfile_dest], check=True)
+        shutil.copy(dockerfile_src, dockerfile_dest)
         print("✓ Copied Dockerfile to build-tools/")
 
         # Copy all build scripts to build-tools/
@@ -60,7 +61,7 @@ class TestDockerfileCaddy:
         for script in scripts:
             src = os.path.join(repo_root, script)
             dest = os.path.join(build_tools_dest, script)
-            subprocess.run(["cp", src, dest], check=True)
+            shutil.copy(src, dest)
         print("✓ Copied build scripts to build-tools/")
 
         # Initialize git repository if it doesn't exist (required by build scripts)
@@ -126,7 +127,7 @@ class TestDockerfileCaddy:
         build_tools_dest = os.path.join(test_dir, "build-tools")
 
         if os.path.exists(build_tools_dest):
-            subprocess.run(["rm", "-rf", build_tools_dest], check=True)
+            shutil.rmtree(build_tools_dest)
             print("✓ Removed copied build-tools directory")
 
     def setup_method(self):
