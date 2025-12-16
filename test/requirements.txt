@@ -1,0 +1,4 @@
+# Testing dependencies for Dockerfile tests
+pytest>=7.4.0
+requests>=2.31.0
+ruff>=0.1.0

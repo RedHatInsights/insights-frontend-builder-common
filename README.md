@@ -45,6 +45,51 @@ For an application named "inventory", if you provide a secret named `INVENTORY_S
 
 If no matching secret is found, the build continues with any pre-configured Sentry settings or skips Sentry upload entirely.
 
+## Testing
+
+This repository includes comprehensive automated tests for the Dockerfile and build scripts. Tests are automatically run on all pull requests and after merge to ensure reliability.
+
+### Test Coverage
+
+- **Caddy Server Tests** - Verify Caddy serves static files correctly, routes work, and HTTP responses are correct
+- **Environment Variable Tests** - Test build-time ARGs and runtime ENVs are properly set and used
+- **Filesystem Structure Tests** - Ensure files are copied to correct locations in the final image
+
+### Running Tests Locally
+
+```bash
+cd test
+
+# Install uv (if not already installed)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Install dependencies
+uv pip install --system -r requirements.txt
+
+# Run all tests
+make test
+
+# Or run specific test suites
+make test-caddy      # Caddy server tests
+make test-env        # Environment variable tests
+make test-fs         # Filesystem structure tests
+```
+
+**Requirements:**
+- Python 3.8+
+- uv (fast Python package installer)
+- Podman (or Docker)
+
+For detailed testing documentation, see [`test/README.md`](test/README.md).
+
+### CI/CD
+
+All tests run automatically via GitHub Actions on:
+- Pull requests to `master`/`main`
+- Push to `master`/`main` (after merge)
+
+The workflow is defined in `.github/workflows/test-dockerfile.yml`.
+
 ## Akamai Cache Buster
 
 This script is run automatically from Jenkins each time a frontend is deployed

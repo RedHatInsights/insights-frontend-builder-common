@@ -6,7 +6,7 @@ FROM registry.access.redhat.com/ubi9/nodejs-22:9.7-1763027323 AS builder
 ARG NPM_CI_ARGS=
 
 # Copy package files first for better caching
-COPY package*.json ./
+COPY --chown=default package*.json ./
 
 # Install dependencies - detect airgapped environment and use appropriate npm ci flags
 # Skip Cypress binary download in hermetic environment
@@ -14,7 +14,7 @@ COPY package*.json ./
 RUN CYPRESS_INSTALL_BINARY=0 npm ci --offline --no-audit --no-fund $NPM_CI_ARGS
 
 # Copy source code
-COPY . .
+COPY --chown=default . .
 
 # Run the build process
 RUN npm run build
