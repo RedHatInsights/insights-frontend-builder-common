@@ -246,9 +246,9 @@ class TestDockerfileEnvVars:
                 f"http://localhost:{self.HOST_PORT}{custom_path}/"
             )
 
-            # Should either serve files or redirect, but not 404
-            assert response.status_code != 404, \
-                "Custom ENV_PUBLIC_PATH route returned 404"
+            # Caddy file_server should return 200 for directory listings
+            assert response.status_code == 200, \
+                f"Expected ENV_PUBLIC_PATH route to return 200, got {response.status_code}"
 
             print(f"✓ ENV_PUBLIC_PATH={custom_path} is accessible")
 
