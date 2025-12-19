@@ -1,4 +1,0 @@
-PyYAML==6.0.2
-requests==2.32.3
-urllib3==2.4.0
-
