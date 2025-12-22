@@ -19,9 +19,11 @@ RUN npm i -g yarn
 ARG ENABLE_SENTRY=false
 ARG SENTRY_AUTH_TOKEN
 ARG SENTRY_RELEASE
+ARG SENTRY_SECRET_NAME
 ENV ENABLE_SENTRY=${ENABLE_SENTRY} \
   SENTRY_AUTH_TOKEN=${SENTRY_AUTH_TOKEN} \
-  SENTRY_RELEASE=${SENTRY_RELEASE}
+  SENTRY_RELEASE=${SENTRY_RELEASE} \
+  SENTRY_SECRET_NAME=${SENTRY_SECRET_NAME}
 ARG NPM_BUILD_SCRIPT=""
 
 # Persist yarn build script at runtime.
@@ -39,18 +41,20 @@ RUN chmod +x build-tools/parse-secrets.sh
 
 # 👉 Mount one secret with many keys; export token only if key exists
 USER root
-RUN --mount=type=secret,id=build-container-additional-secret/secrets,required=false \
+RUN --mount=type=secret,id=${SENTRY_SECRET_NAME}/auth_token,required=false \
+  --mount=type=secret,id=${SENTRY_SECRET_NAME}/dsn,required=false \
+  --mount=type=secret,id=${SENTRY_SECRET_NAME}/org,required=false \
+  --mount=type=secret,id=${SENTRY_SECRET_NAME}/project,required=false \
+  export SENTRY_AUTH_TOKEN="$(cat /run/secrets/${SENTRY_SECRET_NAME}/auth_token)" && \
+  export SENTRY_DSN="$(cat /run/secrets/${SENTRY_SECRET_NAME}/dsn)" && \
+  export SENTRY_ORG="$(cat /run/secrets/${SENTRY_SECRET_NAME}/org)" && \
+  export SENTRY_PROJECT="$(cat /run/secrets/${SENTRY_SECRET_NAME}/project)"; \
   set -euo pipefail; \
-  source ./build-tools/parse-secrets.sh; \
-  # Get the app name and define the secrets variable name within the same RUN layer
-  APP_NAME="$(jq -r '.insights.appname' < $PACKAGE_JSON_PATH | tr '[:lower:]-' '[:upper:]_')"; \
-  SECRET_VAR_NAME="${APP_NAME}_SECRET"; \
-  if [ -n "${!SECRET_VAR_NAME:-}" ]; then \
+  if [ -n "${SENTRY_AUTH_TOKEN:-}" ]; then \
+  echo "Sentry: token found – enabling sourcemap upload."; \
   export ENABLE_SENTRY=true; \
-  export SENTRY_AUTH_TOKEN="${!SECRET_VAR_NAME}"; \
-  echo "Sentry: token found for ${APP_NAME} – enabling sourcemap upload."; \
   else \
-  echo "Sentry: no token for ${APP_NAME} – using any pre-set token (if provided) or skipping upload."; \
+  echo "Sentry: no token – using any pre-set token (if provided) or skipping upload."; \
   fi; \
   # Telling git this path is safe
   git config --global --add safe.directory /opt/app-root/src; \
