@@ -90,21 +90,6 @@ All tests run automatically via GitHub Actions on:
 
 The workflow is defined in `.github/workflows/test-dockerfile.yml`.
 
-## Akamai Cache Buster
+## Cache Busting
 
-This script is run automatically from Jenkins each time a frontend is deployed
-to `Prod`. It clears out all of the old cached versions of the application to make
-sure users are served up-to-date content.
-
-### To Run
-
-```bash
-python bustCache.py /path/to/your/.edgerc appName
-```
-
-### Some Notes and Requirements
-
-* Your edgerc needs read/write permission for the eccu API on akamai (not open CCU)
-* The script only works on production akamai (no way to clear the cache on staging)
-* Requests take about 30 minutes to finish
-* Will not work on apps that don't have paths listed in the [source of truth](https://github.com/RedHatInsights/cloud-services-config/blob/ci-beta/main.yml)
+The cache bust job lives at [frontend-cache-bust](https://github.com/RedHatInsights/frontend-cache-bust)
