@@ -37,9 +37,23 @@ COPY --chown=default . .
 
 RUN chmod +x build-tools/parse-secrets.sh
 
-# 👉 Mount one secret with many keys; universal_build.sh handles the rest
+# 👉 Mount one secret with many keys; export token only if key exists
 USER root
 RUN --mount=type=secret,id=build-container-additional-secret/secrets,required=false \
+  set -euo pipefail; \
+  source ./build-tools/parse-secrets.sh; \
+  # Get the app name and define the secrets variable name within the same RUN layer
+  APP_NAME="$(jq -r '.insights.appname' < $PACKAGE_JSON_PATH | tr '[:lower:]-' '[:upper:]_')"; \
+  SECRET_VAR_NAME="${APP_NAME}_SECRET"; \
+  if [ -n "${!SECRET_VAR_NAME:-}" ]; then \
+  export ENABLE_SENTRY=true; \
+  export SENTRY_AUTH_TOKEN="${!SECRET_VAR_NAME}"; \
+  echo "Sentry: token found for ${APP_NAME} – enabling sourcemap upload."; \
+  else \
+  echo "Sentry: no token for ${APP_NAME} – using any pre-set token (if provided) or skipping upload."; \
+  fi; \
+  # Telling git this path is safe
+  git config --global --add safe.directory /opt/app-root/src; \
   universal_build.sh
 USER default
 
