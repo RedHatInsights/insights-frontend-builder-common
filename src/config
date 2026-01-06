@@ -1,0 +1,7 @@
+[cli]
+cache-path            = /home/jenkins/.akamai-cli/cache
+config-version        = 1.1
+install-in-path       = no
+last-upgrade-check    = ignore
+enable-cli-statistics = false
+
