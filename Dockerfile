@@ -19,6 +19,7 @@ RUN npm i -g yarn
 ARG ENABLE_SENTRY=false
 ARG SENTRY_AUTH_TOKEN
 ARG SENTRY_RELEASE
+ARG SENTRY_SECRET_NAME
 ENV ENABLE_SENTRY=${ENABLE_SENTRY} \
   SENTRY_AUTH_TOKEN=${SENTRY_AUTH_TOKEN} \
   SENTRY_RELEASE=${SENTRY_RELEASE}
@@ -37,10 +38,22 @@ COPY --chown=default . .
 
 RUN chmod +x build-tools/parse-secrets.sh
 
-# 👉 Mount one secret with many keys; universal_build.sh handles the rest
+# 👉 Mount secrets; universal_build.sh handles the rest
 USER root
-RUN --mount=type=secret,id=build-container-additional-secret/secrets,required=false \
-  universal_build.sh
+RUN --mount=type=secret,id=${SENTRY_SECRET_NAME}/auth_token,required=false \
+    --mount=type=secret,id=${SENTRY_SECRET_NAME}/dsn,required=false \
+    --mount=type=secret,id=${SENTRY_SECRET_NAME}/org,required=false \
+    --mount=type=secret,id=${SENTRY_SECRET_NAME}/project,required=false \
+    export SENTRY_AUTH_TOKEN="$(cat /run/secrets/${SENTRY_SECRET_NAME}/auth_token)" && \
+    export SENTRY_DSN="$(cat /run/secrets/${SENTRY_SECRET_NAME}/dsn)" && \
+    export SENTRY_ORG="$(cat /run/secrets/${SENTRY_SECRET_NAME}/org)" && \
+    export SENTRY_PROJECT="$(cat /run/secrets/${SENTRY_SECRET_NAME}/project)"; \
+    set -euo pipefail; \
+    if [ -n "${SENTRY_AUTH_TOKEN:-}" ]; then \
+    echo "Sentry: token found – enabling sourcemap upload."; \
+    export ENABLE_SENTRY=true; else \
+    echo "Sentry: no token found"; fi; \
+    universal_build.sh
 USER default
 
 
