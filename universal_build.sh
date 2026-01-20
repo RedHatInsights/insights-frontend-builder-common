@@ -13,6 +13,8 @@ fi
 # Note: Uses PACKAGE_JSON_PATH env var (defaults to package.json)
 APP_NAME_FOR_SECRET="$(jq -r '.insights.appname' < "${PACKAGE_JSON_PATH:-package.json}" | tr '[:lower:]-' '[:upper:]_')"
 SECRET_VAR_NAME="${APP_NAME_FOR_SECRET}_SECRET"
+USES_NPM=false
+USES_YARN=false
 
 if [[ -n "${!SECRET_VAR_NAME:-}" ]]; then
   export ENABLE_SENTRY=true
