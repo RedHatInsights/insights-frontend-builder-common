@@ -54,6 +54,12 @@ fi
 if [[ $GIT_BRANCH == origin/* ]]; then
     BRANCH_NAME=${GIT_BRANCH:7}
 else
+    # Branch names may contain '/' which is not a valid character to use for container images.
+    # Use two slashes, '//', in the pattern substitution so that all instances of '/' are replaced.
+    #
+    # Examples:
+    #   feature/something-interesting --> feature-something-interesting
+    #   bob/bug/squash-it --> bob-bug-squash-it
     BRANCH_NAME=${GIT_BRANCH//\//-}
 fi
 # We want to be really, really, really sure we have a unique container name
