@@ -1,6 +1,6 @@
 # Multi-stage build for hermetic frontend build
 # Stage 1: Build stage
-FROM registry.access.redhat.com/ubi9/nodejs-22:9.7-1769661234 AS builder
+FROM registry.access.redhat.com/ubi9/nodejs-22:9.7-1770021428 AS builder
 
 # Additional arguments to be appended for `npm ci`, e.g. "--legacy-peer-deps"
 ARG NPM_CI_ARGS=
