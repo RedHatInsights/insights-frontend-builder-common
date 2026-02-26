@@ -33,15 +33,23 @@ ARG APP_BUILD_DIR=dist
 ARG PACKAGE_JSON_PATH=package.json
 ENV PACKAGE_JSON_PATH=${PACKAGE_JSON_PATH}
 
+# ────────── CUSTOM BUILD ENVIRONMENT VARIABLES ──────────
+# NOTE:
+# Tekton/Konflux can pass project-specific environment variables via --build-arg BUILD_ENV
+# in multi-line format. Each line should be in KEY=VALUE format.
+# These variables will be exported and available during the npm/yarn build process.
+ARG BUILD_ENV=""
+
 COPY build-tools/universal_build.sh build-tools/build_app_info.sh build-tools/server_config_gen.sh /opt/app-root/bin/
 COPY --chown=default . .
 
 RUN chmod +x build-tools/parse-secrets.sh
 
 # 👉 Mount one secret with many keys; universal_build.sh handles the rest
+# Note: BUILD_ENV ARG must be explicitly passed as an environment variable
 USER root
 RUN --mount=type=secret,id=build-container-additional-secret/secrets,required=false \
-  universal_build.sh
+  BUILD_ENV="$BUILD_ENV" universal_build.sh
 USER default
 
 

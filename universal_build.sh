@@ -3,6 +3,19 @@ set -euo pipefail
 
 set -exv
 
+# ────────── BUILD ENVIRONMENT VARIABLES SETUP ──────────
+# Parse and export BUILD_ENV if provided (multi-line KEY=VALUE format)
+if [[ -n "${BUILD_ENV:-}" ]]; then
+  echo "BUILD_ENV detected, exporting custom build variables..."
+  while IFS= read -r line; do
+    if [[ -n "$line" ]]; then
+      export "$line"
+      echo "  Exported: $line"
+    fi
+  done <<< "$BUILD_ENV"
+fi
+# ────────── END BUILD ENVIRONMENT VARIABLES SETUP ──────────
+
 # ────────── SENTRY & SECRETS SETUP ──────────
 # Source secrets if the parse-secrets script exists
 if [[ -f ./build-tools/parse-secrets.sh ]]; then
