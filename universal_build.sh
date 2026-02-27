@@ -66,10 +66,10 @@ function build() {
       npm run build
     fi
   elif [[ "$USES_YARN" == true ]]; then
-    # If YARN_BUILD_SCRIPT env var is set use that
+    # If APP_YARN_BUILD_SCRIPT env var is set use that
     # Otherwise just build
-    if [[ -n "$YARN_BUILD_SCRIPT" ]]; then
-      yarn "$YARN_BUILD_SCRIPT"
+    if [[ -n "$APP_YARN_BUILD_SCRIPT" ]]; then
+      yarn "$APP_YARN_BUILD_SCRIPT"
     else
       yarn build:prod
     fi
@@ -104,9 +104,6 @@ function setNpmOrYarn() {
 get_appname_from_package() {
   jq --raw-output '.insights.appname' < $PACKAGE_JSON_PATH
 }
-
-# Work around large package timeout; up default from 30s to 5m
-yarn config set network-timeout 300000
 
 if ! APP_NAME=$(get_appname_from_package); then
   echo "could not read application name from package.json"

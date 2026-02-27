@@ -179,7 +179,7 @@ After all tests complete:
 - ✓ Runtime variable override of defaults
 - ✓ Default values are correctly set
 
-**Note:** Due to the multi-stage Docker build, variables set in the builder stage (like `ENABLE_SENTRY`, `USES_YARN`, `YARN_BUILD_SCRIPT`) are only available during build and not at runtime in the final Caddy container. Only variables set in the final stage (`ENV_PUBLIC_PATH`, `CADDY_TLS_MODE`) are available at runtime.
+**Note:** Due to the multi-stage Docker build, variables set in the builder stage (like `ENABLE_SENTRY`, `USES_YARN`, `APP_YARN_BUILD_SCRIPT`) are only available during build and not at runtime in the final Caddy container. Only variables set in the final stage (`ENV_PUBLIC_PATH`, `CADDY_TLS_MODE`) are available at runtime.
 
 ### Filesystem Structure Tests (`test_dockerfile_filesystem.py`)
 
