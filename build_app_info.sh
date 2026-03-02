@@ -80,6 +80,7 @@ APP_NAME=$(get_package_value "insights.appname")
 NODE_VERSION=$(get_package_value "engines.node")
 SRC_BRANCH=$(get_git_branch)
 SRC_TAG=$(get_git_tag)
+APP_VERSION=${APP_VERSION:-unknown}
 
 PATTERNFLY_DEPS=$(handle_npm_list "@patternfly")
 RH_CLOUD_SERVICES_DEPS=$(handle_npm_list "@redhat-cloud-services")
@@ -93,6 +94,7 @@ jq -n \
   --arg sh "$SRC_HASH" \
   --arg st "$SRC_TAG" \
   --arg sb "$SRC_BRANCH" \
+  --arg av "$APP_VERSION" \
   --arg pd "$PATTERNFLY_DEPS" \
   --arg rh "$RH_CLOUD_SERVICES_DEPS" \
   '{
@@ -101,6 +103,7 @@ jq -n \
     src_hash: $sh,
     src_tag: $st,
     src_branch: $sb,
+    app_version: $av,
     patternfly_dependencies: $pd,
     rh_cloud_services_dependencies: $rh
   }'
