@@ -68,7 +68,7 @@ ARG APP_BUILD_DIR=dist
 ARG PACKAGE_JSON_PATH=package.json
 
 # Copy the valpop binary from the valpop image
-COPY --from=quay.io/redhat-services-prod/hcc-platex-services-tenant/valpop:latest /usr/local/bin/valpop /usr/local/bin/valpop
+COPY --from=quay.io/redhat-services-prod/hcc-platex-services-tenant/valpop:b9e14af /usr/local/bin/valpop /usr/local/bin/valpop
 
 COPY --from=builder /opt/app-root/src/Caddyfile /etc/caddy/Caddyfile
 COPY --from=builder /opt/app-root/src/${APP_BUILD_DIR} dist
