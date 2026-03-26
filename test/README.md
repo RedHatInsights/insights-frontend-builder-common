@@ -193,7 +193,6 @@ After all tests complete:
 - ✓ `/srv/dist/manifest.json` - Application manifest
 - ✓ `/srv/dist/app.info.json` - Generated build metadata with correct fields
 - ✓ `/srv/package.json` - Package.json copied to working directory
-- ✓ `/usr/local/bin/valpop` - Valpop binary is executable
 
 **Build Artifact Tests:**
 - ✓ Custom `APP_BUILD_DIR` is respected
