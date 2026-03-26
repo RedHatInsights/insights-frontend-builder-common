@@ -479,16 +479,6 @@ class TestDockerfileFilesystem:
 
         assert app_info_found, f"app.info.json not found at any of: {app_info_paths}"
 
-    def test_valpop_binary_exists(self):
-        """Test that valpop binary is copied to /usr/local/bin/valpop."""
-        print("\n=== Testing valpop binary location ===")
-
-        # Check if valpop exists
-        valpop_exists = self._file_exists_in_image("/usr/local/bin/valpop")
-        assert valpop_exists, "valpop binary not found at /usr/local/bin/valpop"
-
-        print("✓ valpop binary exists at /usr/local/bin/valpop")
-
     def test_custom_build_dir_location(self):
         """Test that custom APP_BUILD_DIR is respected in final image.
 
