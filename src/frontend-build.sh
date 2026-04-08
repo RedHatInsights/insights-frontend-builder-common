@@ -256,18 +256,18 @@ export GIT_COMMIT=$(git rev-parse HEAD)
 if [ $IS_PR = true ]; then
   verifyDependencies
 
-  docker  build -t "${IMAGE}:${IMAGE_TAG}" $APP_ROOT -f $APP_ROOT/Dockerfile
+  docker build --pull -t "${IMAGE}:${IMAGE_TAG}" $APP_ROOT -f $APP_ROOT/Dockerfile
   if running_in_ci; then
     docker push "${IMAGE}:${IMAGE_TAG}"
   fi
 else
   # Standard build and push
-  docker build --label "image-type=single" -t "${IMAGE}:${IMAGE_TAG}-single" "$APP_ROOT" -f "$APP_ROOT/Dockerfile"
+  docker build --pull --label "image-type=single" -t "${IMAGE}:${IMAGE_TAG}-single" "$APP_ROOT" -f "$APP_ROOT/Dockerfile"
   if running_in_ci; then
     docker push "${IMAGE}:${IMAGE_TAG}-single"
   fi
   getHistory
-  docker build --label "image-type=aggregate" -t "${IMAGE}:${IMAGE_TAG}" "$APP_ROOT" -f "$APP_ROOT/Dockerfile"
+  docker build --pull --label "image-type=aggregate" -t "${IMAGE}:${IMAGE_TAG}" "$APP_ROOT" -f "$APP_ROOT/Dockerfile"
   if running_in_ci; then
     docker push "${IMAGE}:${IMAGE_TAG}"
   fi
