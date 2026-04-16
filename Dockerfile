@@ -40,6 +40,17 @@ ARG YARN_BUILD_SCRIPT=""
 ARG USES_YARN=false
 ENV YARN_BUILD_SCRIPT=${YARN_BUILD_SCRIPT} \
   USES_YARN=${USES_YARN}
+# ────────── SOURCE GIT METADATA ──────────
+# NOTE:
+# In CI environments with detached HEAD checkouts (e.g. Konflux/Tekton),
+# git cannot determine the branch or tag from the working directory alone.
+# Pass these build args so build_app_info.sh can include them in app.info.json.
+# Example: --build-arg SOURCE_GIT_BRANCH=main --build-arg SOURCE_GIT_TAG=v1.2.0
+ARG SOURCE_GIT_BRANCH=""
+ARG SOURCE_GIT_TAG=""
+ENV SOURCE_GIT_BRANCH=${SOURCE_GIT_BRANCH} \
+  SOURCE_GIT_TAG=${SOURCE_GIT_TAG}
+
 ARG APP_BUILD_DIR=dist
 ARG PACKAGE_JSON_PATH=package.json
 ENV PACKAGE_JSON_PATH=${PACKAGE_JSON_PATH}

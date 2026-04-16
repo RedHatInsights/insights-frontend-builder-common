@@ -56,23 +56,76 @@ handle_npm_list() {
 }
 
 get_git_branch() {
-  # Retrieve the current Git branch name or return "unknown" if unsuccessful.
-  if ! git branch --show-current 2>/dev/null; then
-    echo "unknown"
+  local branch
+
+  # 1. Direct branch name (works on regular checkouts)
+  branch=$(git branch --show-current 2>/dev/null)
+  if [[ -n "$branch" ]]; then
+    echo "$branch"
+    return
   fi
+
+  # 2. Symbolic ref (fails in detached HEAD but worth trying)
+  branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
+  if [[ -n "$branch" && "$branch" != "HEAD" ]]; then
+    echo "$branch"
+    return
+  fi
+
+  # 3. Find remote branch(es) pointing at HEAD (detached HEAD in CI)
+  branch=$(git branch -r --points-at HEAD 2>/dev/null | head -1 | sed 's|.*/||' | xargs)
+  if [[ -n "$branch" ]]; then
+    echo "$branch"
+    return
+  fi
+
+  # 4. CI environment variable fallbacks
+  for var in SOURCE_GIT_BRANCH GITHUB_HEAD_REF GITHUB_REF_NAME GIT_BRANCH BRANCH_NAME; do
+    if [[ -n "${!var:-}" ]]; then
+      # Strip any refs/heads/ prefix
+      echo "${!var##*/}"
+      return
+    fi
+  done
+
+  echo "unknown"
 }
 
 get_git_tag() {
-  # Retrieve the current Git tag or return "unknown" if unsuccessful.
-  if ! git describe --tags --abbrev=0 2>/dev/null; then
-    echo "unknown"
+  local tag
+
+  # 1. Describe the current commit's nearest tag
+  tag=$(git describe --tags --abbrev=0 2>/dev/null)
+  if [[ -n "$tag" ]]; then
+    echo "$tag"
+    return
   fi
+
+  # 2. Check for tags directly pointing at HEAD (shallow clones may lack history)
+  tag=$(git tag --points-at HEAD 2>/dev/null | head -1)
+  if [[ -n "$tag" ]]; then
+    echo "$tag"
+    return
+  fi
+
+  # 3. CI environment variable fallback (set via Dockerfile build arg)
+  if [[ -n "${SOURCE_GIT_TAG:-}" ]]; then
+    echo "$SOURCE_GIT_TAG"
+    return
+  fi
+
+  echo "unknown"
 }
 
 get_git_hash() {
-  if ! git rev-parse --verify HEAD 2>/dev/null; then
-    echo "unknown"
+  local hash
+  hash=$(git rev-parse --verify HEAD 2>/dev/null)
+  if [[ -n "$hash" ]]; then
+    echo "$hash"
+    return
   fi
+
+  echo "unknown"
 }
 
 SRC_HASH=$(get_git_hash)
