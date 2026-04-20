@@ -71,8 +71,8 @@ export CONTAINER_NAME="$APP_NAME-$BRANCH_NAME-$IMAGE_TAG-$(date +%s)"
 if [ -z "$NPM_BUILD_SCRIPT" ]; then
   export NPM_BUILD_SCRIPT="build"
 fi
-if [ -z "$YARN_BUILD_SCRIPT" ]; then
-  export YARN_BUILD_SCRIPT="build:prod"
+if [ -z "$APP_YARN_BUILD_SCRIPT" ]; then
+  export APP_YARN_BUILD_SCRIPT="build:prod"
 fi
 
 teardown_docker() {
@@ -165,7 +165,7 @@ build() {
     -e PREVIEW_ROUTE_PATH \
     -e BRANCH_NAME \
     -e NPM_BUILD_SCRIPT \
-    -e YARN_BUILD_SCRIPT \
+    -e APP_YARN_BUILD_SCRIPT \
     -e SKIP_VERIFY \
     -e SENTRY_DSN \
     -e SENTRY_AUTH_TOKEN \
