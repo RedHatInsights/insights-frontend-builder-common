@@ -1,6 +1,20 @@
 # Multi-stage build for hermetic frontend build
 # Stage 1: Build stage
-FROM registry.access.redhat.com/ubi9/nodejs-22:9.7-1776041578 AS builder
+
+# ────────── NODE.JS VERSION CONFIGURATION ──────────
+# NOTE:
+# These build arguments allow you to specify a different Node.js version
+# and corresponding UBI image tag for the builder stage.
+#
+# Examples:
+#   Node 22 (default): --build-arg NODEJS_VERSION=22 --build-arg NODEJS_IMAGE_TAG=9.7-1776041578
+#   Node 24: --build-arg NODEJS_VERSION=24 --build-arg NODEJS_IMAGE_TAG=<appropriate-tag>
+#
+# To find available tags, visit:
+# https://catalog.redhat.com/software/containers/ubi9/nodejs-22/62e8e7ed22d1d3c2dfe2ca01
+ARG NODEJS_VERSION=22
+ARG NODEJS_IMAGE_TAG=9.7-1776041578
+FROM registry.access.redhat.com/ubi9/nodejs-${NODEJS_VERSION}:${NODEJS_IMAGE_TAG} AS builder
 
 # Additional arguments to be appended for `npm ci`, e.g. "--legacy-peer-deps"
 ARG NPM_CI_ARGS=
