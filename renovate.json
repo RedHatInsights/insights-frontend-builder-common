@@ -1,50 +1,20 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "config:recommended"
+    "github>RedHatInsights/shared-workflows//renovate/backend"
   ],
   "packageRules": [
     {
-      "matchManagers": [
-        "dockerfile"
-      ],
-      "matchUpdateTypes": [
-        "minor",
-        "patch",
-        "digest"
-      ],
-      "groupName": "Docker minor, patch, and digest updates",
-      "enabled": true
+      "description": "Group Python minor and patch updates into a single PR",
+      "matchManagers": ["pip_requirements"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "Python minor and patch dependencies"
     },
     {
-      "matchManagers": [
-        "dockerfile"
-      ],
-      "matchUpdateTypes": [
-        "major"
-      ],
-      "enabled": false
-    },
-    {
-      "matchManagers": [
-        "pip_requirements"
-      ],
-      "matchUpdateTypes": [
-        "minor",
-        "patch"
-      ],
-      "groupName": "Python minor and patch dependencies",
-      "enabled": true
-    },
-    {
-      "matchManagers": [
-        "pip_requirements"
-      ],
-      "matchUpdateTypes": [
-        "major"
-      ],
+      "description": "Disable major Python dependency updates",
+      "matchManagers": ["pip_requirements"],
+      "matchUpdateTypes": ["major"],
       "enabled": false
     }
-  ],
-  "semanticCommits": "enabled"
+  ]
 }
