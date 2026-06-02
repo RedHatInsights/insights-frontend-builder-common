@@ -10,7 +10,7 @@
 # To find available tags, visit:
 # https://catalog.redhat.com/software/containers/ubi9/nodejs-22/62e8e7ed22d1d3c2dfe2ca01
 ARG NODE_BUILD_VERSION=22
-ARG NODE_IMAGE_TAG=9.8-1779991861
+ARG NODE_IMAGE_TAG=9.8-1780375952
 FROM registry.access.redhat.com/ubi9/nodejs-${NODE_BUILD_VERSION}:${NODE_IMAGE_TAG} as builder
 
 USER root
