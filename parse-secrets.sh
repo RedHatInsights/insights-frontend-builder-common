@@ -4,8 +4,8 @@
 # Expected .env structure: KEY=VALUE (one per line)
 # Lines starting with # are treated as comments and ignored
 # Empty lines are ignored
-# Disable bash xtrace so secret values are not printed in CI logs
-{ set +x; } 2>/dev/null
+# Disable bash xtrace so secret values are not printed in CI logs, then restore
+{ old_opts=$(set +o); set +x; } 2>/dev/null
 
 SECRETS_FILE="/run/secrets/build-container-additional-secret/secrets"
 
@@ -41,3 +41,6 @@ else
         done < "$SECRETS_FILE"
     fi
 fi
+
+# Restore previous shell options (re-enables xtrace if it was on)
+{ eval "$old_opts"; } 2>/dev/null
