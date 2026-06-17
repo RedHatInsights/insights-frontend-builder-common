@@ -4,6 +4,8 @@
 # Expected .env structure: KEY=VALUE (one per line)
 # Lines starting with # are treated as comments and ignored
 # Empty lines are ignored
+# Disable bash xtrace so secret values are not printed in CI logs
+{ set +x; } 2>/dev/null
 
 SECRETS_FILE="/run/secrets/build-container-additional-secret/secrets"
 
