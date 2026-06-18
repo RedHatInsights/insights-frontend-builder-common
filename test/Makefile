@@ -1,4 +1,7 @@
-.PHONY: help install test test-caddy test-env test-fs test-verbose lint clean
+.PHONY: help install test test-caddy test-env test-fs test-verbose lint lint-sh clean
+
+# Shell scripts to lint (active build scripts only; legacy src/ scripts excluded)
+SHELL_SCRIPTS := ../build_app_info.sh ../server_config_gen.sh ../universal_build.sh ../parse-secrets.sh
 
 help:
 	@echo "Available targets:"
@@ -9,6 +12,7 @@ help:
 	@echo "  test-fs       - Run only filesystem structure tests"
 	@echo "  test-verbose  - Run tests with verbose output"
 	@echo "  lint          - Run ruff check on test code"
+	@echo "  lint-sh       - Run shellcheck on build scripts"
 	@echo "  clean         - Remove test artifacts and containers"
 
 install:
@@ -31,6 +35,9 @@ test-verbose:
 
 lint:
 	ruff check .
+
+lint-sh:
+	shellcheck $(SHELL_SCRIPTS)
 
 clean:
 	-podman rm -f test-frontend-container test-envs-container test-fs-container

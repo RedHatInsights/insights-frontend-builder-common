@@ -102,7 +102,7 @@ function setNpmOrYarn() {
 }
 
 get_appname_from_package() {
-  jq --raw-output '.insights.appname' < $PACKAGE_JSON_PATH
+  jq --raw-output '.insights.appname' < "$PACKAGE_JSON_PATH"
 }
 
 # Work around large package timeout; up default from 30s to 5m

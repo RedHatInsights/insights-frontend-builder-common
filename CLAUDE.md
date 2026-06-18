@@ -14,6 +14,9 @@ cd test && make test-fs          # Filesystem structure tests
 # Lint Python test code
 cd test && make lint
 
+# Lint shell scripts (requires shellcheck)
+cd test && make lint-sh
+
 # Clean up test containers and artifacts
 cd test && make clean
 

@@ -1,0 +1,8 @@
+# ShellCheck configuration for insights-frontend-builder-common
+# https://www.shellcheck.net/wiki/
+
+# Follow sourced files (scripts are used as a submodule, paths may not resolve locally)
+external-sources=true
+
+# SC1091: Not following sourced file (paths resolve at runtime in Docker build context)
+disable=SC1091

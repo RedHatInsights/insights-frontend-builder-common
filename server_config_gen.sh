@@ -2,7 +2,8 @@
 
 export LC_ALL=en_US.utf-8
 export LANG=en_US.utf-8
-export GIT_COMMIT=$(git rev-parse HEAD)
+GIT_COMMIT=$(git rev-parse HEAD)
+export GIT_COMMIT
 
 NPM_INFO="undefined"
 PATTERNFLY_DEPS="undefined"
