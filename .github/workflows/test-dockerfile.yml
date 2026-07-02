@@ -37,6 +37,11 @@ jobs:
           cd test
           uv pip install --system -r requirements.txt
 
+      - name: Run shellcheck on build scripts
+        run: |
+          cd test
+          make lint-sh
+
       - name: Install Podman
         run: |
           sudo apt-get update
