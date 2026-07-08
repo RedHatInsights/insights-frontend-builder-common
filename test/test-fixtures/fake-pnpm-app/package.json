@@ -1,0 +1,15 @@
+{
+  "name": "test-pnpm-app",
+  "version": "1.0.0",
+  "description": "Fake pnpm app for testing Dockerfile",
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "scripts": {
+    "build-plugin": "BUILD_VARIANT=plugin node build.js"
+  },
+  "insights": {
+    "appname": "test-pnpm-app"
+  },
+  "dependencies": {}
+}

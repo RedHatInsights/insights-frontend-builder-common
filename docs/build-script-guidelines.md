@@ -30,20 +30,22 @@ Use `set -exv` only in `universal_build.sh` for build-time debug output.
 
 ### Package Manager Detection
 
-The build system supports both npm and yarn. Detection is based on lock file presence:
+The build system supports npm, yarn, and pnpm. Detection is based on lock file presence:
 
 ```bash
 if [[ -f package-lock.json ]]; then
     USES_NPM=true
 elif [[ -f yarn.lock ]]; then
     USES_YARN=true
+elif [[ -f pnpm-lock.yaml ]]; then
+    USES_PNPM=true
 else
     echo "No lock file found"
     exit 1
 fi
 ```
 
-When adding new functionality that invokes npm or yarn commands, always branch on `USES_NPM` and `USES_YARN`. Never hardcode one package manager.
+When adding new functionality that invokes package manager commands, always branch on `USES_NPM`, `USES_YARN`, and `USES_PNPM`. Never hardcode one package manager.
 
 ### Environment Variable Conventions
 
@@ -137,7 +139,7 @@ Key rules:
 ## Checklist for Changes
 
 - [ ] Script has `set -euo pipefail` header
-- [ ] Both npm and yarn paths handled (if applicable)
+- [ ] npm, yarn, and pnpm paths handled (if applicable)
 - [ ] New ARGs documented with comment blocks
 - [ ] New env vars tested in `test/test_dockerfile_env_vars.py`
 - [ ] Secret values never logged

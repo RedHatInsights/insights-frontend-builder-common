@@ -1,7 +1,7 @@
 .PHONY: help install test test-caddy test-env test-fs test-verbose lint lint-sh clean
 
 # Shell scripts to lint (active build scripts only; legacy src/ scripts excluded)
-SHELL_SCRIPTS := ../build_app_info.sh ../server_config_gen.sh ../universal_build.sh ../parse-secrets.sh
+SHELL_SCRIPTS := ../build_app_info.sh ../server_config_gen.sh ../universal_build.sh ../dependency_helpers.sh ../parse-secrets.sh
 
 help:
 	@echo "Available targets:"
@@ -41,8 +41,10 @@ lint-sh:
 
 clean:
 	-podman rm -f test-frontend-container test-envs-container test-fs-container
-	-podman rmi -f test-frontend-builder:test test-frontend-builder-envs:test test-frontend-builder-fs:test
+	-podman rmi -f test-frontend-builder:test test-frontend-builder-envs:test test-frontend-builder-fs:test test-frontend-builder-fs-pnpm:test
 	-rm -rf test-fixtures/fake-app/build-tools
+	-rm -rf test-fixtures/fake-pnpm-app/build-tools
 	-rm -rf test-fixtures/fake-app/dist
+	-rm -rf test-fixtures/fake-pnpm-app/dist
 	-find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
 	-find . -type d -name .pytest_cache -exec rm -rf {} + 2>/dev/null || true

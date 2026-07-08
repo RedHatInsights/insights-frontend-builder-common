@@ -19,7 +19,7 @@ RUN dnf install jq -y
 
 USER default
 
-RUN npm i -g yarn
+RUN npm i -g pnpm yarn
 
 # ────────── SENTRY BUILD ARGS ──────────
 # NOTE:
@@ -48,6 +48,10 @@ ENV APP_VERSION=${APP_VERSION}
 ARG NPM_BUILD_SCRIPT=""
 ENV NPM_BUILD_SCRIPT=${NPM_BUILD_SCRIPT}
 
+# Persist pnpm build script at runtime.
+ARG PNPM_BUILD_SCRIPT=""
+ENV PNPM_BUILD_SCRIPT=${PNPM_BUILD_SCRIPT}
+
 # Persist yarn build script at runtime.
 ARG YARN_BUILD_SCRIPT=""
 ARG USES_YARN=false
@@ -68,7 +72,7 @@ ARG APP_BUILD_DIR=dist
 ARG PACKAGE_JSON_PATH=package.json
 ENV PACKAGE_JSON_PATH=${PACKAGE_JSON_PATH}
 
-COPY build-tools/universal_build.sh build-tools/build_app_info.sh build-tools/server_config_gen.sh /opt/app-root/bin/
+COPY build-tools/universal_build.sh build-tools/build_app_info.sh build-tools/server_config_gen.sh build-tools/dependency_helpers.sh /opt/app-root/bin/
 COPY --chown=default . .
 
 RUN chmod +x build-tools/parse-secrets.sh

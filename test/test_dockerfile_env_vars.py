@@ -49,6 +49,7 @@ class TestDockerfileEnvVars:
             "universal_build.sh",
             "build_app_info.sh",
             "server_config_gen.sh",
+            "dependency_helpers.sh",
             "parse-secrets.sh"
         ]
         for script in scripts:
@@ -266,7 +267,8 @@ class TestDockerfileEnvVars:
     def test_build_args_accepted(self):
         """Test that various build-time arguments are accepted and don't break the build.
 
-        Tests multiple build args: ENABLE_SENTRY, SENTRY_RELEASE, and USES_YARN.
+        Tests multiple build args: ENABLE_SENTRY, SENTRY_RELEASE, USES_YARN, and
+        PNPM_BUILD_SCRIPT.
 
         Note: These variables are only available in the builder stage,
         not in the final runtime container due to multi-stage build.
@@ -281,14 +283,18 @@ class TestDockerfileEnvVars:
             # Prepare environment
             self._prepare_test_env(test_dir, repo_root)
 
-            # Build with multiple build args: Sentry + USES_YARN
+            # Build with multiple build args: Sentry + package manager args
             build_args = {
                 "ENABLE_SENTRY": "true",
                 "SENTRY_RELEASE": "test-release-123",
-                "USES_YARN": "false"
+                "USES_YARN": "false",
+                "PNPM_BUILD_SCRIPT": "build-plugin",
             }
 
-            print("Building with multiple build args: ENABLE_SENTRY, SENTRY_RELEASE, USES_YARN")
+            print(
+                "Building with multiple build args: ENABLE_SENTRY, SENTRY_RELEASE, "
+                "USES_YARN, PNPM_BUILD_SCRIPT"
+            )
             result = self._build_image(test_dir, build_args)
 
             # Verify the build completed successfully
@@ -299,6 +305,7 @@ class TestDockerfileEnvVars:
             print("  - ENABLE_SENTRY=true")
             print("  - SENTRY_RELEASE=test-release-123")
             print("  - USES_YARN=false")
+            print("  - PNPM_BUILD_SCRIPT=build-plugin")
             print("  (Note: Build-time vars are not available at runtime)")
 
         finally:
