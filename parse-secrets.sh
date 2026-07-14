@@ -7,7 +7,7 @@
 # Disable bash xtrace so secret values are not printed in CI logs, then restore
 { old_opts=$(set +o); set +x; } 2>/dev/null
 
-SECRETS_FILE="/run/secrets/build-container-additional-secret/secrets"
+SECRETS_FILE="/run/secrets/sentry-secrets/secrets"
 
 if [ ! -f "$SECRETS_FILE" ]; then
     echo "Error: Secrets file not found at $SECRETS_FILE"
@@ -23,16 +23,16 @@ else
             if [[ -z "$line" ]] || [[ "$line" =~ ^[[:space:]]*# ]]; then
                 continue
             fi
-            
+
             # Check if line contains = and split into key=value
             if [[ "$line" =~ ^[^=]+= ]]; then
                 # Extract key and value
                 key="${line%%=*}"
                 value="${line#*=}"
-                
+
                 # Remove any leading/trailing whitespace from key
                 key=$(echo "$key" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-                
+
                 if [[ -n "$key" ]]; then
                     export "$key"="$value"
                     echo "Set environment variable: $key"
