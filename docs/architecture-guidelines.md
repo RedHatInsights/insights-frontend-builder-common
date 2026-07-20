@@ -9,7 +9,7 @@ Consumer frontend app (e.g., insights-chrome, notifications-frontend)
 │
 ├── src/                     ← App source code
 ├── package.json             ← Must have insights.appname
-├── package-lock.json        ← Or yarn.lock
+├── package-lock.json        ← Or yarn.lock / pnpm-lock.yaml
 ├── LICENSE                  ← Required by Dockerfile
 └── build-tools/             ← Git submodule → this repo
     ├── Dockerfile           ← Multi-stage build definition
@@ -47,8 +47,8 @@ Key operations:
 1. `parse-secrets.sh` loads Konflux secrets
 2. Auto-detect Sentry token from `{APP_NAME}_SECRET`
 3. Detect npm vs yarn from lock files
-4. `npm ci` / `yarn install --immutable`
-5. `npm run build` / `yarn build:prod` (or custom script)
+4. `npm ci` / `yarn install --immutable` / `pnpm install --frozen-lockfile`
+5. `npm run build` / `yarn build:prod` / `pnpm run build` (or custom script)
 6. `build_app_info.sh` generates build metadata JSON
 7. `server_config_gen.sh` generates Caddy config
 
@@ -143,7 +143,7 @@ git submodule add https://github.com/RedHatInsights/insights-frontend-builder-co
 | File | Requirement |
 |------|-------------|
 | `package.json` | Must have `insights.appname` field |
-| `package-lock.json` or `yarn.lock` | Exactly one must exist |
+| `package-lock.json`, `yarn.lock`, or `pnpm-lock.yaml` | Exactly one must exist |
 | `LICENSE` | Copied to `/licenses/` for compliance |
 | Build output | Must produce a `dist/` directory (or custom `APP_BUILD_DIR`) |
 

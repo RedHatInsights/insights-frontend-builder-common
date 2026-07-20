@@ -24,9 +24,10 @@ insights-frontend-builder-common/
 ├── Dockerfile                    # Primary multi-stage build (Node.js builder → Caddy runtime)
 ├── Dockerfile.hermetic           # Hermetic/airgapped build variant (Node.js → ubi-micro)
 ├── application.Dockerfile        # Legacy Dockerfile using pre-built builder image
-├── universal_build.sh            # Main build orchestrator (npm/yarn detect, install, build)
+├── universal_build.sh            # Main build orchestrator (npm/yarn/pnpm detect, install, build)
 ├── build_app_info.sh             # Generates app.info.json with build metadata
 ├── server_config_gen.sh          # Generates Caddyfile, .dockerignore, app.info.json
+├── dependency_helpers.sh          # Shared lockfile/dependency metadata helpers
 ├── parse-secrets.sh              # Parses .env secrets from Konflux secret mounts
 ├── README.md                     # Main documentation
 ├── README-hermetic-build.md      # Hermetic build setup guide
@@ -89,8 +90,8 @@ The build is triggered by `podman build -f build-tools/Dockerfile .` and follows
    - Copies application source
    - Runs `parse-secrets.sh` to load Konflux secrets
    - Runs `universal_build.sh` which:
-     - Detects npm vs yarn (via lock file presence)
-     - Runs `npm ci` or `yarn install --immutable`
+   - Detects npm vs yarn vs pnpm (via lock file presence)
+   - Runs `npm ci`, `yarn install --immutable`, or `pnpm install --frozen-lockfile`
      - Runs the build command (`npm run build` or custom script)
      - Generates `app.info.json` via `build_app_info.sh`
      - Generates Caddyfile via `server_config_gen.sh`
@@ -118,7 +119,8 @@ The build is triggered by `podman build -f build-tools/Dockerfile .` and follows
 | `SENTRY_AUTH_TOKEN` | (none) | Sentry authentication token |
 | `SENTRY_RELEASE` | (none) | Sentry release identifier |
 | `APP_VERSION` | `unknown` | Application version for app.info.json |
-| `NPM_BUILD_SCRIPT` | (empty) | Custom npm build script name |
+| `NPM_BUILD_SCRIPT` | (empty) | Custom npm build script name; also used by pnpm for existing pipeline compatibility |
+| `PNPM_BUILD_SCRIPT` | (empty) | Custom pnpm build script name |
 | `YARN_BUILD_SCRIPT` | (empty) | Custom yarn build script name |
 | `USES_YARN` | `false` | Force yarn build system |
 | `SOURCE_GIT_BRANCH` | (empty) | Git branch for detached HEAD CI |
@@ -164,7 +166,7 @@ cd test && make install
 
 1. **Shell scripts**: Use `set -euo pipefail` at the top. Use `set -exv` for verbose debug output during builds.
 2. **Conventional commits**: Follow `type(scope): description` format. Types: `fix`, `feat`, `chore`, `docs`, `test`, `ci`. Renovate uses `chore(deps):` for dependency updates.
-3. **Build system detection**: Always detect npm vs yarn by checking for `package-lock.json` or `yarn.lock`. Never hardcode one.
+3. **Build system detection**: `universal_build.sh` `setPackageManager` must detect npm vs yarn vs pnpm by checking for `package-lock.json`, `yarn.lock`, and `pnpm-lock.yaml`. It must fail when none or more than one of those lockfiles exists, and select the package manager only when exactly one supported lockfile is present.
 4. **Environment variables**: Use `ARG` for build-time, `ENV` to persist to runtime. Document every ARG in the Dockerfile with comments.
 5. **Secrets handling**: Never log secret values. Use the `parse-secrets.sh` pattern for `.env` format secrets from Konflux mounts.
 6. **Python tests**: Use pytest classes (e.g., `TestDockerfileCaddy`). Each test class builds its own container image and cleans up.
@@ -174,7 +176,7 @@ cd test && make install
 ## Common Pitfalls
 
 1. **Detached HEAD in CI**: Konflux/Tekton checks out a detached HEAD, so `git branch --show-current` returns empty. `build_app_info.sh` has a 4-step fallback: current branch, abbrev-ref, remote branch, CI env vars (`SOURCE_GIT_BRANCH`, `GITHUB_HEAD_REF`, etc.).
-2. **npm vs yarn detection**: `universal_build.sh` checks for lock files. If neither `package-lock.json` nor `yarn.lock` exists, the build fails. Both cannot be present.
+2. **Package manager detection**: `universal_build.sh` `setPackageManager` builds the supported lockfile list from `package-lock.json`, `yarn.lock`, and `pnpm-lock.yaml`. If none exist, the build fails. If more than one exists, the build also fails instead of choosing by precedence. Exactly one lockfile sets the matching `USES_NPM`, `USES_YARN`, or `USES_PNPM` path for install and build.
 3. **Secret naming convention**: Sentry tokens use `{APP_NAME}_SECRET` where `APP_NAME` comes from `package.json` `insights.appname`, uppercased with dashes replaced by underscores.
 4. **Multi-stage build variables**: `ARG` values set in the builder stage do NOT persist to the runtime (Caddy) stage. Only `ENV` values set in the final stage are available at runtime.
 5. **Test fixture setup**: Tests dynamically copy the Dockerfile and scripts from repo root to `test-fixtures/fake-app/build-tools/` before each run. Don't manually place files there.

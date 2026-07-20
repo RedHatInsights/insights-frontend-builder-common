@@ -5,6 +5,10 @@ export LANG=en_US.utf-8
 GIT_COMMIT=$(git rev-parse HEAD)
 export GIT_COMMIT
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=dependency_helpers.sh
+source "${SCRIPT_DIR}/dependency_helpers.sh" || exit 1
+
 NPM_INFO="undefined"
 PATTERNFLY_DEPS="undefined"
 export USES_CADDY=true
@@ -70,11 +74,12 @@ EOF
 
 # FIXME: How's this any different from the "build_app_info.sh script??"
 generate_app_info() {
-  if [[ -f package-lock.json ]] || [[ -f yarn.lock ]]; then
-    LINES=$(npm list --silent --depth=0 --production | grep @patternfly -i | sed -E "s/^(.{0})(.{4})/\1/" | tr "\n" "," | sed -E "s/,/\",\"/g")
-    PATTERNFLY_DEPS="[\"${LINES%???}\"]"
-    LINES=$(npm list --silent --depth=0 --production | grep @redhat-cloud-services -i | sed -E "s/^(.{0})(.{4})/\1/" | tr "\n" "," | sed -E "s/,/\",\"/g")
-    RH_CLOUD_SERVICES_DEPS="[\"${LINES%???}\"]"
+  if has_supported_lock_file; then
+    LINES=$(list_dependency_versions "@patternfly")
+    PATTERNFLY_DEPS=$(format_dependency_array "$LINES")
+
+    LINES=$(list_dependency_versions "@redhat-cloud-services")
+    RH_CLOUD_SERVICES_DEPS=$(format_dependency_array "$LINES")
   else
     PATTERNFLY_DEPS="[]"
     RH_CLOUD_SERVICES_DEPS="[]"

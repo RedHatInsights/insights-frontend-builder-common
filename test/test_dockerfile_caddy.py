@@ -56,6 +56,7 @@ class TestDockerfileCaddy:
             "universal_build.sh",
             "build_app_info.sh",
             "server_config_gen.sh",
+            "dependency_helpers.sh",
             "parse-secrets.sh"
         ]
         for script in scripts:

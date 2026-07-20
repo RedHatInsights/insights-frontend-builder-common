@@ -83,6 +83,7 @@ class TestDockerfileFilesystem:
             "universal_build.sh",
             "build_app_info.sh",
             "server_config_gen.sh",
+            "dependency_helpers.sh",
             "parse-secrets.sh"
         ]
         for script in scripts:
@@ -521,6 +522,112 @@ class TestDockerfileFilesystem:
                 capture_output=True
             )
             print(f"✓ Cleaned up custom image {custom_image_name}")
+
+    def test_pnpm_lockfile_build_with_npm_build_script(self):
+        """Test pnpm lockfile detection with the existing NPM_BUILD_SCRIPT arg."""
+        print("\n=== Testing pnpm lockfile build with NPM_BUILD_SCRIPT ===")
+
+        test_script_dir = os.path.dirname(__file__)
+        repo_root = os.path.abspath(os.path.join(test_script_dir, ".."))
+        test_dir = os.path.join(test_script_dir, "test-fixtures", "fake-pnpm-app")
+        pnpm_image_name = "test-frontend-builder-fs-pnpm:test"
+
+        try:
+            self._prepare_test_env(test_dir, repo_root)
+
+            self._build_image(
+                test_dir,
+                build_args={"NPM_BUILD_SCRIPT": "build-plugin"},
+                image_name=pnpm_image_name,
+            )
+
+            index_exists = self._file_exists_in_image(
+                "/srv/dist/index.html",
+                image_name=pnpm_image_name,
+            )
+            assert index_exists, "pnpm build did not create /srv/dist/index.html"
+
+            plugin_marker_exists = self._file_exists_in_image(
+                "/srv/dist/plugin-build.txt",
+                image_name=pnpm_image_name,
+            )
+            assert plugin_marker_exists, "NPM_BUILD_SCRIPT=build-plugin was not used"
+
+            app_info_content = self._read_file_from_image(
+                "/srv/dist/app.info.json",
+                image_name=pnpm_image_name,
+            )
+            assert app_info_content is not None, "app.info.json was not generated"
+
+            app_info = json.loads(app_info_content)
+            assert app_info["app_name"] == "test-pnpm-app", (
+                f"Expected app_name 'test-pnpm-app', got '{app_info['app_name']}'"
+            )
+
+            print("✓ pnpm build completed and used NPM_BUILD_SCRIPT")
+
+        finally:
+            subprocess.run(
+                ["podman", "rmi", "-f", pnpm_image_name],
+                capture_output=True,
+            )
+            self._cleanup_test_env(test_dir)
+            print(f"✓ Cleaned up pnpm image {pnpm_image_name}")
+
+    def test_multiple_lockfiles_fail_build(self):
+        """Test package manager detection fails when conflicting lockfiles exist."""
+        print("\n=== Testing conflicting lockfile detection ===")
+
+        test_script_dir = os.path.dirname(__file__)
+        repo_root = os.path.abspath(os.path.join(test_script_dir, ".."))
+        test_dir = os.path.join(test_script_dir, "test-fixtures", "fake-pnpm-app")
+        conflict_image_name = "test-frontend-builder-fs-conflict:test"
+        package_lock_src = os.path.join(
+            test_script_dir,
+            "test-fixtures",
+            "fake-app",
+            "package-lock.json",
+        )
+        package_lock_dest = os.path.join(test_dir, "package-lock.json")
+
+        try:
+            self._prepare_test_env(test_dir, repo_root)
+            shutil.copy(package_lock_src, package_lock_dest)
+
+            result = subprocess.run(
+                [
+                    "podman",
+                    "build",
+                    "-t",
+                    conflict_image_name,
+                    "-f",
+                    "build-tools/Dockerfile",
+                    ".",
+                ],
+                cwd=test_dir,
+                capture_output=True,
+                text=True,
+                timeout=300,
+            )
+
+            assert result.returncode != 0, "Build succeeded with multiple lockfiles"
+
+            output = f"{result.stdout}\n{result.stderr}"
+            assert "multiple supported package lock files found" in output
+            assert "package-lock.json" in output
+            assert "pnpm-lock.yaml" in output
+
+            print("✓ Build failed with a clear conflicting lockfile message")
+
+        finally:
+            if os.path.exists(package_lock_dest):
+                os.remove(package_lock_dest)
+            subprocess.run(
+                ["podman", "rmi", "-f", conflict_image_name],
+                capture_output=True,
+            )
+            self._cleanup_test_env(test_dir)
+            print(f"✓ Cleaned up conflict image {conflict_image_name}")
 
 
 if __name__ == "__main__":

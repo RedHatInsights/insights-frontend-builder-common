@@ -15,6 +15,7 @@ APP_NAME_FOR_SECRET="$(jq -r '.insights.appname' < "${PACKAGE_JSON_PATH:-package
 SECRET_VAR_NAME="${APP_NAME_FOR_SECRET}_SECRET"
 USES_NPM=false
 USES_YARN=false
+USES_PNPM=false
 
 # Disable verbose output to hide Sentry token from logs
 { old_opts=$(set +o); set +x; } 2>/dev/null
@@ -38,10 +39,12 @@ export APP_BUILD_DIR=${APP_BUILD_DIR:-dist}
 export OUTPUT_DIR=${OUTPUT_DIR:-dist}
 
 function install() {
-  if [ $USES_NPM == true ]; then
+  if [[ "$USES_NPM" == true ]]; then
     npm ci
-  elif [ $USES_YARN == true ]; then
+  elif [[ "$USES_YARN" == true ]]; then
     yarn install --immutable
+  elif [[ "$USES_PNPM" == true ]]; then
+    pnpm install --frozen-lockfile
   else
     # Normally we would not use exit in a source'd file, but this should fail the job
     echo "Exiting; no supported installation packages"
@@ -50,10 +53,12 @@ function install() {
 }
 
 function verify() {
-  if [ $USES_NPM == true ]; then
+  if [[ "$USES_NPM" == true ]]; then
     npm run verify
-  elif [ $USES_YARN == true ]; then
+  elif [[ "$USES_YARN" == true ]]; then
     yarn verify
+  elif [[ "$USES_PNPM" == true ]]; then
+    pnpm run verify
   else
     # Normally we would not use exit in a source'd file, but this should fail the job
     echo "Exiting; no supported verification tool or target"
@@ -78,6 +83,16 @@ function build() {
     else
       yarn build:prod
     fi
+  elif [[ "$USES_PNPM" == true ]]; then
+    # Prefer the pnpm-specific build arg, but keep NPM_BUILD_SCRIPT working for
+    # existing Tekton/Konflux configs that use that build arg name.
+    if [[ -n "$PNPM_BUILD_SCRIPT" ]]; then
+      pnpm run "$PNPM_BUILD_SCRIPT"
+    elif [[ -n "$NPM_BUILD_SCRIPT" ]]; then
+      pnpm run "$NPM_BUILD_SCRIPT"
+    else
+      pnpm run build
+    fi
   else
     # Normally we would not use exit in a source'd file, but this should fail the job
     echo "Exiting; no supported build or target"
@@ -93,25 +108,46 @@ function delete_node_modules() {
   fi
 }
 
-function setNpmOrYarn() {
-  # We can't assume npm or yarn, so we turn on the toggle depending on files in the root
-  if [[ -f package-lock.json ]]; then
-    USES_NPM=true
-  elif [[ -f yarn.lock ]]; then
-    USES_YARN=true
-  else
-  # Normally we would not use exit in a source'd file, but this should fail the job
-    echo "Exiting; no yarn or npm package lock files found. Add a package-lock.json or yarn.lock to your project root"
+function setPackageManager() {
+  # We can't assume npm, yarn, or pnpm, so we turn on the toggle depending on
+  # lock files in the root.
+  local lock_files=()
+
+  [[ -f package-lock.json ]] && lock_files+=("package-lock.json")
+  [[ -f yarn.lock ]] && lock_files+=("yarn.lock")
+  [[ -f pnpm-lock.yaml ]] && lock_files+=("pnpm-lock.yaml")
+
+  if (( ${#lock_files[@]} > 1 )); then
+    echo "Exiting; multiple supported package lock files found: ${lock_files[*]}. Keep only one of package-lock.json, yarn.lock, or pnpm-lock.yaml in your project root" >&2
     exit 1
   fi
+
+  if (( ${#lock_files[@]} == 0 )); then
+    # Normally we would not use exit in a source'd file, but this should fail the job
+    echo "Exiting; no supported package lock files found. Add package-lock.json, yarn.lock, or pnpm-lock.yaml to your project root" >&2
+    exit 1
+  fi
+
+  USES_NPM=false
+  USES_YARN=false
+  USES_PNPM=false
+
+  case "${lock_files[0]}" in
+    package-lock.json)
+      USES_NPM=true
+      ;;
+    yarn.lock)
+      USES_YARN=true
+      ;;
+    pnpm-lock.yaml)
+      USES_PNPM=true
+      ;;
+  esac
 }
 
 get_appname_from_package() {
   jq --raw-output '.insights.appname' < "${PACKAGE_JSON_PATH}"
 }
-
-# Work around large package timeout; up default from 30s to 5m
-yarn config set network-timeout 300000
 
 if ! APP_NAME=$(get_appname_from_package); then
   echo "could not read application name from package.json"
@@ -120,7 +156,12 @@ fi
 
 export APP_NAME
 
-setNpmOrYarn
+setPackageManager
+
+if [[ "$USES_YARN" == true ]]; then
+  # Work around large package timeout; up default from 30s to 5m
+  yarn config set network-timeout 300000
+fi
 
 install
 

@@ -43,6 +43,11 @@ test/
         └── build-tools/           # (Created dynamically during tests)
             ├── Dockerfile         # (Copied from repo root)
             └── *.sh               # (Build scripts copied from repo root)
+    └── fake-pnpm-app/             # Minimal pnpm test application
+        ├── package.json
+        ├── pnpm-lock.yaml
+        ├── build.js
+        └── LICENSE
 ```
 
 ## Prerequisites
@@ -132,8 +137,8 @@ pytest test_dockerfile_caddy.py --cov --cov-report=html
 1. Changes to `test-fixtures/fake-app` directory
 2. Runs `podman build -f build-tools/Dockerfile .` (mimicking real-world usage)
 3. The build process inside the container:
-   - Installs npm dependencies
-   - Runs `npm run build` (which executes `build.js`)
+   - Installs npm, yarn, or pnpm dependencies based on the lock file
+   - Runs the configured build script (which executes `build.js` in the fixtures)
    - Creates `dist/` directory with test assets (HTML, CSS, JS, JSON)
    - Runs build scripts to generate Caddyfile and app.info.json
    - Copies files to final Caddy-based image
@@ -172,6 +177,7 @@ After all tests complete:
 - ✓ `ENABLE_SENTRY` - Sentry configuration during build
 - ✓ `SENTRY_RELEASE` - Sentry release version
 - ✓ `USES_YARN` - Build system selection (npm vs yarn)
+- ✓ pnpm lockfile detection with `NPM_BUILD_SCRIPT` compatibility
 
 **Runtime ENV variables:**
 - ✓ `ENV_PUBLIC_PATH` - Custom Caddy route for serving app
@@ -179,7 +185,7 @@ After all tests complete:
 - ✓ Runtime variable override of defaults
 - ✓ Default values are correctly set
 
-**Note:** Due to the multi-stage Docker build, variables set in the builder stage (like `ENABLE_SENTRY`, `USES_YARN`, `YARN_BUILD_SCRIPT`) are only available during build and not at runtime in the final Caddy container. Only variables set in the final stage (`ENV_PUBLIC_PATH`, `CADDY_TLS_MODE`) are available at runtime.
+**Note:** Due to the multi-stage Docker build, variables set in the builder stage (like `ENABLE_SENTRY`, `USES_YARN`, `YARN_BUILD_SCRIPT`, `PNPM_BUILD_SCRIPT`) are only available during build and not at runtime in the final Caddy container. Only variables set in the final stage (`ENV_PUBLIC_PATH`, `CADDY_TLS_MODE`) are available at runtime.
 
 ### Filesystem Structure Tests (`test_dockerfile_filesystem.py`)
 
@@ -220,7 +226,7 @@ To test with a different application structure:
 1. Create a new directory under `test-fixtures/`
 2. Ensure it has the required files:
    - `package.json` with `insights.appname`
-   - `package-lock.json` or `yarn.lock`
+   - `package-lock.json`, `yarn.lock`, or `pnpm-lock.yaml`
    - Build script that creates a `dist/` directory
    - `LICENSE` file
    - Git repository initialized (required by build scripts)
