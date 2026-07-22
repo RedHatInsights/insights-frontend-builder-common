@@ -79,7 +79,7 @@ RUN chmod +x build-tools/parse-secrets.sh
 
 # 👉 Mount one secret with many keys; universal_build.sh handles the rest
 USER root
-RUN --mount=type=secret,id=build-container-additional-secret/secrets,required=false \
+RUN --mount=type=secret,id=sentry-secrets/secrets,required=false \
   universal_build.sh
 USER default
 

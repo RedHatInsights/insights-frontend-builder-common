@@ -18,8 +18,8 @@ INVENTORY_SECRET=your-secret-value
 ```
 
 **Key features:**
-- Secrets are mounted at `/run/secrets/build-container-additional-secret/secrets`
-- You have to name your secret as `build-container-additional-secret` inside of it create a single key/value secret with key as `secrets` and value contents of your `.env` file
+- Secrets are mounted at `/run/secrets/sentry-secrets/secrets`
+- You have to name your secret as `sentry-secrets` inside of it create a single key/value secret with key as `secrets` and value contents of your `.env` file
 - The `parse-secrets.sh` script automatically parses the `.env` file format
 - Comments (lines starting with `#`) and empty lines are ignored
 - All key-value pairs are exported as environment variables during the build

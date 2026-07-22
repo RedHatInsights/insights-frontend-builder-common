@@ -86,7 +86,7 @@ Follow this same fallback pattern when adding new git-derived metadata.
 
 ### Secret Handling
 
-The `parse-secrets.sh` script reads from a fixed path (`/run/secrets/build-container-additional-secret/secrets`). Rules:
+The `parse-secrets.sh` script reads from a fixed path (`/run/secrets/sentry-secrets/secrets`). Rules:
 
 - Never echo secret values to stdout
 - Handle missing secret files gracefully (exit 0, not 1)

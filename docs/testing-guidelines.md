@@ -177,7 +177,7 @@ with tempfile.NamedTemporaryFile(mode='w', suffix='.env', delete=False) as f:
 # Build with secret mount
 subprocess.run(
     ["podman", "build", "--secret",
-     f"id=build-container-additional-secret/secrets,src={secret_path}",
+     f"id=sentry-secrets/secrets,src={secret_path}",
      "-f", "build-tools/Dockerfile", "-t", "test-secrets:test", "."],
     cwd=str(self.FIXTURE_DIR),
     check=True,
