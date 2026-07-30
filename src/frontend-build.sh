@@ -113,7 +113,9 @@ function getHistory() {
   # Suppress xtrace to avoid leaking QUAY_TOKEN in CI logs
   { set +x; } 2>/dev/null
   ./frontend-build-history.sh -q "$IMAGE" -o aggregated_history -c dist -p true -t "$QUAY_TOKEN" -u "$QUAY_USER"
+  local _rc=$?
   set -x
+  return $_rc
 }
 
 #FIXME this is not actually true in all cases
@@ -214,8 +216,13 @@ setup_docker_login() {
     fi
 
     docker login -u="$QUAY_USER" --password-stdin quay.io <<< "$QUAY_TOKEN"
+    local _rc1=$?
     docker login -u="$RH_REGISTRY_USER" --password-stdin registry.redhat.io <<< "$RH_REGISTRY_TOKEN"
+    local _rc2=$?
     set -x
+    if [[ $_rc1 -ne 0 || $_rc2 -ne 0 ]]; then
+        return 1
+    fi
 
 }
 
