@@ -8,10 +8,6 @@ fi
 # Set to not empty to force using local path scripts (for testing in change request context)
 FORCE_LOCAL_SCRIPT_PATHS="${FORCE_LOCAL_SCRIPT_PATHS:-}"
 
-#dump env
-ENV_DUMP=`env`
-echo "$ENV_DUMP"
-
 which docker
 docker --version
 
@@ -114,7 +110,10 @@ function getHistory() {
   fi
 
   mkdir aggregated_history
+  # Suppress xtrace to avoid leaking QUAY_TOKEN in CI logs
+  { set +x; } 2>/dev/null
   ./frontend-build-history.sh -q "$IMAGE" -o aggregated_history -c dist -p true -t "$QUAY_TOKEN" -u "$QUAY_USER"
+  set -x
 }
 
 #FIXME this is not actually true in all cases
@@ -145,17 +144,19 @@ build() {
   # NOTE: Make sure this volume is mounted 'ro', otherwise Jenkins cannot clean up the
   # workspace due to file permission errors; the Z is used for SELinux workarounds
   # -e NODE_BUILD_VERSION can be used to specify a version other than 12
-  docker run -i --name $CONTAINER_NAME \
+  # Suppress xtrace to avoid leaking secret values in CI logs
+  { set +x; } 2>/dev/null
+  docker run -i --name "$CONTAINER_NAME" \
     --pull=always \
-    -v $PWD:/workspace:ro,Z \
-    -e QUAY_USER=$QUAY_USER \
-    -e QUAY_TOKEN=$QUAY_TOKEN \
-    -e GLITCHTIP_TOKEN=$GLITCHTIP_TOKEN \
-    -e APP_DIR=$APP_DIR \
-    -e IS_PR=$IS_PR \
-    -e CI_ROOT=$CI_ROOT \
-    -e NODE_BUILD_VERSION=$NODE_BUILD_VERSION \
-    -e SERVER_NAME=$SERVER_NAME \
+    -v "$PWD:/workspace:ro,Z" \
+    -e QUAY_USER="$QUAY_USER" \
+    -e QUAY_TOKEN="$QUAY_TOKEN" \
+    -e GLITCHTIP_TOKEN="$GLITCHTIP_TOKEN" \
+    -e APP_DIR="$APP_DIR" \
+    -e IS_PR="$IS_PR" \
+    -e CI_ROOT="$CI_ROOT" \
+    -e NODE_BUILD_VERSION="$NODE_BUILD_VERSION" \
+    -e SERVER_NAME="$SERVER_NAME" \
     -e DIST_FOLDER \
     -e INCLUDE_CHROME_CONFIG \
     -e CHROME_CONFIG_BRANCH \
@@ -175,6 +176,7 @@ build() {
     --add-host prod.foo.redhat.com:127.0.0.1 \
     quay.io/cloudservices/frontend-build-container:3bacc0b
   RESULT=$?
+  set -x
 
   if [ $RESULT -ne 0 ]; then
     echo "Test failure observed; aborting"
@@ -196,18 +198,24 @@ setup_docker_login() {
     DOCKER_CONFIG=$(mktemp -d -p "$HOME" docker_config_XXXXX)
     export DOCKER_CONFIG
 
+    # Suppress xtrace to avoid leaking registry credentials in CI logs
+    { set +x; } 2>/dev/null
+
     if [[ -z "$QUAY_USER" || -z "$QUAY_TOKEN" ]]; then
+        set -x
         echo "QUAY_USER and QUAY_TOKEN must be set"
         return 1
     fi
 
     if [[ -z "$RH_REGISTRY_USER" || -z "$RH_REGISTRY_TOKEN" ]]; then
+        set -x
         echo "RH_REGISTRY_USER and RH_REGISTRY_TOKEN must be set"
         return 1
     fi
 
     docker login -u="$QUAY_USER" --password-stdin quay.io <<< "$QUAY_TOKEN"
     docker login -u="$RH_REGISTRY_USER" --password-stdin registry.redhat.io <<< "$RH_REGISTRY_TOKEN"
+    set -x
 
 }
 
