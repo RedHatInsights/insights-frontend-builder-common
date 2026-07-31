@@ -13,6 +13,7 @@ help:
 	@echo "  test-verbose  - Run tests with verbose output"
 	@echo "  lint          - Run ruff check on test code"
 	@echo "  lint-sh       - Run shellcheck on build scripts"
+	@echo "  test-repo     - Run repository-level config file checks"
 	@echo "  clean         - Remove test artifacts and containers"
 
 install:

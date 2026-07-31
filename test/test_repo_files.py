@@ -6,6 +6,7 @@ This test suite verifies that shared configuration files
 These tests run without Podman — they only inspect the local filesystem.
 """
 
+import fnmatch
 import os
 
 import pytest
@@ -40,17 +41,44 @@ class TestRepoFiles:
             )
 
     def test_dockerignore_no_sensitive_paths_included(self):
-        """Test that .dockerignore does not accidentally exclude build-critical paths."""
+        """Test that .dockerignore does not accidentally exclude build-critical paths.
+
+        Uses fnmatch to evaluate Docker-compatible pattern matching semantics,
+        catching wildcard and directory-form rules (e.g. ``*``, ``test/``,
+        ``**/*.sh``) that would exclude protected paths.
+        """
         dockerignore_path = os.path.join(self.repo_root, ".dockerignore")
         with open(dockerignore_path) as f:
             entries = [line.strip() for line in f if line.strip() and not line.startswith("#")]
 
-        # These paths must NOT be excluded — they are needed during Docker builds
-        critical_paths = ["Dockerfile", "*.sh", "src", "test"]
-        for path in critical_paths:
-            assert path not in entries, (
-                f".dockerignore must not exclude build-critical path: {path}"
-            )
+        # Representative files that must survive the ignore filter.
+        # Each is a realistic path that could be matched by overly broad rules.
+        critical_files = [
+            "Dockerfile",
+            "universal_build.sh",
+            "src/frontend-build.sh",
+            "test/conftest.py",
+            "build_app_info.sh",
+        ]
+
+        for entry in entries:
+            # Normalise directory-form rules: "test/" should match "test/conftest.py"
+            pattern = entry.rstrip("/")
+            for filepath in critical_files:
+                # Direct match (e.g. pattern "src" matches path "src")
+                matched = fnmatch.fnmatch(filepath, pattern)
+                # Directory-prefix match (e.g. pattern "src" matches "src/frontend-build.sh")
+                if not matched:
+                    matched = filepath.startswith(pattern + "/")
+                # Recursive-glob match (e.g. "**/*.sh" → "*.sh" applied to basename)
+                if not matched and pattern.startswith("**/"):
+                    matched = fnmatch.fnmatch(
+                        os.path.basename(filepath), pattern[3:]
+                    )
+                assert not matched, (
+                    f".dockerignore entry '{entry}' would exclude "
+                    f"build-critical path: {filepath}"
+                )
 
 
 if __name__ == "__main__":
