@@ -1,4 +1,4 @@
-.PHONY: help install test test-caddy test-env test-fs test-verbose lint lint-sh clean
+.PHONY: help install test test-caddy test-env test-fs test-repo test-verbose lint lint-sh clean
 
 # Shell scripts to lint (active build scripts only; legacy src/ scripts excluded)
 SHELL_SCRIPTS := ../build_app_info.sh ../server_config_gen.sh ../universal_build.sh ../dependency_helpers.sh ../parse-secrets.sh
@@ -29,6 +29,9 @@ test-env:
 
 test-fs:
 	pytest test_dockerfile_filesystem.py -v
+
+test-repo:
+	pytest test_repo_files.py -v
 
 test-verbose:
 	pytest -v -s
