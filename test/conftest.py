@@ -27,6 +27,10 @@ def pytest_configure(config):
         "markers",
         "hermetic: marks tests related to hermetic Dockerfile"
     )
+    config.addinivalue_line(
+        "markers",
+        "repofiles: marks tests related to repository-level config files"
+    )
 
 
 def pytest_collection_modifyitems(config, items):
@@ -44,3 +48,6 @@ def pytest_collection_modifyitems(config, items):
         # Mark all tests in TestDockerfileHermetic as hermetic tests
         elif "TestDockerfileHermetic" in item.nodeid:
             item.add_marker(pytest.mark.hermetic)
+        # Mark all tests in TestRepoFiles as repofiles tests
+        elif "TestRepoFiles" in item.nodeid:
+            item.add_marker(pytest.mark.repofiles)
