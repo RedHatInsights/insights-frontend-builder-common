@@ -2,7 +2,7 @@ FROM quay.io/redhat-services-prod/hcm-eng-prod-tenant/frontend-builder:latest as
 
 COPY --chown=default . .
 
-RUN bash -x universal_build.sh
+RUN bash universal_build.sh
 
 FROM quay.io/redhat-services-prod/hcm-eng-prod-tenant/caddy-ubi:latest
 

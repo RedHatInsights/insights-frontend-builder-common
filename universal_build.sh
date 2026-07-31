@@ -1,9 +1,11 @@
 #!/bin/bash
 set -euo pipefail
 
-set -exv
-
 # ────────── SENTRY & SECRETS SETUP ──────────
+# NOTE: xtrace (-x) and verbose (-v) are deliberately OFF during this section
+# to prevent secret values from leaking into Konflux/Tekton build logs.
+# They are enabled after secret handling completes (see END SENTRY block below).
+
 # Source secrets if the parse-secrets script exists
 if [[ -f ./build-tools/parse-secrets.sh ]]; then
   source ./build-tools/parse-secrets.sh
@@ -17,9 +19,6 @@ USES_NPM=false
 USES_YARN=false
 USES_PNPM=false
 
-# Disable verbose output to hide Sentry token from logs
-{ old_opts=$(set +o); set +x; } 2>/dev/null
-
 if [[ -n "${!SECRET_VAR_NAME:-}" ]]; then
   export ENABLE_SENTRY=true
   export SENTRY_AUTH_TOKEN="${!SECRET_VAR_NAME}"
@@ -27,13 +26,13 @@ if [[ -n "${!SECRET_VAR_NAME:-}" ]]; then
 else
   echo "Sentry: no token for ${APP_NAME_FOR_SECRET} – using any pre-set token (if provided) or skipping upload."
 fi
-# Restore previous shell options (re-enables verbose output)
-{ eval "$old_opts"; } 2>/dev/null
 
 # Configure git to trust this directory
 git config --global --add safe.directory /opt/app-root/src
 
 # ────────── END SENTRY & SECRETS SETUP ──────────
+# Enable xtrace and verbose for build debugging now that secrets are handled
+set -xv
 
 export APP_BUILD_DIR=${APP_BUILD_DIR:-dist}
 export OUTPUT_DIR=${OUTPUT_DIR:-dist}
