@@ -84,7 +84,16 @@ RUN --mount=type=secret,id=build-container-additional-secret/secrets,required=fa
 USER default
 
 
-FROM quay.io/redhat-services-prod/hcm-eng-prod-tenant/caddy-ubi:latest
+# ────────── CADDY UBI VERSION CONFIGURATION ──────────
+# NOTE:
+# This build argument specifies the Caddy UBI runtime image tag.
+# Tags are 7-character git commit SHAs from the caddy-ubi source repo:
+# https://gitlab.cee.redhat.com/insights-platform/caddy-ubi
+#
+# To find newer tags, check merged MRs on the caddy-ubi repo and use
+# the first 7 characters of the merge commit SHA.
+ARG CADDY_IMAGE_TAG=dd37f62
+FROM quay.io/redhat-services-prod/hcm-eng-prod-tenant/caddy-ubi:${CADDY_IMAGE_TAG}
 
 COPY LICENSE /licenses/
 
