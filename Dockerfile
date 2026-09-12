@@ -8,10 +8,10 @@
 #   Node 24: --build-arg NODE_BUILD_VERSION=24 --build-arg NODE_IMAGE_TAG=<appropriate-tag>
 #
 # To find available tags, visit:
-# https://catalog.redhat.com/software/containers/ubi9/nodejs-22/62e8e7ed22d1d3c2dfe2ca01
-ARG NODE_BUILD_VERSION=22
-ARG NODE_IMAGE_TAG=9.8-1780375952
-FROM registry.access.redhat.com/ubi9/nodejs-${NODE_BUILD_VERSION}:${NODE_IMAGE_TAG} as builder
+# https://catalog.redhat.com/en/software/containers/ubi10/nodejs-24/67f6288d9700d2bde865192a
+ARG NODE_BUILD_VERSION=24
+ARG NODE_IMAGE_TAG=10.2-1785835781
+FROM registry.access.redhat.com/ubi10/nodejs-${NODE_BUILD_VERSION}:${NODE_IMAGE_TAG} as builder
 
 USER root
 

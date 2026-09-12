@@ -11,10 +11,10 @@
 #   Node 24: --build-arg NODE_BUILD_VERSION=24 --build-arg NODE_IMAGE_TAG=<appropriate-tag>
 #
 # To find available tags, visit:
-# https://catalog.redhat.com/software/containers/ubi9/nodejs-22/62e8e7ed22d1d3c2dfe2ca01
-ARG NODE_BUILD_VERSION=22
-ARG NODE_IMAGE_TAG=9.8-1780375952
-FROM registry.access.redhat.com/ubi9/nodejs-${NODE_BUILD_VERSION}:${NODE_IMAGE_TAG} AS builder
+# https://catalog.redhat.com/en/software/containers/ubi10/nodejs-24/67f6288d9700d2bde865192a
+ARG NODE_BUILD_VERSION=24
+ARG NODE_IMAGE_TAG=10.2-1785835781
+FROM registry.access.redhat.com/ubi10/nodejs-${NODE_BUILD_VERSION}:${NODE_IMAGE_TAG} as builder
 
 # Additional arguments to be appended for `npm ci`, e.g. "--legacy-peer-deps"
 ARG NPM_CI_ARGS=
@@ -45,11 +45,11 @@ RUN npm run build
 
 # Stage 2: Semi-minimal runtime image - contains only built files and minimal dependencies for the RH certification
 
-# To achieve a hermetic build with minimal container size, you can request an exception for the image to use a base image 
+# To achieve a hermetic build with minimal container size, you can request an exception for the image to use a base image
 # other than ubi-minimal. This will allow you to use a smaller base image like scratch or alpine.
 
-# Alternatively, you can use the `docker-build-multi-platform-oci-ta` pipeline, which supports building multi-arch 
-# container images while maintaining trust after pipeline customization. This pipeline uses OCI artifacts instead of 
+# Alternatively, you can use the `docker-build-multi-platform-oci-ta` pipeline, which supports building multi-arch
+# container images while maintaining trust after pipeline customization. This pipeline uses OCI artifacts instead of
 #Persistent Volume Claims, which may help reduce the container size.
 
 # You can also take a look at the workarounds:supportRedHatImageVersion preset for other available options.
@@ -80,9 +80,9 @@ COPY --from=builder /opt/app-root/src/LICENSE /licenses/
 
 # Create srv directory and copy built files from builder stage
 RUN mkdir -p /srv
-COPY --from=builder /opt/app-root/src/dist /srv/dist 
-COPY --from=builder /opt/app-root/src/package.json /srv/package.json 
-COPY --from=builder /opt/app-root/src/package-lock.json /srv/package-lock.json 
+COPY --from=builder /opt/app-root/src/dist /srv/dist
+COPY --from=builder /opt/app-root/src/package.json /srv/package.json
+COPY --from=builder /opt/app-root/src/package-lock.json /srv/package-lock.json
 
 # Set to non-root user
 USER 1001
