@@ -19,6 +19,10 @@ FROM registry.access.redhat.com/ubi9/nodejs-${NODE_BUILD_VERSION}:${NODE_IMAGE_T
 # Additional arguments to be appended for `npm ci`, e.g. "--legacy-peer-deps"
 ARG NPM_CI_ARGS=
 
+# Whether this is an IOP (Satellite) build — set to 'true' for IoP deployments
+ARG IOP=false
+ENV IOP=${IOP}
+
 # ────────── APP VERSION ──────────
 # NOTE:
 # This build argument allows application owners to set a custom version string
@@ -41,7 +45,7 @@ RUN CYPRESS_INSTALL_BINARY=0 npm ci --offline --no-audit --no-fund $NPM_CI_ARGS
 COPY --chown=default . .
 
 # Run the build process
-RUN npm run build
+RUN IOP=${IOP} npm run build
 
 # Stage 2: Semi-minimal runtime image - contains only built files and minimal dependencies for the RH certification
 
