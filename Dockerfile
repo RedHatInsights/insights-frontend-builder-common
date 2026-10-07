@@ -15,7 +15,11 @@ FROM registry.access.redhat.com/ubi9/nodejs-${NODE_BUILD_VERSION}:${NODE_IMAGE_T
 
 USER root
 
-RUN dnf install jq -y
+# Installing jq from public UBI repositories does not require a RHEL subscription.
+RUN dnf install -y --disablerepo='*' \
+    --enablerepo=ubi-9-baseos-rpms \
+    --enablerepo=ubi-9-appstream-rpms jq \
+    && dnf clean all
 
 USER default
 
