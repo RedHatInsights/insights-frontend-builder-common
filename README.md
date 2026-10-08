@@ -8,9 +8,8 @@ The repo responsible for building all of the frontends on cloud.redhat.com.
 image using `:latest@sha256:<digest>`. The digest selects the exact image content
 used by builds; the `latest` tag lets Renovate discover newly published images.
 Renovate proposes digest updates in this repository, subject to the inherited
-Docker update grouping and scheduling rules. The Caddy rule disables the
-inherited release-age delay because digest updates have no release timestamp to
-check against it. The bot needs pull access to the production Quay repository.
+Docker update grouping and scheduling rules. The bot needs pull access to the
+production Quay repository.
 
 After a Caddy update passes CI and merges, consuming applications must update
 their `build-tools` submodule revision and rebuild through their normal pipeline

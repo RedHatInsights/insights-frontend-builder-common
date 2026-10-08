@@ -23,8 +23,7 @@
       "matchPackageNames": [
         "quay.io/redhat-services-prod/hcm-eng-prod-tenant/caddy-ubi"
       ],
-      "pinDigests": true,
-      "minimumReleaseAge": "0 days"
+      "pinDigests": true
     }
   ]
 }
