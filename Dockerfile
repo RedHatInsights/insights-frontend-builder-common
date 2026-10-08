@@ -15,7 +15,12 @@ FROM registry.access.redhat.com/ubi9/nodejs-${NODE_BUILD_VERSION}:${NODE_IMAGE_T
 
 USER root
 
-RUN dnf install jq -y
+# install without the need for subsman
+RUN dnf --disablerepo='*' \
+    --enablerepo=ubi-9-baseos-rpms \
+    --enablerepo=ubi-9-appstream-rpms \
+    -y install jq \
+    && dnf clean all
 
 USER default
 
