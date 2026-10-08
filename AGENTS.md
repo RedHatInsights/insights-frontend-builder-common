@@ -8,7 +8,7 @@ Shared Docker build infrastructure for all HCC (Hybrid Cloud Console) frontend a
 |-----------|----------------|---------|
 | Docker/Podman | Multi-stage builds | Container image builds |
 | Bash | Shell scripts | Build orchestration, config generation |
-| Caddy | UBI-based (`caddy-ubi:latest`) | Static file serving in production |
+| Caddy | UBI-based (`caddy-ubi:latest@sha256:<digest>`) | Static file serving in production |
 | Node.js | UBI9 nodejs-22 | Frontend build stage |
 | Python | 3.8+ with pytest | Dockerfile integration tests |
 | Podman | Container runtime | Test execution (builds + runs containers) |
@@ -170,7 +170,7 @@ cd test && make install
 4. **Environment variables**: Use `ARG` for build-time, `ENV` to persist to runtime. Document every ARG in the Dockerfile with comments.
 5. **Secrets handling**: Never log secret values. Use the `parse-secrets.sh` pattern for `.env` format secrets from Konflux mounts.
 6. **Python tests**: Use pytest classes (e.g., `TestDockerfileCaddy`). Each test class builds its own container image and cleans up.
-7. **Container references**: Use Quay registry paths. The Caddy base image is `quay.io/redhat-services-prod/hcm-eng-prod-tenant/caddy-ubi:latest`.
+7. **Container references**: Use Quay registry paths. Pin the Caddy base image as `quay.io/redhat-services-prod/hcm-eng-prod-tenant/caddy-ubi:latest@sha256:<digest>` in both `Dockerfile` and `application.Dockerfile`. Renovate tracks the `latest` tag and updates the digest.
 8. **Submodule convention**: Consumer apps clone this as `build-tools/`. Scripts reference paths relative to this (e.g., `build-tools/Dockerfile`).
 
 ## Common Pitfalls
