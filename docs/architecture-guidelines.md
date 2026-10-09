@@ -54,7 +54,11 @@ Key operations:
 
 ### Stage 2: Runtime (Caddy)
 
-Base image: `quay.io/redhat-services-prod/hcm-eng-prod-tenant/caddy-ubi:latest`
+Base image: `quay.io/redhat-services-prod/hcm-eng-prod-tenant/caddy-ubi:latest@sha256:<digest>`
+
+The digest fixes the runtime image content. Renovate tracks the `latest` tag for
+digest updates in both shared Dockerfiles; consumers receive them by updating
+their `build-tools` revision and rebuilding.
 
 Purpose: Serve the built static files with Caddy web server.
 

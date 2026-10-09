@@ -2,6 +2,21 @@
 
 The repo responsible for building all of the frontends on cloud.redhat.com.
 
+## Caddy Runtime Image Updates
+
+`Dockerfile` and `application.Dockerfile` pin the production `caddy-ubi` runtime
+image using `:latest@sha256:<digest>`. The digest selects the exact image content
+used by builds; the `latest` tag lets Renovate discover newly published images.
+Renovate proposes digest updates in this repository, subject to the inherited
+Docker update grouping and scheduling rules. The bot needs pull access to the
+production Quay repository.
+
+After a Caddy update passes CI and merges, consuming applications must update
+their `build-tools` submodule revision and rebuild through their normal pipeline
+to receive it. Applications using automated build-tools updates receive that
+revision change as a separate PR/MR; merging the shared change alone does not
+rebuild those applications.
+
 ## Build Secrets Management
 
 This Dockerfile supports passing build secrets via Konflux as a `.env` file format. The secrets are parsed and made available during the build process, with special handling for Sentry authentication tokens.
