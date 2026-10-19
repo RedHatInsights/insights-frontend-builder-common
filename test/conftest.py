@@ -46,6 +46,8 @@ def pytest_collection_modifyitems(config, items):
         elif "TestDockerfileFilesystem" in item.nodeid:
             item.add_marker(pytest.mark.filesystem)
         # Mark all tests in TestDockerfileHermetic as hermetic tests
+        elif "TestDockerfileHermeticDeploy" in item.nodeid:
+            item.add_marker(pytest.mark.hermetic)
         elif "TestDockerfileHermetic" in item.nodeid:
             item.add_marker(pytest.mark.hermetic)
         # Mark all tests in TestRepoFiles as repofiles tests

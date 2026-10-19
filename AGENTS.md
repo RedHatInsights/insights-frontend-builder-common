@@ -22,7 +22,8 @@ Shared Docker build infrastructure for all HCC (Hybrid Cloud Console) frontend a
 ```text
 insights-frontend-builder-common/
 ├── Dockerfile                    # Primary multi-stage build (Node.js builder → Caddy runtime)
-├── Dockerfile.hermetic           # Hermetic/airgapped build variant (Node.js → ubi-micro)
+├── Dockerfile.hermetic           # Hermetic/airgapped build variant (multi-target: deploy + artifact)
+├── caddyfile_gen_hermetic.js     # Caddyfile generator for hermetic builds (Node.js, no jq)
 ├── application.Dockerfile        # Legacy Dockerfile using pre-built builder image
 ├── universal_build.sh            # Main build orchestrator (npm/yarn/pnpm detect, install, build)
 ├── build_app_info.sh             # Generates app.info.json with build metadata
@@ -104,11 +105,24 @@ The build is triggered by `podman build -f build-tools/Dockerfile .` and follows
 
 ### Hermetic Build Flow
 
-`Dockerfile.hermetic` is used for airgapped Konflux builds:
+`Dockerfile.hermetic` supports two build targets for airgapped Konflux builds:
+
+**Artifact target (default, no `--target` needed):**
 - Uses Cachi2 prefetched dependencies (`npm ci --offline`)
 - Final stage uses `ubi-micro` (minimal image, no Caddy)
 - Output goes to `/srv/dist`, `/srv/package.json`, `/srv/package-lock.json`
-- Requires `prefetch-input` in Tekton pipeline config
+- Configurable Red Hat compliance labels via `LABEL_*` build args
+- Used for security-compliance (-sc) images
+
+**Deploy target (`--target deploy`):**
+- Same builder stage as artifact
+- Final stage uses `caddy-ubi` (Caddy server on port 8000)
+- Caddyfile auto-generated from `package.json` `insights.appname` via `caddyfile_gen_hermetic.js`
+- Consumers can override with a static `Caddyfile` in repo root
+- Output: Caddyfile at `/etc/caddy/Caddyfile`, dist at `/srv/dist`
+- Replaces per-repo `Dockerfile.hermetic` + `Caddyfile` workaround
+
+Both targets require `prefetch-input` in Tekton pipeline config
 
 ### Key Build Arguments
 
