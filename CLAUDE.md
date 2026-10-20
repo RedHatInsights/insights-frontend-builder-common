@@ -36,6 +36,7 @@ cd test && make install
 
 - `Dockerfile` — primary multi-stage build (builder + Caddy runtime)
 - `Dockerfile.hermetic` — hermetic multi-target build (deploy + artifact targets)
+- `build_app_info_hermetic.js` — generates app.info.json/app.info.deps.json for hermetic builds (Node.js, no jq)
 - `caddyfile_gen_hermetic.js` — Caddyfile generator for hermetic builds (Node.js, no jq)
 - `universal_build.sh` — main build orchestrator (detects npm/yarn, installs, builds)
 - `build_app_info.sh` — generates app.info.json with build metadata

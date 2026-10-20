@@ -23,6 +23,7 @@ Shared Docker build infrastructure for all HCC (Hybrid Cloud Console) frontend a
 insights-frontend-builder-common/
 ├── Dockerfile                    # Primary multi-stage build (Node.js builder → Caddy runtime)
 ├── Dockerfile.hermetic           # Hermetic/airgapped build variant (multi-target: deploy + artifact)
+├── build_app_info_hermetic.js     # Metadata generator for hermetic builds (app.info.json, no jq)
 ├── caddyfile_gen_hermetic.js     # Caddyfile generator for hermetic builds (Node.js, no jq)
 ├── application.Dockerfile        # Legacy Dockerfile using pre-built builder image
 ├── universal_build.sh            # Main build orchestrator (npm/yarn/pnpm detect, install, build)

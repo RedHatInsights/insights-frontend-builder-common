@@ -14,9 +14,17 @@
 #     value: "true"
 #   - name: prefetch-input
 #     value: '{"type": "npm", "path": "."}'
-#   # For deploy target, also set (pipeline-dependent):
-#   - name: target-stage
-#     value: deploy
+#
+# DEPLOY TARGET PREREQUISITE:
+# Building the deploy target requires pipeline support for forwarding --target
+# to the Buildah task's build command. The current shared pipeline
+# (docker-build-run-unit-tests.yaml) and its pinned Buildah task do not expose
+# a target-forwarding parameter. Required before consumers can use --target deploy:
+#   1. The Buildah task must accept and forward a --target build arg
+#   2. The shared or inline Tekton pipeline must expose this as a PipelineRun param
+#   3. Consumer .tekton PipelineRun sets that parameter to "deploy"
+# Without these changes, the build defaults to the artifact stage (backward-compatible).
+# This cross-repository prerequisite is tracked separately from this Dockerfile.
 
 # ────────── NODE.JS VERSION CONFIGURATION ──────────
 # NOTE:
@@ -61,6 +69,17 @@ ENV ENABLE_SENTRY=${ENABLE_SENTRY} \
 ARG APP_VERSION=unknown
 ENV APP_VERSION=${APP_VERSION}
 
+# ────────── SOURCE GIT METADATA ──────────
+# NOTE:
+# In CI environments with detached HEAD checkouts (e.g. Konflux/Tekton),
+# git cannot determine the branch or tag from the working directory alone.
+# Pass these build args so build_app_info_hermetic.js can include them in
+# app.info.json. Example: --build-arg SOURCE_GIT_BRANCH=main
+ARG SOURCE_GIT_BRANCH=""
+ARG SOURCE_GIT_TAG=""
+ENV SOURCE_GIT_BRANCH=${SOURCE_GIT_BRANCH} \
+    SOURCE_GIT_TAG=${SOURCE_GIT_TAG}
+
 # ────────── BUILD CONFIGURATION ──────────
 ARG APP_BUILD_DIR=dist
 ARG PACKAGE_JSON_PATH=package.json
@@ -77,6 +96,9 @@ RUN CYPRESS_INSTALL_BINARY=0 npm ci --offline --no-audit --no-fund $NPM_CI_ARGS
 # Copy source code
 COPY --chown=default . .
 
+# Trust the working directory for git operations (needed by metadata generation)
+RUN git config --global --add safe.directory /opt/app-root/src
+
 # Build the frontend application
 RUN IOP=${IOP} npm run build
 
@@ -87,6 +109,13 @@ RUN if [ -f build-tools/caddyfile_gen_hermetic.js ]; then \
       node build-tools/caddyfile_gen_hermetic.js; \
     elif [ ! -f Caddyfile ]; then \
       echo "Note: No Caddyfile found. Deploy target requires a Caddyfile or updated build-tools submodule."; \
+    fi
+
+# Generate app.info.json and app.info.deps.json metadata
+# Equivalent to build_app_info.sh + server_config_gen.sh generate_app_info()
+# Skipped if consumer provides their own or if script not found
+RUN if [ -f build-tools/build_app_info_hermetic.js ]; then \
+      node build-tools/build_app_info_hermetic.js; \
     fi
 
 
