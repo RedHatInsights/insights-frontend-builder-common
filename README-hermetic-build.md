@@ -66,6 +66,12 @@ spec:
 
 ### Regular Pipeline (deploy target)
 
+The deploy target requires `--target deploy` to be forwarded to the Buildah task during the container build. This is a **cross-repository prerequisite** that involves:
+
+1. **Buildah task**: The pinned Buildah task revision must accept a `TARGET` or equivalent parameter and pass `--target $(params.TARGET)` to `buildah build`.
+2. **Shared/inline pipeline**: The Tekton Pipeline must expose this as a PipelineRun-level parameter (e.g. `target-stage`) and forward it to the Buildah task.
+3. **Consumer PipelineRun**: Once the above are in place, set the parameter in `.tekton/`:
+
 ```yaml
 spec:
   params:
@@ -81,11 +87,11 @@ spec:
     value: "true"
   - name: prefetch-input
     value: '{"type": "npm", "path": "."}'
-  - name: target-stage                          # ADD THIS for deploy
-    value: deploy                                # ADD THIS for deploy
+  - name: target-stage                          # Requires pipeline support (see above)
+    value: deploy
 ```
 
-> **Note**: The `target-stage` parameter name depends on the referenced pipeline. Check your `pipelineRef` revision for supported parameter names. If target forwarding is not available, describe the specific follow-up needed.
+> **Note**: Without the pipeline/task changes above, the build defaults to the `artifact` stage (backward-compatible, but no Caddy server). Check your `pipelineRef` revision for current parameter support.
 
 ---
 
@@ -194,7 +200,7 @@ Hermetic builds require all dependencies to be pre-fetched before the isolated b
 
 - **npm only**: Yarn and pnpm are not supported in hermetic mode (the builder image does not install them; `npm ci --offline` is hardcoded)
 - **Sentry uploads**: Sourcemap uploads require network access. Pass Sentry build args to embed config; upload via a separate post-build pipeline task
-- **app.info.json**: Not generated in hermetic builds (requires `jq` + `build_app_info.sh`). If needed, generate via a custom build step
+- **app.info.json**: Generated via `build_app_info_hermetic.js` (Node.js, no `jq` dependency). Produces the same `app.info.json` and `app.info.deps.json` as the regular builder, with identical dependency serialization format
 - **`jq` not available**: The hermetic builder image does not install `jq`. The Caddyfile generator uses Node.js instead. If your build scripts require `jq`, supply it via RPM generic prefetch or use an alternative
 
 ---

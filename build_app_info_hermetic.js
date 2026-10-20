@@ -128,11 +128,13 @@ const srcTag = getGitTag();
 const patternflyDeps = listScopedDeps('@patternfly');
 const rhCloudServicesDeps = listScopedDeps('@redhat-cloud-services');
 
-// Format dependency arrays as strings — matches build_app_info.sh output format
-// (jq --arg treats the formatted array as a string value)
+// Format dependency arrays as strings — matches build_app_info.sh output format.
+// dependency_helpers.sh format_dependency_array wraps the list as JSON-array text
+// (e.g. '["@patternfly/react-core@6.0.0"]'), then jq --arg stores it as a string
+// value. JSON.stringify produces the same output: '[]' for empty, '["dep@ver"]'
+// for one dependency, '["dep1@ver","dep2@ver"]' for multiple.
 function formatDepsString(deps) {
-  if (deps.length === 0) return '';
-  return deps.join('","');
+  return JSON.stringify(deps);
 }
 
 // Generate app.info.json — matches build_app_info.sh output format

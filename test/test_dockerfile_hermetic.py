@@ -534,9 +534,21 @@ class TestDockerfileHermetic:
         assert "patternfly_dependencies" in data, "app.info.json missing patternfly_dependencies"
         assert "rh_cloud_services_dependencies" in data, "app.info.json missing rh_cloud_services_dependencies"
 
+        # Verify dependency serialization matches build_app_info.sh contract.
+        # dependency_helpers.sh format_dependency_array wraps deps as JSON-array
+        # text stored in a string-valued field. Zero deps → "[]", one dep →
+        # '["@patternfly/react-core@6.0.0"]'. The test fixture has no deps,
+        # so both fields must be "[]" (not empty string).
+        assert data["patternfly_dependencies"] == "[]", \
+            f"Expected patternfly_dependencies '[]', got '{data['patternfly_dependencies']}'"
+        assert data["rh_cloud_services_dependencies"] == "[]", \
+            f"Expected rh_cloud_services_dependencies '[]', got '{data['rh_cloud_services_dependencies']}'"
+
         print(f"  ✓ app_name: {data['app_name']}")
         print(f"  ✓ src_hash: {data['src_hash'][:12]}...")
         print(f"  ✓ node_version: {data['node_version']}")
+        print(f"  ✓ patternfly_dependencies: {data['patternfly_dependencies']}")
+        print(f"  ✓ rh_cloud_services_dependencies: {data['rh_cloud_services_dependencies']}")
         print("✓ app.info.json exists with correct metadata")
 
     def test_app_info_deps_json_exists(self):
@@ -1015,8 +1027,17 @@ class TestDockerfileHermeticDeploy:
         assert "app_version" in data, "app.info.json missing app_version"
         assert "node_version" in data, "app.info.json missing node_version"
 
+        # Verify dependency serialization matches build_app_info.sh contract.
+        # Zero deps → "[]" (JSON-array string), not empty string.
+        assert data.get("patternfly_dependencies") == "[]", \
+            f"Expected patternfly_dependencies '[]', got '{data.get('patternfly_dependencies')}'"
+        assert data.get("rh_cloud_services_dependencies") == "[]", \
+            f"Expected rh_cloud_services_dependencies '[]', got '{data.get('rh_cloud_services_dependencies')}'"
+
         print(f"  ✓ app_name: {data['app_name']}")
         print(f"  ✓ node_version: {data['node_version']}")
+        print(f"  ✓ patternfly_dependencies: {data['patternfly_dependencies']}")
+        print(f"  ✓ rh_cloud_services_dependencies: {data['rh_cloud_services_dependencies']}")
         print("✓ app.info.json present in deploy image")
 
     def test_deploy_app_info_deps_json_exists(self):
