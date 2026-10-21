@@ -1,40 +1,53 @@
-# **Hermetic Build Setup Guide for Frontend Projects**
+# Hermetic Build Setup Guide for Frontend Projects
 
-Based on our experience setting up hermetic builds for the landing-page-frontend, here's a complete guide for teams to implement hermetic builds in Konflux using the shared Dockerfile from `insights-frontend-builder-common`.
+## Overview
 
-## **Overview**
+A hermetic build ensures your frontend application builds in a completely isolated environment without external network access, using only pre-fetched dependencies. This guide covers the shared `Dockerfile.hermetic` provided through `insights-frontend-builder-common`.
 
-A hermetic build ensures your frontend application builds in a completely isolated environment without external network access, using only pre-fetched dependencies. This guide uses a shared Dockerfile provided through the `insights-frontend-builder-common` repository. The resulting container will include the build artifacts, package.json, and package-lock.json files organized under a `/srv` directory.
+The shared Dockerfile supports **two build targets**:
 
-## **Prerequisites**
+| Target | Base Image | Use Case | Selection |
+|--------|-----------|----------|-----------|
+| `artifact` (default) | `ubi9/ubi-micro` | Security-compliance scanning images | No `--target` needed |
+| `deploy` | `caddy-ubi` | Deployable frontend images with Caddy serving | `--target deploy` |
 
-- ✅ Access to Konflux
-- ✅ Frontend project with `package.json` and `package-lock.json`
-- ✅ `insights-frontend-builder-common` already available in your project
-
----
-
-## **Step 1: Set Up Konflux Component**
-
-1. **Navigate to Konflux Console**
-2. **Create New Component:**
-   - **Component Name**: `your-project-name-hermetic`
-   - **Git Repository**: Your frontend project repo
-   - **Dockerfile Path**: `/build-tools/Dockerfile.hermetic`
-   - **Build Type**: Select "Hermetic Build"
+Existing consumers omitting target selection retain artifact-only behavior — **fully backward-compatible**.
 
 ---
 
-## **Step 2: Configure Pipeline Files**
+## Prerequisites
 
-Konflux will automatically create pipeline files in `.tekton/`. You'll need to modify them to add dependency prefetching.
+- Access to Konflux
+- Frontend project with `package.json` and `package-lock.json` (npm)
+- `insights-frontend-builder-common` available as `build-tools/` submodule
 
-### **2.1: Update Push Pipeline**
+---
 
-Edit `.tekton/your-project-hermetic-push.yaml`:
+## Step 1: Set Up Konflux Components
+
+### Security-Compliance Component (artifact target)
+
+1. **Component Name**: `your-project-name-sc`
+2. **Dockerfile Path**: `build-tools/Dockerfile.hermetic`
+3. **Build Type**: Hermetic Build
+4. No `--target` needed — the default `artifact` stage produces a minimal ubi-micro image
+
+### Deployable Component (deploy target)
+
+1. **Component Name**: `your-project-name`
+2. **Dockerfile Path**: `build-tools/Dockerfile.hermetic`
+3. **Build Type**: Hermetic Build
+4. Set target to `deploy` via pipeline parameters (see below)
+
+---
+
+## Step 2: Configure Pipeline Files
+
+Konflux creates pipeline files in `.tekton/`. Add dependency prefetching and target selection.
+
+### SC Pipeline (artifact target, default)
 
 ```yaml
-# Find the spec.params section and add/modify:
 spec:
   params:
   - name: git-url
@@ -42,19 +55,24 @@ spec:
   - name: revision
     value: '{{revision}}'
   - name: output-image
-    value: quay.io/your-registry/your-project-hermetic:{{revision}}
+    value: quay.io/your-registry/your-project-sc:{{revision}}
   - name: dockerfile
-    value: /build-tools/Dockerfile.hermetic
-  - name: prefetch-input                    # ADD THIS
-    value: '{"type": "npm", "path": "."}'   # ADD THIS
+    value: build-tools/Dockerfile.hermetic
+  - name: hermetic
+    value: "true"
+  - name: prefetch-input
+    value: '{"type": "npm", "path": "."}'
 ```
 
-### **2.2: Update Pull Request Pipeline**
+### Regular Pipeline (deploy target)
 
-Edit `.tekton/your-project-hermetic-pull-request.yaml`:
+The deploy target requires `--target deploy` to be forwarded to the Buildah task during the container build. This is a **cross-repository prerequisite** that involves:
+
+1. **Buildah task**: The pinned Buildah task revision must accept a `TARGET` or equivalent parameter and pass `--target $(params.TARGET)` to `buildah build`.
+2. **Shared/inline pipeline**: The Tekton Pipeline must expose this as a PipelineRun-level parameter (e.g. `target-stage`) and forward it to the Buildah task.
+3. **Consumer PipelineRun**: Once the above are in place, set the parameter in `.tekton/`:
 
 ```yaml
-# Find the spec.params section and add/modify:
 spec:
   params:
   - name: git-url
@@ -62,81 +80,165 @@ spec:
   - name: revision
     value: '{{revision}}'
   - name: output-image
-    value: quay.io/your-registry/your-project-hermetic:on-pr-{{revision}}
+    value: quay.io/your-registry/your-project:{{revision}}
   - name: dockerfile
-    value: /build-tools/Dockerfile.hermetic
-  - name: prefetch-input                    # ADD THIS
-    value: '{"type": "npm", "path": "."}'   # ADD THIS
+    value: build-tools/Dockerfile.hermetic
+  - name: hermetic
+    value: "true"
+  - name: prefetch-input
+    value: '{"type": "npm", "path": "."}'
+  - name: target-stage                          # Requires pipeline support (see above)
+    value: deploy
+```
+
+> **Note**: Without the pipeline/task changes above, the build defaults to the `artifact` stage (backward-compatible, but no Caddy server). Check your `pipelineRef` revision for current parameter support.
+
+---
+
+## Step 3: Build Arguments
+
+### Common Build Args
+
+| ARG | Default | Description |
+|-----|---------|-------------|
+| `NODE_BUILD_VERSION` | `22` | Node.js major version |
+| `NODE_IMAGE_TAG` | `9.8-1780375952` | UBI Node.js image tag |
+| `NPM_CI_ARGS` | (empty) | Extra args for `npm ci` (e.g. `--legacy-peer-deps`) |
+| `APP_BUILD_DIR` | `dist` | Build output directory |
+| `PACKAGE_JSON_PATH` | `package.json` | Path to package.json |
+| `APP_VERSION` | `unknown` | Application version string |
+| `IOP` | `false` | IoP/Satellite build flag |
+| `ENABLE_SENTRY` | `false` | Enable Sentry integration |
+
+### Artifact-Only Build Args (labels)
+
+| ARG | Default | Description |
+|-----|---------|-------------|
+| `LABEL_COMPONENT` | `frontend-app-hermetic` | `com.redhat.component` label |
+| `LABEL_DESCRIPTION` | `HCC Frontend Application...` | Image description |
+| `LABEL_URL` | `https://github.com/RedHatInsights` | Project URL |
+| `LABEL_SUMMARY` | `HCC Frontend Application` | Image summary |
+
+Override labels in your Tekton pipeline:
+
+```yaml
+  - name: build-args
+    value: |
+      LABEL_COMPONENT=my-app-hermetic
+      LABEL_DESCRIPTION=My App - Hermetic Build
 ```
 
 ---
 
-## **Step 3: Verify and Test**
+## Step 4: Caddyfile Generation (deploy target)
 
-### **3.1: Create Pull Request**
+The deploy target automatically generates a Caddyfile using `caddyfile_gen_hermetic.js`:
 
-1. **Create PR** with your pipeline changes
-2. **Konflux will automatically trigger** the hermetic build
-3. **Monitor the build** in Konflux console
+- Reads `insights.appname` from `package.json` for the route path (`/apps/<appname>/*`)
+- Generates the same Caddy config as `server_config_gen.sh`, but uses Node.js instead of `jq`
+- **Skips generation** if a `Caddyfile` already exists in your repo (consumer override)
 
-### **3.2: Check Build Process**
+The generated Caddyfile provides:
+- Port 8000 for application traffic
+- Port 9000 for Prometheus metrics
+- Route: `/apps/{APP_NAME}/*` serves from `/srv/dist`
+- Environment-based route: `{$ENV_PUBLIC_PATH}/*`
+- Root redirect: `/` → `/apps/chrome/index.html`
 
-Verify these steps succeed in the build logs:
-- ✅ **Offline npm ci**: Should use `--offline` flag
-- ✅ **Dependency prefetch**: Should use Cachi2 prefetched packages
-- ✅ **Build process**: Should generate files in `/hermetic-build/dist`
-- ✅ **Tests and linting**: Should pass all checks
-
-### **3.3: Verify Image**
-
-Check the final container image:
-- ✅ **Size**: Should be minimal (~50-100MB total)
-- ✅ **Contents**: Should contain built static files in `/hermetic-build/dist`, with `package.json` and `package-lock.json` in `/hermetic-build/`
-- ✅ **Labels**: Should pass Red Hat compliance checks
+To use a custom Caddyfile, place it in your repo root. The generator will detect it and skip.
 
 ---
 
-## **Common Issues and Solutions**
+## Step 5: Verify and Test
 
-### **Issue: npm ci fails with network errors**
-**Solution**: Ensure `prefetch-input` is correctly configured in pipeline files
+### Check Build Process
 
-### **Issue: Cypress tries to download binaries**
-**Solution**: The Dockerfile automatically sets `CYPRESS_INSTALL_BINARY=0` in airgapped environments
+Verify these steps in the build logs:
 
-### **Issue: Build artifacts not found**
-**Solution**: Verify your build script produces files in `/dist` directory during the build process. The shared Dockerfile expects this standard location and copies the files to `/hermetic-build/dist` in the final container.
+**Artifact target (default):**
+- `npm ci --offline` succeeds with Cachi2 prefetched packages
+- `npm run build` produces output in `dist/`
+- Final image is ubi-micro based, minimal size (~50-100 MB)
+- Files at `/srv/dist/`, `/srv/package.json`, `/srv/package-lock.json`
 
-### **Issue: Container fails certification**
-**Solution**: The shared Dockerfile includes all required labels and UBI-minimal base image for compliance
+**Deploy target:**
+- Same build steps as artifact
+- Caddyfile generated (or consumer-provided)
+- Final image is caddy-ubi based
+- Files at `/srv/dist/`, Caddyfile at `/etc/caddy/Caddyfile`
+- Container serves on port 8000
+
+### Verify Image Contents
+
+**Artifact image:**
+
+```bash
+podman build -f build-tools/Dockerfile.hermetic -t my-app-sc .
+podman run --rm my-app-sc cat /srv/dist/index.html
+podman run --rm my-app-sc id -u    # Should print 1001
+```
+
+**Deploy image:**
+
+```bash
+podman build -f build-tools/Dockerfile.hermetic --target deploy -t my-app .
+podman run --rm -p 8000:8000 my-app
+# Visit http://localhost:8000/apps/<appname>/
+```
 
 ---
 
-## **FAQ**
+## Dependency Prefetch
 
-### **Q: Can I optimize build performance?**
-**A:** Yes, you can add a `.dockerignore` file to exclude unnecessary files like `node_modules/`, cache directories, and development files from the build context. This can speed up builds and reduce context size.
+Hermetic builds require all dependencies to be pre-fetched before the isolated build:
 
-### **Q: How do I update the shared Dockerfile?**
-**A:** The Dockerfile is maintained in `insights-frontend-builder-common`. Updates will be automatically available when the submodule is updated.
+1. **npm prefetch**: Handled by Cachi2/Hermeto via `prefetch-input: '{"type": "npm", "path": "."}'`
+2. **Git submodules**: Fetched during the network-enabled checkout step, before isolated RUN steps
+3. **No networked installs**: All `RUN` commands execute with `--network=none`; `npm ci --offline` uses the prefetch cache
 
-### **Q: What if my build output is not in `/dist`?**
-**A:** The shared Dockerfile expects build output in `/dist` during the build process, which is then copied to `/hermetic-build/dist` in the final container. Ensure your `package.json` build script outputs to the `/dist` directory, or modify your build configuration accordingly.
+### Current Limitations
 
-### **Q: Why do I need to add prefetch-input manually?**
-**A:** Konflux doesn't automatically detect npm dependencies for hermetic builds. The `prefetch-input` parameter tells Cachi2 to pre-download your npm dependencies for offline use.
+- **npm only**: Yarn and pnpm are not supported in hermetic mode (the builder image does not install them; `npm ci --offline` is hardcoded)
+- **Sentry uploads**: Sourcemap uploads require network access. Pass Sentry build args to embed config; upload via a separate post-build pipeline task
+- **app.info.json**: Generated via `build_app_info_hermetic.js` (Node.js, no `jq` dependency). Produces the same `app.info.json` and `app.info.deps.json` as the regular builder, with identical dependency serialization format
+- **`jq` not available**: The hermetic builder image does not install `jq`. The Caddyfile generator uses Node.js instead. If your build scripts require `jq`, supply it via RPM generic prefetch or use an alternative
 
 ---
 
-## **Project Structure After Setup**
+## Common Issues and Solutions
+
+### Issue: npm ci fails with network errors
+**Solution**: Ensure `prefetch-input` is correctly configured and `hermetic: "true"` is set.
+
+### Issue: Cypress tries to download binaries
+**Solution**: The Dockerfile sets `CYPRESS_INSTALL_BINARY=0` automatically.
+
+### Issue: Build artifacts not found
+**Solution**: Verify your build script outputs to `dist/` (or set `APP_BUILD_DIR` accordingly).
+
+### Issue: Container fails Red Hat certification
+**Solution**: The artifact target includes all required labels. Override `LABEL_*` build args for your application.
+
+### Issue: Deploy target fails with "No Caddyfile found"
+**Solution**: Update your `build-tools` submodule to a version containing `caddyfile_gen_hermetic.js`, or place a static `Caddyfile` in your repo root.
+
+---
+
+## Project Structure After Setup
 
 ```
 your-project/
 ├── .tekton/
-│   ├── your-project-hermetic-push.yaml      # (modified with prefetch-input)
-│   └── your-project-hermetic-pull-request.yaml  # (modified with prefetch-input)
-├── build-tools/
-│   └── Dockerfile.hermetic                   # (shared Dockerfile)
+│   ├── your-project-pull-request.yaml          # (deploy target + hermetic)
+│   ├── your-project-push.yaml                  # (deploy target + hermetic)
+│   ├── your-project-sc-pull-request.yaml       # (artifact target, default)
+│   └── your-project-sc-push.yaml               # (artifact target, default)
+├── build-tools/                                 # git submodule
+│   ├── Dockerfile.hermetic                      # shared multi-target Dockerfile
+│   ├── caddyfile_gen_hermetic.js                # Caddyfile generator (Node.js)
+│   ├── Dockerfile                               # regular (non-hermetic) build
+│   └── ...
+├── Caddyfile                                    # optional: consumer override
 ├── package.json
 ├── package-lock.json
 └── src/
