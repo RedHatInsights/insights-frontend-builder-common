@@ -1079,6 +1079,78 @@ class TestDockerfileHermeticDeploy:
         print("  ✓ All file_server roots use /srv/dist")
         print("✓ Caddyfile root paths match runtime destination")
 
+    def test_deploy_red_hat_labels_present(self):
+        """Test that required Red Hat labels are present in the deploy image.
+
+        The deploy stage must carry the same compliance labels as the artifact
+        stage so that images built with --target deploy pass Red Hat certification.
+        """
+        print("\n=== Testing Red Hat compliance labels in deploy image ===")
+
+        result = subprocess.run(
+            ["podman", "inspect", self.IMAGE_NAME],
+            capture_output=True,
+            text=True
+        )
+        assert result.returncode == 0, "Failed to inspect deploy image"
+
+        data = json.loads(result.stdout)
+        labels = {}
+        if data:
+            if "Labels" in data[0] and data[0]["Labels"]:
+                labels = data[0]["Labels"]
+            else:
+                labels = data[0].get("Config", {}).get("Labels", {})
+
+        assert labels, "No labels found in deploy image"
+
+        required_labels = [
+            "com.redhat.component",
+            "description",
+            "distribution-scope",
+            "io.k8s.description",
+            "name",
+            "release",
+            "url",
+            "vendor",
+            "version",
+            "maintainer",
+            "summary"
+        ]
+
+        for label in required_labels:
+            assert label in labels, f"Required label '{label}' not found in deploy image"
+            assert labels[label], f"Label '{label}' is empty in deploy image"
+            print(f"  ✓ {label}: {labels[label][:50]}{'...' if len(labels[label]) > 50 else ''}")
+
+        print("✓ All required Red Hat labels present in deploy image")
+
+    def test_deploy_labels_are_generic(self):
+        """Test that deploy labels use generic defaults, not hardcoded values."""
+        print("\n=== Testing deploy labels are not hardcoded ===")
+
+        result = subprocess.run(
+            ["podman", "inspect", self.IMAGE_NAME],
+            capture_output=True,
+            text=True
+        )
+        assert result.returncode == 0, "Failed to inspect deploy image"
+
+        data = json.loads(result.stdout)
+        labels = {}
+        if data:
+            if "Labels" in data[0] and data[0]["Labels"]:
+                labels = data[0]["Labels"]
+            else:
+                labels = data[0].get("Config", {}).get("Labels", {})
+
+        component = labels.get("com.redhat.component", "")
+        assert "landing-page" not in component, \
+            f"Deploy label com.redhat.component still contains hardcoded 'landing-page': {component}"
+
+        print(f"  ✓ com.redhat.component: {component} (no hardcoded app name)")
+        print("✓ Deploy labels use generic defaults")
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "-s"])

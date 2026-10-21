@@ -138,6 +138,26 @@ ENV ENV_PUBLIC_PATH "/default"
 ARG APP_BUILD_DIR=dist
 ARG PACKAGE_JSON_PATH=package.json
 
+# Configurable Red Hat labels for container compliance (same as artifact stage)
+# Override via --build-arg for your application:
+#   --build-arg LABEL_COMPONENT=my-app-hermetic
+#   --build-arg LABEL_DESCRIPTION="My App - Hermetic Build"
+ARG LABEL_COMPONENT=frontend-app-hermetic
+ARG LABEL_DESCRIPTION="HCC Frontend Application - Hermetic Build"
+ARG LABEL_URL="https://github.com/RedHatInsights"
+ARG LABEL_SUMMARY="HCC Frontend Application"
+LABEL com.redhat.component="${LABEL_COMPONENT}" \
+      description="${LABEL_DESCRIPTION}" \
+      distribution-scope="public" \
+      io.k8s.description="${LABEL_DESCRIPTION}" \
+      name="${LABEL_COMPONENT}" \
+      release="1" \
+      url="${LABEL_URL}" \
+      vendor="Red Hat, Inc." \
+      version="1.0" \
+      maintainer="Red Hat Console Team <console@redhat.com>" \
+      summary="${LABEL_SUMMARY}"
+
 COPY --from=builder /opt/app-root/src/Caddyfile /etc/caddy/Caddyfile
 COPY --from=builder /opt/app-root/src/${APP_BUILD_DIR} dist
 COPY ${PACKAGE_JSON_PATH} .
