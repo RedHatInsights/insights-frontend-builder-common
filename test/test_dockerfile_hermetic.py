@@ -1,15 +1,23 @@
 """
-Tests for Dockerfile.hermetic filesystem structure and build process.
+Tests for Dockerfile.hermetic multi-target build.
 
-This test suite verifies that:
-1. Files are copied to the correct locations in the hermetic image
-2. Build artifacts are in the expected directories (/srv/dist)
+This test suite verifies both build targets:
+
+Artifact target (default, no --target needed):
+1. Files are copied to the correct locations (/srv/dist, /srv/package.json)
+2. Build artifacts are in the expected directories
 3. Required files (package.json, LICENSE) are properly placed
-4. Directory structure matches hermetic build expectations
-5. Image metadata and labels are correct
-6. Container runs as non-root user (1001)
-7. Offline build process works correctly
-8. Minimal image contains only necessary components (no Caddy)
+4. Image metadata and labels are correct
+5. Container runs as non-root user (1001)
+6. Offline build process works correctly
+7. Minimal image contains only necessary components (no Caddy)
+
+Deploy target (--target deploy):
+1. Caddyfile is generated and placed at /etc/caddy/Caddyfile
+2. Build artifacts are at expected locations (dist/)
+3. Package.json is present
+4. LICENSE is present
+5. Caddy environment variables are set
 """
 
 import json
@@ -23,7 +31,7 @@ import pytest
 
 
 class TestDockerfileHermetic:
-    """Test suite for Dockerfile.hermetic structure and build."""
+    """Test suite for Dockerfile.hermetic artifact target (default)."""
 
     IMAGE_NAME = "test-frontend-builder-hermetic:test"
     CONTAINER_NAME = "test-hermetic-container"
@@ -62,22 +70,35 @@ class TestDockerfileHermetic:
 
         # Remove copied Dockerfile
         cls._cleanup_test_env(cls.test_dir)
-        print("✓ Removed copied Dockerfile.hermetic")
+        print("✓ Removed copied test files")
 
     @classmethod
     def _prepare_test_env(cls, test_dir, repo_root):
-        """Prepare test environment by copying Dockerfile.hermetic."""
+        """Prepare test environment by copying Dockerfile.hermetic and helpers."""
         # Copy Dockerfile.hermetic to test directory
         dockerfile_src = os.path.join(repo_root, "Dockerfile.hermetic")
         dockerfile_dest = os.path.join(test_dir, "Dockerfile.hermetic")
         shutil.copy(dockerfile_src, dockerfile_dest)
 
+        # Create build-tools directory and copy hermetic build scripts
+        build_tools_dir = os.path.join(test_dir, "build-tools")
+        os.makedirs(build_tools_dir, exist_ok=True)
+        caddyfile_gen_src = os.path.join(repo_root, "caddyfile_gen_hermetic.js")
+        caddyfile_gen_dest = os.path.join(build_tools_dir, "caddyfile_gen_hermetic.js")
+        shutil.copy(caddyfile_gen_src, caddyfile_gen_dest)
+        app_info_gen_src = os.path.join(repo_root, "build_app_info_hermetic.js")
+        app_info_gen_dest = os.path.join(build_tools_dir, "build_app_info_hermetic.js")
+        shutil.copy(app_info_gen_src, app_info_gen_dest)
+
         # Initialize git repository if it doesn't exist (required by npm build)
+        # Note: GPG signing is disabled for this test fixture commit because
+        # the test uses a fake identity that has no GPG key
         git_dir = os.path.join(test_dir, ".git")
         if not os.path.exists(git_dir):
             subprocess.run(["git", "init"], cwd=test_dir, check=True)
             subprocess.run(["git", "config", "user.email", "test@test.com"], cwd=test_dir, check=True)
             subprocess.run(["git", "config", "user.name", "Test User"], cwd=test_dir, check=True)
+            subprocess.run(["git", "config", "commit.gpgsign", "false"], cwd=test_dir, check=True)
             subprocess.run(["git", "add", "."], cwd=test_dir, check=True)
             subprocess.run(["git", "commit", "-m", "Initial commit"], cwd=test_dir, check=True)
 
@@ -88,9 +109,13 @@ class TestDockerfileHermetic:
         if os.path.exists(dockerfile_dest):
             os.remove(dockerfile_dest)
 
+        build_tools_dir = os.path.join(test_dir, "build-tools")
+        if os.path.exists(build_tools_dir):
+            shutil.rmtree(build_tools_dir)
+
     @classmethod
-    def _build_image(cls, test_dir, build_args=None, image_name=None):
-        """Build Docker image with optional build args.
+    def _build_image(cls, test_dir, build_args=None, image_name=None, target=None):
+        """Build Docker image with optional build args and target.
 
         Enforces offline/hermetic build by disabling network access during build.
 
@@ -98,6 +123,7 @@ class TestDockerfileHermetic:
             test_dir: Directory containing the Dockerfile
             build_args: Optional dict of build arguments
             image_name: Optional custom image name (defaults to cls.IMAGE_NAME)
+            target: Optional build target (e.g. "deploy", "artifact")
         """
         target_image_name = image_name or cls.IMAGE_NAME
 
@@ -107,6 +133,10 @@ class TestDockerfileHermetic:
             "-f", "Dockerfile.hermetic",
             "--network=none"  # Enforce offline/hermetic build
         ]
+
+        # Add target if specified
+        if target:
+            build_cmd.extend(["--target", target])
 
         # Add build args if provided
         if build_args:
@@ -199,7 +229,7 @@ class TestDockerfileHermetic:
             str: File content if successful, None otherwise
         """
         target_image_name = image_name or self.IMAGE_NAME
-        # Use podman create + podman cp instead of running cat in minimal image
+        # Use podman create + podman cp instead of running commands in minimal image
         # Create a temporary container without starting it (use unique name to avoid conflicts)
         container_name = f"temp-read-{uuid.uuid4().hex[:8]}"
         create_result = subprocess.run(
@@ -358,6 +388,39 @@ class TestDockerfileHermetic:
             return None
         return None
 
+    def _get_image_env(self, image_name=None):
+        """Get environment variables from the image.
+
+        Args:
+            image_name: Optional custom image name (defaults to self.IMAGE_NAME)
+
+        Returns:
+            dict: Environment variables as key-value pairs
+        """
+        target_image_name = image_name or self.IMAGE_NAME
+        result = subprocess.run(
+            ["podman", "inspect", target_image_name],
+            capture_output=True,
+            text=True
+        )
+        if result.returncode != 0:
+            return {}
+
+        try:
+            data = json.loads(result.stdout)
+            if data and len(data) > 0:
+                config = data[0].get("Config", {})
+                env_list = config.get("Env", [])
+                env_dict = {}
+                for item in env_list:
+                    if "=" in item:
+                        key, value = item.split("=", 1)
+                        env_dict[key] = value
+                return env_dict
+        except (json.JSONDecodeError, KeyError, IndexError):
+            return {}
+        return {}
+
     # ============= Filesystem Structure Tests =============
 
     def test_license_file_exists(self):
@@ -396,7 +459,6 @@ class TestDockerfileHermetic:
         print(f"Contents of /srv/dist:\n{dist_listing}")
 
         # Check for expected files
-        # Note: app.info.json is not generated in hermetic builds (only in normal builds with build_app_info.sh)
         expected_files = ["index.html", "manifest.json"]
         for expected_file in expected_files:
             file_path = f"/srv/dist/{expected_file}"
@@ -449,32 +511,75 @@ class TestDockerfileHermetic:
 
         print(f"✓ package-lock.json found at {package_lock_path}")
 
-    def test_no_app_info_json(self):
-        """Test that app.info.json is NOT generated in hermetic builds.
+    def test_app_info_json_exists(self):
+        """Test that app.info.json is generated in hermetic builds.
 
-        Note: app.info.json is only generated by build_app_info.sh in the normal
-        Dockerfile build. Hermetic builds just run 'npm run build' directly.
+        build_app_info_hermetic.js generates metadata equivalent to
+        build_app_info.sh but without jq dependency.
         """
-        print("\n=== Testing that app.info.json is not generated ===")
+        print("\n=== Testing app.info.json in hermetic image ===")
 
         app_info_path = "/srv/dist/app.info.json"
         content = self._read_file_from_image(app_info_path)
-        assert content is None, \
-            "app.info.json should not exist in hermetic builds (it's only in normal builds)"
+        assert content is not None, \
+            "app.info.json not found at /srv/dist/app.info.json"
 
-        print("✓ app.info.json correctly absent (hermetic builds don't use build_app_info.sh)")
+        data = json.loads(content)
+        assert data.get("app_name") == self.APP_NAME, \
+            f"Expected app_name '{self.APP_NAME}', got '{data.get('app_name')}'"
+        assert "src_hash" in data, "app.info.json missing src_hash"
+        assert "src_branch" in data, "app.info.json missing src_branch"
+        assert "app_version" in data, "app.info.json missing app_version"
+        assert "node_version" in data, "app.info.json missing node_version"
+        assert "patternfly_dependencies" in data, "app.info.json missing patternfly_dependencies"
+        assert "rh_cloud_services_dependencies" in data, "app.info.json missing rh_cloud_services_dependencies"
+
+        # Verify dependency serialization matches build_app_info.sh contract.
+        # dependency_helpers.sh format_dependency_array wraps deps as JSON-array
+        # text stored in a string-valued field. Zero deps → "[]", one dep →
+        # '["@patternfly/react-core@6.0.0"]'. The test fixture has no deps,
+        # so both fields must be "[]" (not empty string).
+        assert data["patternfly_dependencies"] == "[]", \
+            f"Expected patternfly_dependencies '[]', got '{data['patternfly_dependencies']}'"
+        assert data["rh_cloud_services_dependencies"] == "[]", \
+            f"Expected rh_cloud_services_dependencies '[]', got '{data['rh_cloud_services_dependencies']}'"
+
+        print(f"  ✓ app_name: {data['app_name']}")
+        print(f"  ✓ src_hash: {data['src_hash'][:12]}...")
+        print(f"  ✓ node_version: {data['node_version']}")
+        print(f"  ✓ patternfly_dependencies: {data['patternfly_dependencies']}")
+        print(f"  ✓ rh_cloud_services_dependencies: {data['rh_cloud_services_dependencies']}")
+        print("✓ app.info.json exists with correct metadata")
+
+    def test_app_info_deps_json_exists(self):
+        """Test that app.info.deps.json is generated in hermetic builds."""
+        print("\n=== Testing app.info.deps.json in hermetic image ===")
+
+        app_info_deps_path = "/srv/dist/app.info.deps.json"
+        content = self._read_file_from_image(app_info_deps_path)
+        assert content is not None, \
+            "app.info.deps.json not found at /srv/dist/app.info.deps.json"
+
+        data = json.loads(content)
+        assert data.get("app_name") == self.APP_NAME, \
+            f"Expected app_name '{self.APP_NAME}', got '{data.get('app_name')}'"
+        assert "patternfly_dependencies" in data, "app.info.deps.json missing patternfly_dependencies"
+        assert "rh_cloud_services_dependencies" in data, "app.info.deps.json missing rh_cloud_services_dependencies"
+
+        print(f"  ✓ app_name: {data['app_name']}")
+        print("✓ app.info.deps.json exists with correct metadata")
 
     # ============= Negative Tests (Things that should NOT exist) =============
 
     def test_no_caddy_files(self):
-        """Test that Caddy-related files do NOT exist in hermetic image."""
+        """Test that Caddy-related files do NOT exist in hermetic artifact image."""
         print("\n=== Testing that Caddy files are absent ===")
 
-        # Caddyfile should not exist
+        # Caddyfile should not exist in the artifact target
         caddyfile_exists = self._file_exists_in_image("/etc/caddy/Caddyfile")
-        assert not caddyfile_exists, "Caddyfile should not exist in hermetic image"
+        assert not caddyfile_exists, "Caddyfile should not exist in hermetic artifact image"
 
-        print("✓ Caddyfile correctly absent from hermetic image")
+        print("✓ Caddyfile correctly absent from hermetic artifact image")
 
 
     def test_no_nodejs_in_final_image(self):
@@ -522,6 +627,21 @@ class TestDockerfileHermetic:
             print(f"  ✓ {label}: {labels[label][:50]}{'...' if len(labels[label]) > 50 else ''}")
 
         print("✓ All required Red Hat labels are present")
+
+    def test_labels_are_generic(self):
+        """Test that labels use generic defaults, not hardcoded app-specific values."""
+        print("\n=== Testing labels are not hardcoded to specific app ===")
+
+        labels = self._get_image_labels()
+        assert labels, "No labels found in image"
+
+        # Should NOT contain landing-page-frontend (old hardcoded value)
+        component = labels.get("com.redhat.component", "")
+        assert "landing-page" not in component, \
+            f"Label com.redhat.component still contains hardcoded 'landing-page': {component}"
+
+        print(f"  ✓ com.redhat.component: {component} (no hardcoded app name)")
+        print("✓ Labels use generic defaults")
 
     def test_runs_as_non_root_user(self):
         """Test that container runs as non-root user (1001)."""
@@ -652,6 +772,384 @@ class TestDockerfileHermetic:
 
         print("✓ Container can run with read-only filesystem")
         print("✓ Files are readable (not just listable) in read-only mode")
+
+
+class TestDockerfileHermeticDeploy:
+    """Test suite for Dockerfile.hermetic deploy target (Caddy runtime).
+
+    Builds with --target deploy to produce a Caddy-based serving image.
+    Verifies Caddyfile generation, file placement, and environment config.
+    """
+
+    IMAGE_NAME = "test-frontend-builder-hermetic-deploy:test"
+    APP_NAME = "test-app"
+
+    @classmethod
+    def setup_class(cls):
+        """Build the Docker image with --target deploy."""
+        print("\n=== Building Hermetic Deploy Docker image for tests ===")
+
+        test_script_dir = os.path.dirname(__file__)
+        repo_root = os.path.abspath(os.path.join(test_script_dir, ".."))
+        cls.test_dir = os.path.join(test_script_dir, "test-fixtures", "fake-app")
+
+        # Reuse same prepare method (Dockerfile.hermetic + build-tools/)
+        TestDockerfileHermetic._prepare_test_env(cls.test_dir, repo_root)
+
+        # Build with --target deploy
+        print("Building hermetic deploy image (offline build, deploy target)")
+        TestDockerfileHermetic._build_image(
+            cls.test_dir,
+            image_name=cls.IMAGE_NAME,
+            target="deploy"
+        )
+
+        print(f"✓ Deploy image {cls.IMAGE_NAME} built successfully")
+
+    @classmethod
+    def teardown_class(cls):
+        """Clean up: remove the Docker image."""
+        print("\n=== Cleaning up hermetic deploy tests ===")
+
+        subprocess.run(
+            ["podman", "rmi", "-f", cls.IMAGE_NAME],
+            capture_output=True
+        )
+        print(f"✓ Image {cls.IMAGE_NAME} removed")
+
+        TestDockerfileHermetic._cleanup_test_env(cls.test_dir)
+        print("✓ Removed copied test files")
+
+    def _file_exists_in_image(self, file_path):
+        """Check if a file exists in the deploy image."""
+        return TestDockerfileHermeticDeploy._file_exists_in_image_static(file_path, self.IMAGE_NAME)
+
+    def _read_file_from_image(self, file_path):
+        """Read a file from the deploy image."""
+        return TestDockerfileHermeticDeploy._read_file_from_image_static(file_path, self.IMAGE_NAME)
+
+    @staticmethod
+    def _file_exists_in_image_static(file_path, image_name):
+        """Static helper to check file existence in an image."""
+        container_name = f"temp-check-{uuid.uuid4().hex[:8]}"
+        create_result = subprocess.run(
+            ["podman", "create", "--name", container_name, image_name],
+            capture_output=True,
+            text=True
+        )
+        if create_result.returncode != 0:
+            return False
+
+        try:
+            with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
+                tmp_path = tmp_file.name
+            try:
+                cp_result = subprocess.run(
+                    ["podman", "cp", f"{container_name}:{file_path}", tmp_path],
+                    capture_output=True,
+                    text=True
+                )
+                return cp_result.returncode == 0
+            finally:
+                if os.path.exists(tmp_path):
+                    os.remove(tmp_path)
+        finally:
+            subprocess.run(
+                ["podman", "rm", "-f", container_name],
+                capture_output=True,
+                text=True
+            )
+
+    @staticmethod
+    def _read_file_from_image_static(file_path, image_name):
+        """Static helper to read a file from an image."""
+        container_name = f"temp-read-{uuid.uuid4().hex[:8]}"
+        create_result = subprocess.run(
+            ["podman", "create", "--name", container_name, image_name],
+            capture_output=True,
+            text=True
+        )
+        if create_result.returncode != 0:
+            return None
+
+        try:
+            with tempfile.NamedTemporaryFile(mode='r', delete=False) as tmp_file:
+                tmp_path = tmp_file.name
+            try:
+                cp_result = subprocess.run(
+                    ["podman", "cp", f"{container_name}:{file_path}", tmp_path],
+                    capture_output=True,
+                    text=True
+                )
+                if cp_result.returncode != 0:
+                    return None
+                with open(tmp_path) as f:
+                    return f.read()
+            finally:
+                if os.path.exists(tmp_path):
+                    os.remove(tmp_path)
+        finally:
+            subprocess.run(
+                ["podman", "rm", "-f", container_name],
+                capture_output=True,
+                text=True
+            )
+
+    # ============= Deploy Target Tests =============
+
+    def test_caddyfile_exists(self):
+        """Test that Caddyfile is generated and placed at /etc/caddy/Caddyfile."""
+        print("\n=== Testing Caddyfile in deploy image ===")
+
+        caddyfile_exists = self._file_exists_in_image("/etc/caddy/Caddyfile")
+        assert caddyfile_exists, "Caddyfile not found at /etc/caddy/Caddyfile"
+
+        print("✓ Caddyfile exists at /etc/caddy/Caddyfile")
+
+    def test_caddyfile_contains_app_route(self):
+        """Test that generated Caddyfile contains correct app-specific route."""
+        print("\n=== Testing Caddyfile content ===")
+
+        content = self._read_file_from_image("/etc/caddy/Caddyfile")
+        assert content is not None, "Could not read Caddyfile"
+
+        # Should contain route for test-app (from fake-app package.json)
+        assert f"/apps/{self.APP_NAME}" in content, \
+            f"Caddyfile does not contain route for /apps/{self.APP_NAME}"
+
+        # Should contain port 8000 listener
+        assert ":8000" in content, "Caddyfile does not contain :8000 listener"
+
+        # Should contain metrics port 9000
+        assert ":9000" in content, "Caddyfile does not contain :9000 metrics port"
+
+        # Should NOT contain hardcoded landing-page-frontend
+        assert "landing-page" not in content, \
+            "Caddyfile contains hardcoded landing-page reference"
+
+        print(f"  ✓ Route /apps/{self.APP_NAME} present")
+        print("  ✓ Port :8000 configured")
+        print("  ✓ Metrics port :9000 configured")
+        print("  ✓ No hardcoded app names")
+        print("✓ Caddyfile content is correct")
+
+    def test_deploy_dist_files_exist(self):
+        """Test that build artifacts are present in deploy image."""
+        print("\n=== Testing dist files in deploy image ===")
+
+        # In deploy target, dist is at /srv/dist (Caddy working dir)
+        index_exists = self._file_exists_in_image("/srv/dist/index.html")
+        assert index_exists, "index.html not found in deploy image"
+
+        js_exists = self._file_exists_in_image("/srv/dist/js/app.js")
+        assert js_exists, "js/app.js not found in deploy image"
+
+        css_exists = self._file_exists_in_image("/srv/dist/css/app.css")
+        assert css_exists, "css/app.css not found in deploy image"
+
+        print("  ✓ index.html exists")
+        print("  ✓ js/app.js exists")
+        print("  ✓ css/app.css exists")
+        print("✓ Build artifacts present in deploy image")
+
+    def test_deploy_package_json_exists(self):
+        """Test that package.json is present in deploy image."""
+        print("\n=== Testing package.json in deploy image ===")
+
+        content = self._read_file_from_image("/srv/package.json")
+        assert content is not None, "package.json not found in deploy image"
+
+        data = json.loads(content)
+        assert data.get("insights", {}).get("appname") == self.APP_NAME, \
+            "package.json doesn't contain expected appname"
+
+        print(f"✓ package.json found with appname: {self.APP_NAME}")
+
+    def test_deploy_license_exists(self):
+        """Test that LICENSE is present in deploy image."""
+        print("\n=== Testing LICENSE in deploy image ===")
+
+        license_exists = self._file_exists_in_image("/licenses/LICENSE")
+        assert license_exists, "LICENSE not found at /licenses/LICENSE"
+
+        print("✓ LICENSE file present in deploy image")
+
+    def test_deploy_caddy_env_vars(self):
+        """Test that Caddy environment variables are set in deploy image."""
+        print("\n=== Testing Caddy environment variables ===")
+
+        result = subprocess.run(
+            ["podman", "inspect", self.IMAGE_NAME],
+            capture_output=True,
+            text=True
+        )
+        assert result.returncode == 0, "Failed to inspect deploy image"
+
+        data = json.loads(result.stdout)
+        config = data[0].get("Config", {})
+        env_list = config.get("Env", [])
+        env_dict = {}
+        for item in env_list:
+            if "=" in item:
+                key, value = item.split("=", 1)
+                env_dict[key] = value
+
+        assert "CADDY_TLS_MODE" in env_dict, "CADDY_TLS_MODE not set"
+        assert "ENV_PUBLIC_PATH" in env_dict, "ENV_PUBLIC_PATH not set"
+
+        print(f"  ✓ CADDY_TLS_MODE={env_dict.get('CADDY_TLS_MODE')}")
+        print(f"  ✓ ENV_PUBLIC_PATH={env_dict.get('ENV_PUBLIC_PATH')}")
+        print("✓ Caddy environment variables configured")
+
+    def test_deploy_build_succeeds_offline(self):
+        """Test that the deploy target builds successfully with --network=none."""
+        print("\n=== Testing deploy target offline build ===")
+
+        result = subprocess.run(
+            ["podman", "image", "exists", self.IMAGE_NAME],
+            capture_output=True
+        )
+        assert result.returncode == 0, "Deploy image does not exist"
+
+        print("✓ Deploy image built successfully with offline build")
+
+    def test_deploy_app_info_json_exists(self):
+        """Test that app.info.json is present in deploy image."""
+        print("\n=== Testing app.info.json in deploy image ===")
+
+        content = self._read_file_from_image("/srv/dist/app.info.json")
+        assert content is not None, "app.info.json not found in deploy image"
+
+        data = json.loads(content)
+        assert data.get("app_name") == self.APP_NAME, \
+            f"Expected app_name '{self.APP_NAME}', got '{data.get('app_name')}'"
+        assert "src_hash" in data, "app.info.json missing src_hash"
+        assert "app_version" in data, "app.info.json missing app_version"
+        assert "node_version" in data, "app.info.json missing node_version"
+
+        # Verify dependency serialization matches build_app_info.sh contract.
+        # Zero deps → "[]" (JSON-array string), not empty string.
+        assert data.get("patternfly_dependencies") == "[]", \
+            f"Expected patternfly_dependencies '[]', got '{data.get('patternfly_dependencies')}'"
+        assert data.get("rh_cloud_services_dependencies") == "[]", \
+            f"Expected rh_cloud_services_dependencies '[]', got '{data.get('rh_cloud_services_dependencies')}'"
+
+        print(f"  ✓ app_name: {data['app_name']}")
+        print(f"  ✓ node_version: {data['node_version']}")
+        print(f"  ✓ patternfly_dependencies: {data['patternfly_dependencies']}")
+        print(f"  ✓ rh_cloud_services_dependencies: {data['rh_cloud_services_dependencies']}")
+        print("✓ app.info.json present in deploy image")
+
+    def test_deploy_app_info_deps_json_exists(self):
+        """Test that app.info.deps.json is present in deploy image."""
+        print("\n=== Testing app.info.deps.json in deploy image ===")
+
+        content = self._read_file_from_image("/srv/dist/app.info.deps.json")
+        assert content is not None, "app.info.deps.json not found in deploy image"
+
+        data = json.loads(content)
+        assert data.get("app_name") == self.APP_NAME, \
+            f"Expected app_name '{self.APP_NAME}', got '{data.get('app_name')}'"
+
+        print(f"  ✓ app_name: {data['app_name']}")
+        print("✓ app.info.deps.json present in deploy image")
+
+    def test_caddyfile_root_uses_srv_dist(self):
+        """Test that Caddyfile file_server roots use /srv/dist.
+
+        The deploy stage always copies ${APP_BUILD_DIR} into /srv/dist,
+        so the Caddyfile must reference /srv/dist regardless of APP_BUILD_DIR.
+        """
+        print("\n=== Testing Caddyfile root paths ===")
+
+        content = self._read_file_from_image("/etc/caddy/Caddyfile")
+        assert content is not None, "Could not read Caddyfile"
+
+        # All file_server roots should use /srv/dist
+        assert "/srv/dist" in content, \
+            "Caddyfile does not reference /srv/dist — runtime path mismatch"
+
+        # Should NOT reference a variable-based root that could differ from /srv/dist
+        import re
+        roots = re.findall(r'root\s+(\S+)', content)
+        for root_path in roots:
+            assert root_path == "/srv/dist", \
+                f"Caddyfile root '{root_path}' does not match runtime destination /srv/dist"
+
+        print("  ✓ All file_server roots use /srv/dist")
+        print("✓ Caddyfile root paths match runtime destination")
+
+    def test_deploy_red_hat_labels_present(self):
+        """Test that required Red Hat labels are present in the deploy image.
+
+        The deploy stage must carry the same compliance labels as the artifact
+        stage so that images built with --target deploy pass Red Hat certification.
+        """
+        print("\n=== Testing Red Hat compliance labels in deploy image ===")
+
+        result = subprocess.run(
+            ["podman", "inspect", self.IMAGE_NAME],
+            capture_output=True,
+            text=True
+        )
+        assert result.returncode == 0, "Failed to inspect deploy image"
+
+        data = json.loads(result.stdout)
+        labels = {}
+        if data:
+            if "Labels" in data[0] and data[0]["Labels"]:
+                labels = data[0]["Labels"]
+            else:
+                labels = data[0].get("Config", {}).get("Labels", {})
+
+        assert labels, "No labels found in deploy image"
+
+        required_labels = [
+            "com.redhat.component",
+            "description",
+            "distribution-scope",
+            "io.k8s.description",
+            "name",
+            "release",
+            "url",
+            "vendor",
+            "version",
+            "maintainer",
+            "summary"
+        ]
+
+        for label in required_labels:
+            assert label in labels, f"Required label '{label}' not found in deploy image"
+            assert labels[label], f"Label '{label}' is empty in deploy image"
+            print(f"  ✓ {label}: {labels[label][:50]}{'...' if len(labels[label]) > 50 else ''}")
+
+        print("✓ All required Red Hat labels present in deploy image")
+
+    def test_deploy_labels_are_generic(self):
+        """Test that deploy labels use generic defaults, not hardcoded values."""
+        print("\n=== Testing deploy labels are not hardcoded ===")
+
+        result = subprocess.run(
+            ["podman", "inspect", self.IMAGE_NAME],
+            capture_output=True,
+            text=True
+        )
+        assert result.returncode == 0, "Failed to inspect deploy image"
+
+        data = json.loads(result.stdout)
+        labels = {}
+        if data:
+            if "Labels" in data[0] and data[0]["Labels"]:
+                labels = data[0]["Labels"]
+            else:
+                labels = data[0].get("Config", {}).get("Labels", {})
+
+        component = labels.get("com.redhat.component", "")
+        assert "landing-page" not in component, \
+            f"Deploy label com.redhat.component still contains hardcoded 'landing-page': {component}"
+
+        print(f"  ✓ com.redhat.component: {component} (no hardcoded app name)")
+        print("✓ Deploy labels use generic defaults")
 
 
 if __name__ == "__main__":

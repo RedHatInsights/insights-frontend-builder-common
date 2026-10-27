@@ -1,4 +1,4 @@
-.PHONY: help install test test-caddy test-env test-fs test-repo test-verbose lint lint-sh clean
+.PHONY: help install test test-caddy test-env test-fs test-hermetic test-repo test-verbose lint lint-sh clean
 
 # Shell scripts to lint (active build scripts only; legacy src/ scripts excluded)
 SHELL_SCRIPTS := ../build_app_info.sh ../server_config_gen.sh ../universal_build.sh ../dependency_helpers.sh ../parse-secrets.sh
@@ -10,6 +10,7 @@ help:
 	@echo "  test-caddy    - Run only Caddy server tests"
 	@echo "  test-env      - Run only environment variable tests"
 	@echo "  test-fs       - Run only filesystem structure tests"
+	@echo "  test-hermetic - Run only hermetic Dockerfile tests (artifact + deploy)"
 	@echo "  test-verbose  - Run tests with verbose output"
 	@echo "  lint          - Run ruff check on test code"
 	@echo "  lint-sh       - Run shellcheck on build scripts"
@@ -31,6 +32,9 @@ test-env:
 test-fs:
 	pytest test_dockerfile_filesystem.py -v
 
+test-hermetic:
+	pytest test_dockerfile_hermetic.py -v
+
 test-repo:
 	pytest test_repo_files.py -v
 
@@ -45,7 +49,7 @@ lint-sh:
 
 clean:
 	-podman rm -f test-frontend-container test-envs-container test-fs-container
-	-podman rmi -f test-frontend-builder:test test-frontend-builder-envs:test test-frontend-builder-fs:test test-frontend-builder-fs-pnpm:test
+	-podman rmi -f test-frontend-builder:test test-frontend-builder-envs:test test-frontend-builder-fs:test test-frontend-builder-fs-pnpm:test test-frontend-builder-hermetic:test test-frontend-builder-hermetic-deploy:test
 	-rm -rf test-fixtures/fake-app/build-tools
 	-rm -rf test-fixtures/fake-pnpm-app/build-tools
 	-rm -rf test-fixtures/fake-app/dist
