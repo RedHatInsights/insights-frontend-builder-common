@@ -10,7 +10,7 @@
 # To find available tags, visit:
 # https://catalog.redhat.com/software/containers/ubi9/nodejs-22/62e8e7ed22d1d3c2dfe2ca01
 ARG NODE_BUILD_VERSION=22
-ARG NODE_IMAGE_TAG=9.8-1780375952
+ARG NODE_IMAGE_TAG=9.8-1793064801
 FROM registry.access.redhat.com/ubi9/nodejs-${NODE_BUILD_VERSION}:${NODE_IMAGE_TAG} as builder
 
 USER root
@@ -90,7 +90,7 @@ USER default
 
 
 # Pin runtime content by digest; Renovate tracks updates to the latest tag.
-FROM quay.io/redhat-services-prod/hcm-eng-prod-tenant/caddy-ubi:latest@sha256:8d202412dfd1538029cd9590253234f7ed45e15039c62e3d4a6be55f3cfa6d64
+FROM quay.io/redhat-services-prod/hcm-eng-prod-tenant/caddy-ubi:latest@sha256:7468f808396cddf82a10f93d976a1629b3f24fcb47e2de8cf8e20444f26565d8
 
 COPY LICENSE /licenses/
 
