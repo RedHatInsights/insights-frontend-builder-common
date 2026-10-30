@@ -5,7 +5,7 @@ COPY --chown=default . .
 RUN bash universal_build.sh
 
 # Pin runtime content by digest; Renovate tracks updates to the latest tag.
-FROM quay.io/redhat-services-prod/hcm-eng-prod-tenant/caddy-ubi:latest@sha256:7468f808396cddf82a10f93d976a1629b3f24fcb47e2de8cf8e20444f26565d8
+FROM quay.io/redhat-services-prod/hcm-eng-prod-tenant/caddy-ubi:latest@sha256:74771b6c63ce3db5b6774a2480e213d98a9c78afe707427cdca2f0af6756a84b
 
 COPY LICENSE /licenses/
 

@@ -22,7 +22,7 @@
 #client_token = DEADBEEFDEADBEEFDEADBEEF
 #
 # You can set up creds via directions in this article https://techdocs.akamai.com/developer/docs/set-up-authentication-credentials
-FROM registry.access.redhat.com/ubi8/go-toolset:1.26.10-1793033278 as builder
+FROM registry.access.redhat.com/ubi8/go-toolset:1.26.10-1793251638 as builder
 
 USER 0
 
