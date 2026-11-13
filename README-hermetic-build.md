@@ -8,7 +8,7 @@ The shared Dockerfile supports **two build targets**:
 
 | Target | Base Image | Use Case | Selection |
 |--------|-----------|----------|-----------|
-| `artifact` (default) | `ubi9/ubi-micro` | Security-compliance scanning images | No `--target` needed |
+| `artifact` (default) | `ubi10/ubi-micro` | Security-compliance scanning images | No `--target` needed |
 | `deploy` | `caddy-ubi` | Deployable frontend images with Caddy serving | `--target deploy` |
 
 Existing consumers omitting target selection retain artifact-only behavior — **fully backward-compatible**.
