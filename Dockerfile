@@ -4,21 +4,21 @@
 # and corresponding UBI image tag for the builder stage.
 #
 # Examples:
-#   Node 22 (default): --build-arg NODE_BUILD_VERSION=22 --build-arg NODE_IMAGE_TAG=9.7-1776041578
+#   Node 22 (default): --build-arg NODE_BUILD_VERSION=22 --build-arg NODE_IMAGE_TAG=10.3-1793879650
 #   Node 24: --build-arg NODE_BUILD_VERSION=24 --build-arg NODE_IMAGE_TAG=<appropriate-tag>
 #
 # To find available tags, visit:
-# https://catalog.redhat.com/software/containers/ubi9/nodejs-22/62e8e7ed22d1d3c2dfe2ca01
+# https://catalog.redhat.com/software/containers/ubi10/nodejs-22/677d3d3e5fdd0fab2f7ad136
 ARG NODE_BUILD_VERSION=22
-ARG NODE_IMAGE_TAG=9.8-1793708962
-FROM registry.access.redhat.com/ubi9/nodejs-${NODE_BUILD_VERSION}:${NODE_IMAGE_TAG} as builder
+ARG NODE_IMAGE_TAG=10.3-1793879650
+FROM registry.access.redhat.com/ubi10/nodejs-${NODE_BUILD_VERSION}:${NODE_IMAGE_TAG} as builder
 
 USER root
 
 # install without the need for subsman
 RUN dnf --disablerepo='*' \
-    --enablerepo=ubi-9-baseos-rpms \
-    --enablerepo=ubi-9-appstream-rpms \
+    --enablerepo='ubi-10-for-*-baseos-rpms' \
+    --enablerepo='ubi-10-for-*-appstream-rpms' \
     -y install jq \
     && dnf clean all
 
